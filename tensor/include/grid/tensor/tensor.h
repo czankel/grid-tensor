@@ -33,6 +33,42 @@ struct TensorBase
   using TensorType = _TensorRT<_Rank, _T, _Args...>;
   using Type = _T;
 
+  /// operator<< outputs the tensor buffer.
+  inline friend std::ostream& operator<<(std::ostream& os, const TensorType& t)
+  {
+    std::function<void(int, const _T*&)> print;
+    print = [&os, &t, &print](size_t index, const _T*& ptr) {
+      os << "{ ";
+      if (index < _Rank - 1)
+      {
+        for (size_t i = t.Dim(index); i > 0; i--)
+        {
+          print(index + 1, ptr);
+          if (i != 1)
+            os << ", ";
+          else
+            os << " }";
+        }
+      }
+      else
+      {
+        for (size_t i = t.Dim(index); i > 0; i--)
+        {
+          os << *ptr++;
+          if (i != 1)
+            os << ", ";
+          else
+            os << " }";
+        }
+      }
+    };
+    const _T* ptr = t.Data();
+    print(0, ptr);
+    os << std::flush;
+
+    return os;
+  }
+
   // Rank returns the rank of the tensor.
   size_t Rank()                                   { return _Rank; }
 };
