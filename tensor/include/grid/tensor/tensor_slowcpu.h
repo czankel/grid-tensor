@@ -22,6 +22,71 @@ namespace grid {
 template <size_t, typename _T, auto...> struct TensorSlowCpu;
 
 
+/// TensorSlowCpu<1, _T, _N> is a specialization of a rank-1 tensor (vector) for a 'static' array.
+template <typename _T, size_t _N>
+struct TensorSlowCpu<1, _T, _N> : TensorBase<TensorSlowCpu, 1, _T, _N>
+{
+  // helper function to initialize the std:array from an initializer list
+  constexpr std::array<_T, _N> get_array(std::initializer_list<_T>&& init)
+  {
+    std::array<_T,_N> res;
+    std::copy(init.begin(), init.end(), res.begin());
+    return res;
+  }
+
+  /// Constructor for a rank-1 tensor (vector) with brace initialization.
+  explicit TensorSlowCpu(std::initializer_list<_T>&& init)
+    : dim_(_N),
+      array_(get_array(std::move(init)))
+  {}
+
+  /// Dim returns the dimension of the rank.
+  unsigned int Dim(unsigned int index) const      { if (index > 1) throw std::out_of_range ("index");
+                                                    return dim_[index]; }
+  /// Data returns a pointer to the data buffer.
+  const _T* Data() const                          { return array_.data(); }
+
+
+  unsigned int dim_[1];
+  std::array<_T, _N> array_;
+};
+
+
+/// TensorSlowCpu<_T, _M, _N> is a specialization of a rank-2 tensor (matrix) for a 'static' array.
+template <typename _T, size_t _M, size_t _N>
+struct TensorSlowCpu<2, _T, _M, _N> : TensorBase<TensorSlowCpu, 2, _T, _M, _N>
+{
+  // helper function to initialize the std:array from an initializer list
+  constexpr std::array<_T, _M * _N> get_array(std::initializer_list<std::initializer_list<_T>>&& init)
+  {
+    std::array<_T, _M * _N> res{};
+    auto line_it = res.begin();
+    for (auto it : init)
+    {
+      std::copy(it.begin(), it.end(), line_it);
+      line_it += _N;
+    }
+    return res;
+  }
+
+  /// Constructor for a rank-2 (matrix) brace initialization.
+  explicit TensorSlowCpu(std::initializer_list<std::initializer_list<_T>>&& init)
+    : dim_(_M, _N),
+      array_(get_array(std::move(init)))
+  {}
+
+  /// Dim returns the dimension of the rank.
+  unsigned int Dim(unsigned int index) const      { if  (index > 2) throw std::out_of_range ("index");
+                                                    return dim_[index]; }
+  /// Data returns a pointer to the data buffer.
+  const _T* Data() const                          { return array_.data(); }
+
+
+  unsigned int dim_[2];
+  std::array<_T, _M * _N> array_;
+};
+
+
 /// TensorSlowCpu<_Rank, _T> is a specialization of TensorSlowCpu for a dynamically allocated buffer.
 template <size_t _Rank, typename _T>
 struct TensorSlowCpu<_Rank, _T> : TensorBase<TensorSlowCpu, _Rank, _T>
@@ -67,6 +132,15 @@ struct TensorSlowCpu<_Rank, _T> : TensorBase<TensorSlowCpu, _Rank, _T>
 };
 
 // CTAD rules
+
+// Tensor{Ts...} -> Rank-1 tensor with a static/local array (brace-initializer).
+template <typename _T, typename... _Ts>
+explicit TensorSlowCpu(_T, _Ts...) -> TensorSlowCpu<1, std::common_type_t<_T, _Ts...>, sizeof...(_Ts)+1>;
+
+// Tensor{{...},...} -> Rank-2 tensor with a static/local array (brace-initializer).
+template <typename _T, size_t... _N>
+TensorSlowCpu(_T(&&... l)[_N]) -> TensorSlowCpu<2, _T, sizeof...(_N), std::max({_N...})>;
+
 
 // Tensor(uint, _T) -> Rank-1 tensor with a dynamically allocated buffer.
 template <typename _T>

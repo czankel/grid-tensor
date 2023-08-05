@@ -15,10 +15,24 @@ using Tensor = grid::TensorSlowCpu<_Rank, _T, _Args...>;
 
 TEST(TensorSlowCPU, Constructor)
 {
-  Tensor t21i(4, 1.2);
-  Tensor t21u(5, grid::Uninitialized<double>{});
-  Tensor t22i(5, 4, (char)3);
-  Tensor t22u(7, 3, grid::Uninitialized<int>{});
+  // brace-initialization
+  Tensor t11{ 11, 22, 33, 44, 55, 66 };
+  Tensor t12{ { 11, 12 }, { 21, 22, 23 }, { 31, 32, 33, 34 } };
+
+  EXPECT_EQ(t11.Rank(), 1);
+  EXPECT_EQ(t12.Rank(), 2);
+
+  EXPECT_EQ(t11.Dim(0), 6);
+  EXPECT_EQ(t12.Dim(0), 3);
+
+  int data[] = { 11, 22, 33, 44, 55, 66 };
+  EXPECT_EQ(memcmp(t11.Data(), data, sizeof(data)), 0);
+
+  // buffer allocation
+  Tensor t21i(4U, 1.2);
+  Tensor t21u(5U, grid::Uninitialized<double>{});
+  Tensor t22i(5U, 4U, (char)3);
+  Tensor t22u(7U, 3U, grid::Uninitialized<int>{});
 
   EXPECT_EQ(sizeof(*t22i.Data()), sizeof(char));
 
