@@ -33,6 +33,25 @@ struct TensorSlowCpu<_Rank, _T> : TensorBase<TensorSlowCpu, _Rank, _T>
       data_[i] = init;
   }
 
+  /// Constructor for a rank-1 tensor (vector) with a dynamically allocated uninitialized buffer.
+  explicit TensorSlowCpu(unsigned int dim, Uninitialized<_T>) : dim_(dim), data_(new _T[dim]) {}
+
+  /// Constructor for a rank-2 tensor (matrix) with a dynamically allocated buffer.
+  explicit TensorSlowCpu(unsigned int dim_m, int dim_n, _T init)
+    : dim_{dim_m, dim_n},
+      data_(new _T[dim_m * dim_n])
+  {
+    for (unsigned int i = 0; i < dim_m * dim_n; i++)
+      data_[i] = init;
+  }
+
+  /// Constructor for a rank-2 tensor (matrix) with a dynamically allocated uninitialized buffer.
+  explicit TensorSlowCpu(unsigned int dim_m, int dim_n, Uninitialized<_T>)
+  : dim_{dim_m, dim_n},
+    data_(new _T[dim_m * dim_n])
+  {}
+
+
   /// Destructor
   ~TensorSlowCpu()                                { delete[] data_; }
 
@@ -49,9 +68,21 @@ struct TensorSlowCpu<_Rank, _T> : TensorBase<TensorSlowCpu, _Rank, _T>
 
 // CTAD rules
 
-// Tensor(int, _T) -> Rank-1 tensor with a dynamically allocated buffer.
+// Tensor(uint, _T) -> Rank-1 tensor with a dynamically allocated buffer.
 template <typename _T>
-explicit TensorSlowCpu(int, _T) -> TensorSlowCpu<1, _T>;
+explicit TensorSlowCpu(unsigned int, _T) -> TensorSlowCpu<1, _T>;
+
+// Tensor(uint, Uninitialized<T>) -> Rank-1 tensor with a dynamically allocated uninitialized buffer.
+template <typename _T>
+explicit TensorSlowCpu(unsigned int, Uninitialized<_T>) -> TensorSlowCpu<1, _T>;
+
+// Tensor(uint, uint, _T) -> Rank-2 tensor with a dynamically allocated buffer.
+template <typename _T>
+explicit TensorSlowCpu(unsigned int, unsigned int, _T) -> TensorSlowCpu<2, _T>;
+
+// Tensor(uint, Uninitialized<T>) -> Rank-2 tensor with a dynamically allocated uninitialized buffer.
+template <typename _T>
+explicit TensorSlowCpu(unsigned int, unsigned int, Uninitialized<_T>) -> TensorSlowCpu<2, _T>;
 
 } // end of namespace grid
 

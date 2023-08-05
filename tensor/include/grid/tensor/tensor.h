@@ -14,6 +14,10 @@
 
 namespace grid {
 
+/// Placeholder for specifying that a buffer allocation does not need to be initialized.
+template <typename> struct Uninitialized {};
+
+
 /// TensorBase provides a base class for derived "runtime" tensor implementations with
 /// optimizations specific to CPUs and accelerators.
 ///
