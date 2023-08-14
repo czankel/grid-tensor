@@ -6,8 +6,8 @@
 // The contents of this file are confidential and proprietary to Chris Zankel.
 //
 
-#ifndef GRID_TENSOR_SLOWCPU_H
-#define GRID_TENSOR_SLOWCPU_H
+#ifndef GRID_TENSOR_TENSOR_SLOWCPU_H
+#define GRID_TENSOR_TENSOR_SLOWCPU_H
 
 #include <initializer_list>
 #include <type_traits>
@@ -160,4 +160,4 @@ explicit TensorSlowCpu(unsigned int, unsigned int, Uninitialized<_T>) -> TensorS
 
 } // end of namespace grid
 
-#endif  // GRID_TENSOR_SLOWCPU_H
+#endif  // GRID_TENSOR_TENSOR_SLOWCPU_H
