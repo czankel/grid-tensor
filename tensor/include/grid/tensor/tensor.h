@@ -18,6 +18,14 @@ namespace grid {
 template <typename> struct Uninitialized {};
 
 
+// helper functions to identify if a Tensor is for a specific runtime
+template <typename, template <size_t, typename, auto...> typename>
+struct is_tensor_runtime : std::false_type {};
+
+template <template <size_t, typename, auto...> typename _Tensor, size_t _Rank, typename _T, auto... _Args>
+struct is_tensor_runtime<_Tensor<_Rank, _T, _Args...>, _Tensor> : std::true_type {};
+
+
 /// TensorBase provides a base class for derived "runtime" tensor implementations with
 /// optimizations specific to CPUs and accelerators.
 ///
@@ -72,6 +80,14 @@ struct TensorBase
   // Rank returns the rank of the tensor.
   size_t Rank()                                   { return _Rank; }
 };
+
+// Concepts to define Tensors of a specific Rank.
+
+template <typename _Tensor> concept TensorR0Type = _Tensor::_Rank == 0;
+template <typename _Tensor> concept TensorR1Type = _Tensor::_Rank == 1;
+template <typename _Tensor> concept TensorR2Type = _Tensor::_Rank == 2;
+template <typename _Tensor> concept TensorR3Type = _Tensor::_Rank == 3;
+
 
 } // end of namespace grid
 

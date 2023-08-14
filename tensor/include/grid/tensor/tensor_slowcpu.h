@@ -131,6 +131,7 @@ struct TensorSlowCpu<_Rank, _T> : TensorBase<TensorSlowCpu, _Rank, _T>
   _T* data_;
 };
 
+
 // CTAD rules
 
 // Tensor{Ts...} -> Rank-1 tensor with a static/local array (brace-initializer).
@@ -157,6 +158,14 @@ explicit TensorSlowCpu(unsigned int, unsigned int, _T) -> TensorSlowCpu<2, _T>;
 // Tensor(uint, Uninitialized<T>) -> Rank-2 tensor with a dynamically allocated uninitialized buffer.
 template <typename _T>
 explicit TensorSlowCpu(unsigned int, unsigned int, Uninitialized<_T>) -> TensorSlowCpu<2, _T>;
+
+
+// Concepts for SlowCPU Tensors of different ranks.
+
+template <typename _Tensor> concept TensorSlowCpuType = is_tensor_runtime<_Tensor, TensorSlowCpu>::value == true;
+template <typename _Tensor> concept TensorSlowCpuR1Type = is_tensor_runtime<_Tensor, TensorSlowCpu>::value == true && _Tensor::_Rank == 1;
+template <typename _Tensor> concept TensorSlowCpuR2Type = is_tensor_runtime<_Tensor, TensorSlowCpu>::value == true && _Tensor::_Rank == 2;
+template <typename _Tensor> concept TensorSlowCpuR3Type = is_tensor_runtime<_Tensor, TensorSlowCpu>::value == true && _Tensor::_Rank == 3;
 
 } // end of namespace grid
 
