@@ -13,7 +13,7 @@
 template <size_t _Rank, typename _T, auto... _Args>
 using Tensor = grid::TensorSlowCpu<_Rank, _T, _Args...>;
 
-TEST(TensorSlowCPU, Constructor)
+TEST(TensorSlowCPU, IniitalizerConstructor)
 {
   // brace-initialization
   Tensor t11{ 11, 22, 33, 44, 55, 66 };
@@ -55,4 +55,22 @@ TEST(TensorSlowCPU, Constructor)
                   3, 3, 3, 3, 3,
                   3, 3, 3, 3, 3 };
   EXPECT_EQ(memcmp(t22i.Data(), d22i, sizeof(d22i)), 0);
+
+  Tensor t31{{4, 5, 7}, {4, 10, 10}, 3.3};
+  EXPECT_EQ(t31.Rank(), 3);
+  EXPECT_EQ(t31.Dim(0), 4);
+  EXPECT_EQ(t31.Dim(1), 5);
+  EXPECT_EQ(t31.Dim(2), 7);
+  EXPECT_EQ(t31.Stride(0), 4);
+  EXPECT_EQ(t31.Stride(1), 10);
+  EXPECT_EQ(t31.Stride(2), 10);
+
+  Tensor t32({1, 2, 3}, {4, 4, 4}, grid::Uninitialized<float>{});
+  EXPECT_EQ(t31.Rank(), 3);
+  EXPECT_EQ(t31.Dim(0), 4);
+  EXPECT_EQ(t31.Dim(1), 5);
+  EXPECT_EQ(t31.Dim(2), 7);
+  EXPECT_EQ(t31.Stride(0), 4);
+  EXPECT_EQ(t31.Stride(1), 10);
+  EXPECT_EQ(t31.Stride(2), 10);
 }
