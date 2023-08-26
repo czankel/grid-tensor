@@ -243,10 +243,14 @@ explicit TensorSlowCpu(unsigned int(&&d)[_N], unsigned int(&&s)[_N], Uninitializ
 
 // Concepts for SlowCPU Tensors of different ranks.
 
-template <typename _Tensor> concept TensorSlowCpuType = is_tensor_runtime<_Tensor, TensorSlowCpu>::value == true;
-template <typename _Tensor> concept TensorSlowCpuR1Type = is_tensor_runtime<_Tensor, TensorSlowCpu>::value == true && _Tensor::_Rank == 1;
-template <typename _Tensor> concept TensorSlowCpuR2Type = is_tensor_runtime<_Tensor, TensorSlowCpu>::value == true && _Tensor::_Rank == 2;
-template <typename _Tensor> concept TensorSlowCpuR3Type = is_tensor_runtime<_Tensor, TensorSlowCpu>::value == true && _Tensor::_Rank == 3;
+template <typename _Tensor>
+concept TensorSlowCpuR1Type = is_same_runtime_v<_Tensor, TensorSlowCpu> && _Tensor::Rank() == 1;
+template <typename _Tensor>
+concept TensorSlowCpuR2Type = is_same_runtime_v<_Tensor, TensorSlowCpu> && _Tensor::Rank() == 2;
+template <typename _Tensor>
+concept TensorSlowCpuR3Type = is_same_runtime_v<_Tensor, TensorSlowCpu> && _Tensor::Rank() == 3;
+template <typename _Tensor>
+concept TensorSlowCpuR4Type = is_same_runtime_v<_Tensor, TensorSlowCpu> && _Tensor::Rank() == 4;
 
 } // end of namespace grid
 

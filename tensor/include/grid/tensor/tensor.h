@@ -19,19 +19,27 @@ namespace grid {
 /// Placeholder for specifying that a buffer allocation does not need to be initialized.
 template <typename> struct Uninitialized {};
 
-// Concept and helper function that requires a tensor of any type
 struct TensorBase;
+
+// Helper function that requires a tensor of any type
 template <typename _Tensor>
 inline constexpr bool is_tensor_v = std::is_base_of_v<TensorBase, std::remove_cvref_t<_Tensor>>;
 
-template <typename _Tensor> concept TensorType = is_tensor_v<_Tensor>;
 
 // helper functions to identify if a Tensor is for a specific runtime
 template <typename, template <size_t, typename, auto...> typename>
-struct is_tensor_runtime : std::false_type {};
+struct is_same_runtime : std::false_type {};
 
 template <template <size_t, typename, auto...> typename _Tensor, size_t _Rank, typename _T, auto... _Args>
-struct is_tensor_runtime<_Tensor<_Rank, _T, _Args...>, _Tensor> : std::true_type {};
+struct is_same_runtime<_Tensor<_Rank, _T, _Args...>, _Tensor> : std::true_type {};
+
+template <typename _Tensor, template <size_t, typename, auto...> typename _TensorRT>
+inline constexpr bool is_same_runtime_v = is_same_runtime<std::remove_cvref_t<_Tensor>, _TensorRT>::value;
+
+
+// Concept for requiring a TensorType
+
+template <typename _Tensor> concept TensorType = is_tensor_v<_Tensor>;
 
 
 /// TensorBase provides a base class for derived "runtime" tensor implementations with
@@ -78,12 +86,12 @@ struct TensorBase
   }
 };
 
-// Concepts to define Tensors of a specific Rank.
+// Concepts to require a tensor to be of a specific type and rank.
 
-template <typename _Tensor> concept TensorR0Type = _Tensor::_Rank == 0;
-template <typename _Tensor> concept TensorR1Type = _Tensor::_Rank == 1;
-template <typename _Tensor> concept TensorR2Type = _Tensor::_Rank == 2;
-template <typename _Tensor> concept TensorR3Type = _Tensor::_Rank == 3;
+template <typename _Tensor> concept TensorR0Type = is_tensor_v<_Tensor> && _Tensor::Rank() == 0;
+template <typename _Tensor> concept TensorR1Type = is_tensor_v<_Tensor> && _Tensor::Rank() == 1;
+template <typename _Tensor> concept TensorR2Type = is_tensor_v<_Tensor> && _Tensor::Rank() == 2;
+template <typename _Tensor> concept TensorR3Type = is_tensor_v<_Tensor> && _Tensor::Rank() == 3;
 
 
 } // end of namespace grid
