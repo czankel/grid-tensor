@@ -49,11 +49,11 @@ struct TensorBase
   /// operator<< outputs the tensor buffer.
   inline friend std::ostream& operator<<(std::ostream& os, const TensorType auto& tensor)
   {
-    using Type = decltype(tensor)::Type;
+    using value_type = std::remove_reference_t<decltype(tensor)>::value_type;
     constexpr size_t rank = tensor.Rank();
 
-    std::function<void(int, const Type*&)> print;
-    print = [&os, &tensor, &print](size_t index, const Type*& ptr) {
+    std::function<void(int, const value_type*&)> print;
+    print = [&os, &tensor, &print](size_t index, const value_type*& ptr) {
       os << "{ ";
       if (index < rank - 1)
       {
@@ -78,7 +78,7 @@ struct TensorBase
         }
       }
     };
-    const Type* ptr = tensor.Data();
+    const value_type* ptr = tensor.Data();
     print(0, ptr);
     os << std::flush;
 
