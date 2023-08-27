@@ -9,13 +9,10 @@
 #ifndef GRID_TENSOR_SLOWCPU_TENSOR_H
 #define GRID_TENSOR_SLOWCPU_TENSOR_H
 
-#include <initializer_list>
-#include <type_traits>
-#include <array>
 #include <algorithm>
+#include <array>
+#include <initializer_list>
 #include <numeric>
-
-#include "tensor.h"
 
 namespace grid {
 
@@ -195,6 +192,29 @@ struct TensorSlowCpu<_Rank, _T> : TensorBase
   {
   }
 
+
+  // Copy constructor
+  // TODO: simple copy; implement reference counted buffers
+  TensorSlowCpu(const TensorSlowCpu& other)
+    : dim_{other.dim_},
+      stride_{other.stride_},
+      data_(new value_type[std::accumulate(std::begin(stride_), std::end(stride_), 1, std::multiplies<unsigned int>())])
+  {
+    memcpy(data_,
+           other.data_,
+           std::accumulate(std::begin(stride_), std::end(stride_), sizeof(value_type), std::multiplies<unsigned int>()));
+  }
+
+  // Move constructor
+  TensorSlowCpu(TensorSlowCpu&& other)
+    : dim_{other.dim_},
+      stride_{other.stride_},
+      data_(std::move(other).data_)
+  {
+    other.data_ = nullptr;
+  }
+
+
   /// Destructor
   ~TensorSlowCpu()                                { delete[] data_; }
 
@@ -254,6 +274,8 @@ explicit TensorSlowCpu(unsigned int(&&d)[_N], unsigned int(&&s)[_N], Uninitializ
 
 
 // Concepts for SlowCPU Tensors of different ranks.
+
+template <typename _Tensor> concept TensorSlowCpuType = is_same_runtime_v<_Tensor, TensorSlowCpu>;
 
 template <typename _Tensor>
 concept TensorSlowCpuR1Type = is_same_runtime_v<_Tensor, TensorSlowCpu> && _Tensor::Rank() == 1;
