@@ -10,10 +10,11 @@
 
 #include "gtest/gtest.h"
 
+
 template <size_t _Rank, typename _T, auto... _Args>
 using Tensor = grid::TensorSlowCpu<_Rank, _T, _Args...>;
 
-TEST(TensorSlowCPU, IniitalizerConstructor)
+TEST(TensorSlowCPU, ParameterizedConstructor)
 {
   // brace-initialization
   Tensor t11{ 11, 22, 33, 44, 55, 66 };
@@ -50,6 +51,7 @@ TEST(TensorSlowCPU, IniitalizerConstructor)
 
   double d21i[] = { 1.2, 1.2, 1.2, 1.2 };
   EXPECT_EQ(memcmp(t21i.Data(), d21i, sizeof(d21i)), 0);
+
   char d22i[] = { 3, 3, 3, 3, 3,
                   3, 3, 3, 3, 3,
                   3, 3, 3, 3, 3,
@@ -73,4 +75,32 @@ TEST(TensorSlowCPU, IniitalizerConstructor)
   EXPECT_EQ(t31.Stride(0), 4);
   EXPECT_EQ(t31.Stride(1), 10);
   EXPECT_EQ(t31.Stride(2), 10);
+}
+
+TEST(TensorSlowCPU, TensorAdd)
+{
+  Tensor t11{ 11, 22, 33, 44, 55, 66 };
+  Tensor t12{ 89, 78, 67, 56, 45, 34 };
+  int v1[] = { 100, 100, 100, 100, 100, 100 };
+
+  auto op1a = grid::TensorAdd(t11, t12);
+  auto res1a = op1a();
+  EXPECT_EQ(memcmp(res1a.Data(), v1, sizeof(v1)), 0);
+
+  auto&& op1b = t12 + t11;
+  auto res1b = op1b();
+  EXPECT_EQ(memcmp(res1b.Data(), v1, sizeof(v1)), 0);
+
+  Tensor t21(4U, 5U, 1.1);
+  Tensor t22(4U, 5U, 2.4);
+
+  auto op2 = std::move(t21) + std::move(t22);
+  auto res2 = op2();
+  Tensor v2{
+    { 3.5, 3.5, 3.5, 3.5, 3.5 },
+    { 3.5, 3.5, 3.5, 3.5, 3.5 },
+    { 3.5, 3.5, 3.5, 3.5, 3.5 },
+    { 3.5, 3.5, 3.5, 3.5, 3.5 }
+  };
+  EXPECT_EQ(res2, v2);
 }

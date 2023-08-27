@@ -94,6 +94,26 @@ template <typename _Tensor> concept TensorR2Type = is_tensor_v<_Tensor> && _Tens
 template <typename _Tensor> concept TensorR3Type = is_tensor_v<_Tensor> && _Tensor::Rank() == 3;
 
 
+/// TensorBaseOp provides a base class for identifying tensor operation classes.
+struct TensorBaseOp : TensorBase {};
+
+
+// Tensor basic arithmetic operations
+template <template <size_t, typename> typename, size_t, typename, typename... > struct TensorAdd;
+
+template <typename _TensorOp>
+inline constexpr bool is_tensor_op_v = std::is_base_of_v<TensorBaseOp, std::remove_cvref_t<_TensorOp>>;
+
+// Operator overloading
+
+// operator+ (TensorType, TensorType)
+template <TensorType _Tensor1, TensorType _Tensor2>
+auto operator+(_Tensor1&& tensor1, _Tensor2&& tensor2)
+{
+  return TensorAdd(std::forward<_Tensor1>(tensor1), std::forward<_Tensor2>(tensor2));
+}
+
+
 } // end of namespace grid
 
 #endif  // GRID_TENSOR_TENSOR_H

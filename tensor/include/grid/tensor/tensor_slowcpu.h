@@ -24,5 +24,6 @@ template <size_t, typename _T, auto...> struct TensorSlowCpu;
 } // end of namespace grid
 
 #include "slowcpu/tensor.h"
+#include "slowcpu/basic_operations.h"
 
 #endif  // GRID_TENSOR_TENSOR_SLOWCPU_H
