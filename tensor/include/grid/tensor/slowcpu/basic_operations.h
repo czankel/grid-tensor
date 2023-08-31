@@ -13,8 +13,9 @@
 
 namespace grid {
 
+
 // Operator==
-template <grid::TensorSlowCpuType _Tensor1, grid::TensorSlowCpuType _Tensor2>
+template <TensorFor<TensorSlowCpu> _Tensor1, TensorFor<TensorSlowCpu> _Tensor2>
 bool operator==(_Tensor1&& tensor1, _Tensor2&& tensor2)
 {
   using value_type = typename std::remove_cvref_t<_Tensor1>::value_type;
@@ -63,13 +64,14 @@ bool operator==(_Tensor1&& tensor1, _Tensor2&& tensor2)
 
 
 /// TensorAdd<TensorSlowCpu> implements tensor addition operation for tensors of the same rank.
-template <size_t _Rank, typename _T, TensorSlowCpuType _Tensor1, TensorSlowCpuType _Tensor2>
-struct TensorAdd<TensorSlowCpu, _Rank, _T, _Tensor1, _Tensor2> : TensorBaseOp
+template <size_t _Rank, typename _T, TensorFor<TensorSlowCpu> _Tensor1, TensorFor<TensorSlowCpu> _Tensor2>
+struct TensorAdd<TensorSlowCpu, _Rank, _T, _Tensor1, _Tensor2> : TensorBaseOp //<_Tensor1>
 {
   constexpr static size_t Rank()                  { return _Rank; }
+  using tensor_type = TensorSlowCpu<_Rank, _T>;
   using value_type = _T;
 
-  template <typename T1, typename T2>
+  template <ConvertibleTensorFor<TensorSlowCpu> T1, ConvertibleTensorFor<TensorSlowCpu> T2>
   TensorAdd(T1&& tensor1, T2&& tensor2)
    : tensor1_(std::forward<T1>(tensor1)),
      tensor2_(std::forward<T2>(tensor2))
@@ -87,7 +89,7 @@ struct TensorAdd<TensorSlowCpu, _Rank, _T, _Tensor1, _Tensor2> : TensorBaseOp
   // Functor
 
   // Rank1 + Rank1
-  template <TensorR1Type = _Tensor1, TensorR1Type = _Tensor2>
+  template <TensorRank<1> = _Tensor1, TensorRank<1> = _Tensor2>
   auto operator()() const
   {
     size_t dim_m = tensor1_.Dim(0);
@@ -107,7 +109,7 @@ struct TensorAdd<TensorSlowCpu, _Rank, _T, _Tensor1, _Tensor2> : TensorBaseOp
   }
 
   // Rank2 + Rank2
-  template <TensorR2Type = _Tensor1, TensorR2Type = _Tensor2>
+  template <TensorRank<2> = _Tensor1, TensorRank<2> = _Tensor2>
   auto operator()() const
   {
     size_t dim_m = tensor1_.Dim(0);
@@ -135,7 +137,7 @@ struct TensorAdd<TensorSlowCpu, _Rank, _T, _Tensor1, _Tensor2> : TensorBaseOp
 #if 0
   // FIXME: stride
   // Rank3 + Rank3
-  template <TensorR3Type = _Tensor1, TensorR3Type = _Tensor2>
+  template <TensorRank<3> = _Tensor1, TensorRank<3> = _Tensor2>
   auto operator()() const
   {
     size_t dim_m = tensor1_.Dim(0);
@@ -179,10 +181,10 @@ struct TensorAdd<TensorSlowCpu, _Rank, _T, _Tensor1, _Tensor2> : TensorBaseOp
 
 // CTAD
 
-template <TensorSlowCpuType _Tensor1, TensorSlowCpuType _Tensor2>
+template <ConvertibleTensorFor<TensorSlowCpu> _Tensor1, ConvertibleTensorFor<TensorSlowCpu> _Tensor2>
 TensorAdd(_Tensor1, _Tensor2)
-  -> TensorAdd<TensorSlowCpu, _Tensor1::Rank(), typename _Tensor1::value_type, _Tensor1, _Tensor2>;
-
+  -> TensorAdd<TensorSlowCpu, _Tensor1::Rank(), typename _Tensor1::value_type,
+               typename _Tensor1::tensor_type, typename _Tensor2::tensor_type>;
 
 } // end of namespace grid
 

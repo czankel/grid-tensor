@@ -16,38 +16,91 @@
 
 namespace grid {
 
+struct TensorBase;
+
+/// TensorBaseOp provides a base class for identifying tensor operator classes.
+///
+/// All Tensor operators/operations are required to derive from this class.
+/// They must include a type for the resulting tensor and one for the underlying
+/// primitive type:
+///
+///  typedef tensor_type;
+///  typedef value_type;
+///
+/// Tensor operators must also provide the following functions, similar to Tensors.
+///
+///  size_t Rank()
+struct TensorBaseOp {};
+
+// Tensor basic arithmetic operations
+template <template <size_t, typename> typename, size_t, typename, typename... > struct TensorAdd;
+
+/// is_tensor_op_v<_TensorOp> returns true if the template is derived from TensorOp
+template <typename _TensorOp>
+inline constexpr bool is_tensor_op_v = std::is_base_of_v<TensorBaseOp, std::remove_cvref_t<_TensorOp>>;
+
+
 /// Placeholder for specifying that a buffer allocation does not need to be initialized.
 template <typename> struct Uninitialized {};
 
-struct TensorBase;
 
-// Helper function that requires a tensor of any type
+// is_tensor_v returns true if the type is a tensor (derived from TensorBase)
 template <typename _Tensor>
 inline constexpr bool is_tensor_v = std::is_base_of_v<TensorBase, std::remove_cvref_t<_Tensor>>;
 
-
-// helper functions to identify if a Tensor is for a specific runtime
+// helper functions to identify if a Tensor or TensorOp is for a specific device
 template <typename, template <size_t, typename, auto...> typename>
-struct is_same_runtime : std::false_type {};
+struct is_same_device : std::false_type {};
 
 template <template <size_t, typename, auto...> typename _Tensor, size_t _Rank, typename _T, auto... _Args>
-struct is_same_runtime<_Tensor<_Rank, _T, _Args...>, _Tensor> : std::true_type {};
+struct is_same_device<_Tensor<_Rank, _T, _Args...>, _Tensor> : std::true_type {};
 
-template <typename _Tensor, template <size_t, typename, auto...> typename _TensorRT>
-inline constexpr bool is_same_runtime_v = is_same_runtime<std::remove_cvref_t<_Tensor>, _TensorRT>::value;
+template <template <template <size_t, typename, auto...> typename, size_t, typename, typename...> typename _TensorOp,
+          template <size_t, typename, auto...> typename _Tensor, size_t _Rank, typename _T, typename... _Tensors>
+struct is_same_device<_TensorOp<_Tensor, _Rank, _T, _Tensors...>, _Tensor> : std::true_type {};
+
+template <typename _Tensor, template <size_t, typename, auto...> typename _DeviceTensor>
+inline constexpr bool is_same_device_v = is_same_device<std::remove_cvref_t<_Tensor>, _DeviceTensor>::value;
 
 
-// Concept for requiring a TensorType
+// Concepts
 
-template <typename _Tensor> concept TensorType = is_tensor_v<_Tensor>;
+/// TensorFor<DEVICE> requires that the provided argument is a Tensor for the specific DEVICE.
+template <typename _Tensor, template <size_t, typename, auto...> typename _DeviceTensor>
+concept TensorFor = is_tensor_v<_Tensor> && is_same_device_v<_Tensor, _DeviceTensor>;
+
+/// AnyTensor requires that the provided argument is a Tensor
+template <typename _Tensor>
+concept AnyTensor = is_tensor_v<_Tensor>;
+
+/// TensorOpFor<DEVICE> requires that the provided argument is a TensorOp for the specific DEVICE.
+template <typename _TensorOp, template <size_t, typename, auto...> typename _DeviceTensor>
+concept TensorOpFor = is_tensor_op_v<_TensorOp> && is_same_device_v<_TensorOp, _DeviceTensor>;
+
+/// AnyTensorOp requires that the provided argument is a TensorOp
+template <typename _TensorOp>
+concept AnyTensorOp = is_tensor_op_v<_TensorOp>;
+
+/// ConvertibleTensorFor<DEVICE> requires that the provided argument can be converted to a Tensor
+/// for the specified DEVICE. Currently, these are Tensors and TensorOps.
+template <typename _Tensor, template <size_t, typename, auto...> typename _DeviceTensor>
+concept ConvertibleTensorFor = (is_tensor_v<_Tensor> || is_tensor_op_v<_Tensor>) && is_same_device_v<_Tensor, _DeviceTensor>;
+
+/// AnyConvertibleTensor requires that the provided argument can be converted to a Tensor.
+template <typename _Tensor>
+concept AnyConvertibleTensor = is_tensor_v<_Tensor> || is_tensor_op_v<_Tensor>;
+
+/// TensorRank<RANK> requires that the provided argument is a tensor of the rank RANK.
+template <typename _Tensor, size_t _Rank>
+concept TensorRank = (is_tensor_v<_Tensor> || is_tensor_op_v<_Tensor>) && _Tensor::Rank() == _Rank;
 
 
-/// TensorBase provides a base class for derived "runtime" tensor implementations with
+/// TensorBase provides a base class for derived "device" tensor implementations with
 /// optimizations specific to CPUs and accelerators.
 struct TensorBase
 {
   /// operator<< outputs the tensor buffer.
-  inline friend std::ostream& operator<<(std::ostream& os, const TensorType auto& tensor)
+  inline friend std::ostream& operator<<(std::ostream& os, const AnyTensor auto& tensor)
   {
     using value_type = std::remove_reference_t<decltype(tensor)>::value_type;
     constexpr size_t rank = tensor.Rank();
@@ -86,28 +139,11 @@ struct TensorBase
   }
 };
 
-// Concepts to require a tensor to be of a specific type and rank.
-
-template <typename _Tensor> concept TensorR0Type = is_tensor_v<_Tensor> && _Tensor::Rank() == 0;
-template <typename _Tensor> concept TensorR1Type = is_tensor_v<_Tensor> && _Tensor::Rank() == 1;
-template <typename _Tensor> concept TensorR2Type = is_tensor_v<_Tensor> && _Tensor::Rank() == 2;
-template <typename _Tensor> concept TensorR3Type = is_tensor_v<_Tensor> && _Tensor::Rank() == 3;
-
-
-/// TensorBaseOp provides a base class for identifying tensor operation classes.
-struct TensorBaseOp : TensorBase {};
-
-
-// Tensor basic arithmetic operations
-template <template <size_t, typename> typename, size_t, typename, typename... > struct TensorAdd;
-
-template <typename _TensorOp>
-inline constexpr bool is_tensor_op_v = std::is_base_of_v<TensorBaseOp, std::remove_cvref_t<_TensorOp>>;
 
 // Operator overloading
 
 // operator+ (TensorType, TensorType)
-template <TensorType _Tensor1, TensorType _Tensor2>
+template <AnyConvertibleTensor _Tensor1, AnyConvertibleTensor _Tensor2>
 auto operator+(_Tensor1&& tensor1, _Tensor2&& tensor2)
 {
   return TensorAdd(std::forward<_Tensor1>(tensor1), std::forward<_Tensor2>(tensor2));

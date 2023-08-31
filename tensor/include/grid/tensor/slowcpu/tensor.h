@@ -11,15 +11,18 @@
 
 #include <algorithm>
 #include <array>
+#include <cstring>
 #include <initializer_list>
 #include <numeric>
 
 namespace grid {
 
 /// TensorSlowCpu<_Rank, _T> is a specialization of TensorSlowCpu for a dynamically allocated buffer.
+/// Note that this is also the Tensor used for any TensorOp result.
 template <size_t _Rank, typename _T>
 struct TensorSlowCpu<_Rank, _T> : TensorBase
 {
+  using tensor_type = TensorSlowCpu<_Rank, _T>;
   using value_type = _T;
 
   /// Constructor for a rank-1 tensor (vector) with a dynamically allocated buffer without padding.
@@ -82,7 +85,7 @@ struct TensorSlowCpu<_Rank, _T> : TensorBase
       data_(new value_type[std::accumulate(std::begin(dim_), std::end(dim_), 1, std::multiplies<unsigned int>())])
   { }
 
-  /// ....
+  /// Constructor for any rank tensor with a dynamically allocated initialized buffer with strides.
   explicit TensorSlowCpu(std::initializer_list<unsigned int>&& dims,
                          std::initializer_list<unsigned int>&& strides,
                          value_type init)
@@ -95,14 +98,14 @@ struct TensorSlowCpu<_Rank, _T> : TensorBase
       data_[i] = init;
   }
 
+  /// Constructor for any rank tensor with a dynamically allocated uninitialized buffer with strides.
   explicit TensorSlowCpu(std::initializer_list<unsigned int>&& dims,
                          std::initializer_list<unsigned int>&& strides,
                          Uninitialized<value_type>)
     : dim_(get_array(std::move(dims))),
       stride_(get_array(std::move(strides))),
       data_(new value_type[std::accumulate(std::begin(stride_), std::end(stride_), 1, std::multiplies<unsigned int>())])
-  {
-  }
+  {}
 
 
   // Copy constructor
@@ -125,7 +128,6 @@ struct TensorSlowCpu<_Rank, _T> : TensorBase
   {
     other.data_ = nullptr;
   }
-
 
   /// Destructor
   ~TensorSlowCpu()                                { delete[] data_; }
@@ -155,6 +157,7 @@ struct TensorSlowCpu<_Rank, _T> : TensorBase
 template <typename _T, size_t _N>
 struct TensorSlowCpu<1, _T, _N> : TensorBase
 {
+  using tensor_type = TensorSlowCpu<1, _T, _N>;
   using value_type = _T;
 
   // helper function to initialize the std:array from an initializer list
@@ -196,6 +199,7 @@ struct TensorSlowCpu<1, _T, _N> : TensorBase
 template <typename _T, size_t _M, size_t _N>
 struct TensorSlowCpu<2, _T, _M, _N> : TensorBase
 {
+  using tensor_type = TensorSlowCpu<2, _T, _M, _N>;
   using value_type = _T;
 
   // helper function to initialize the std:array from an initializer list
@@ -265,26 +269,24 @@ explicit TensorSlowCpu(unsigned int, unsigned int, _T) -> TensorSlowCpu<2, _T>;
 template <typename _T>
 explicit TensorSlowCpu(unsigned int, unsigned int, Uninitialized<_T>) -> TensorSlowCpu<2, _T>;
 
-// Tensor ...with stride
+// Tensor(uint[], uint[]) -> Rank-N tensor with a dynamically allocated initialized buffer.
 template <typename _T, size_t _N>
 explicit TensorSlowCpu(unsigned int(&&d)[_N], unsigned int(&&s)[_N], _T) -> TensorSlowCpu<_N, _T>;
 
+// Tensor(uint[], uinit[]) -> Rank-N tensor with a dynamically allocated uninitialized buffer.
 template <typename _T, size_t _N>
 explicit TensorSlowCpu(unsigned int(&&d)[_N], unsigned int(&&s)[_N], Uninitialized<_T>) -> TensorSlowCpu<_N, _T>;
 
+// TensorOp -> Tensor (move)
+template <template <template <size_t, typename, auto...> typename, size_t, typename, typename...> typename _TensorOp,
+          template <size_t, typename, auto...> typename _TensorRT, size_t _Rank, typename _T, typename... _Tensors>
+TensorSlowCpu(_TensorOp<_TensorRT, _Rank, _T, _Tensors...>&&) -> TensorSlowCpu<_Rank, _T>;
 
-// Concepts for SlowCPU Tensors of different ranks.
+// TensorOp -> Tensor (copy)
+template <template <template <size_t, typename, auto...> typename, size_t, typename, typename...> typename _TensorOp,
+          template <size_t, typename, auto...> typename _TensorRT, size_t _Rank, typename _T, typename... _Tensors>
+TensorSlowCpu(const _TensorOp<_TensorRT, _Rank, _T, _Tensors...>&) -> TensorSlowCpu<_Rank, _T>;
 
-template <typename _Tensor> concept TensorSlowCpuType = is_same_runtime_v<_Tensor, TensorSlowCpu>;
-
-template <typename _Tensor>
-concept TensorSlowCpuR1Type = is_same_runtime_v<_Tensor, TensorSlowCpu> && _Tensor::Rank() == 1;
-template <typename _Tensor>
-concept TensorSlowCpuR2Type = is_same_runtime_v<_Tensor, TensorSlowCpu> && _Tensor::Rank() == 2;
-template <typename _Tensor>
-concept TensorSlowCpuR3Type = is_same_runtime_v<_Tensor, TensorSlowCpu> && _Tensor::Rank() == 3;
-template <typename _Tensor>
-concept TensorSlowCpuR4Type = is_same_runtime_v<_Tensor, TensorSlowCpu> && _Tensor::Rank() == 4;
 
 } // end of namespace grid
 
