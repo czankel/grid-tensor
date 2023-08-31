@@ -16,94 +16,6 @@
 
 namespace grid {
 
-/// TensorSlowCpu<1, _T, _N> is a specialization of a rank-1 tensor (vector) for a 'static' array.
-/// Note that the brace-initializer form of Tensors don't support padding.
-template <typename _T, size_t _N>
-struct TensorSlowCpu<1, _T, _N> : TensorBase
-{
-  using value_type = _T;
-
-  // helper function to initialize the std:array from an initializer list
-  constexpr std::array<value_type, _N> get_array(std::initializer_list<value_type>&& init)
-  {
-    std::array<value_type,_N> res;
-    std::copy(init.begin(), init.end(), res.begin());
-    return res;
-  }
-
-  /// Constructor for a rank-1 tensor (vector) with brace initialization.
-  explicit TensorSlowCpu(std::initializer_list<value_type>&& init)
-    : dim_(_N),
-      stride_(_N),
-      array_(get_array(std::move(init)))
-  {}
-
-  /// Rank returns the rank of the tensor.
-  constexpr static size_t Rank()                  { return 1UL; }
-
-  /// Dim returns the dimension for the rank.
-  unsigned int Dim(unsigned int index) const      { if (index > 1) throw std::out_of_range ("index");
-                                                    return dim_[index]; }
-  /// Dim returns the stride for the rank.
-  unsigned int Stride(unsigned int index) const   { if (index > 1) throw std::out_of_range ("index");
-                                                    return stride_[index]; }
-  /// Data returns a pointer to the data buffer.
-  const value_type* Data() const                  { return array_.data(); }
-
-
-  unsigned int dim_[1];
-  unsigned int stride_[1];
-  std::array<value_type, _N> array_;
-};
-
-
-/// TensorSlowCpu<_T, _M, _N> is a specialization of a rank-2 tensor (matrix) for a 'static' array.
-/// Note that the brace-initializer form of Tensors don't support padding.
-template <typename _T, size_t _M, size_t _N>
-struct TensorSlowCpu<2, _T, _M, _N> : TensorBase
-{
-  using value_type = _T;
-
-  // helper function to initialize the std:array from an initializer list
-  constexpr std::array<value_type, _M * _N>
-  get_array(std::initializer_list<std::initializer_list<value_type>>&& init)
-  {
-    std::array<value_type, _M * _N> res{};
-    auto line_it = res.begin();
-    for (auto it : init)
-    {
-      std::copy(it.begin(), it.end(), line_it);
-      line_it += _N;
-    }
-    return res;
-  }
-
-  /// Constructor for a rank-2 (matrix) brace initialization.
-  explicit TensorSlowCpu(std::initializer_list<std::initializer_list<value_type>>&& init)
-    : dim_(_M, _N),
-      stride_(_M, _N),
-      array_(get_array(std::move(init)))
-  {}
-
-  /// Rank returns the rank of the tensor.
-  constexpr static size_t Rank()                  { return 2UL; }
-
-  /// Dim returns the dimension of the rank.
-  unsigned int Dim(unsigned int index) const      { if (index > 2) throw std::out_of_range ("index");
-                                                    return dim_[index]; }
-  /// Dim returns the stride of the rank.
-  unsigned int Stride(unsigned int index) const   { if (index > 2) throw std::out_of_range ("index");
-                                                    return stride_[index]; }
-  /// Data returns a pointer to the data buffer.
-  const value_type* Data() const                  { return array_.data(); }
-
-
-  unsigned int dim_[2];
-  unsigned int stride_[2];
-  std::array<value_type, _M * _N> array_;
-};
-
-
 /// TensorSlowCpu<_Rank, _T> is a specialization of TensorSlowCpu for a dynamically allocated buffer.
 template <size_t _Rank, typename _T>
 struct TensorSlowCpu<_Rank, _T> : TensorBase
@@ -235,6 +147,94 @@ struct TensorSlowCpu<_Rank, _T> : TensorBase
   std::array<unsigned int, _Rank> dim_;
   std::array<unsigned int, _Rank> stride_;
   value_type* data_;
+};
+
+
+/// TensorSlowCpu<1, _T, _N> is a specialization of a rank-1 tensor (vector) for a 'static' array.
+/// Note that the brace-initializer form of Tensors don't support padding.
+template <typename _T, size_t _N>
+struct TensorSlowCpu<1, _T, _N> : TensorBase
+{
+  using value_type = _T;
+
+  // helper function to initialize the std:array from an initializer list
+  constexpr std::array<value_type, _N> get_array(std::initializer_list<value_type>&& init)
+  {
+    std::array<value_type,_N> res;
+    std::copy(init.begin(), init.end(), res.begin());
+    return res;
+  }
+
+  /// Constructor for a rank-1 tensor (vector) with brace initialization.
+  explicit TensorSlowCpu(std::initializer_list<value_type>&& init)
+    : dim_(_N),
+      stride_(_N),
+      array_(get_array(std::move(init)))
+  {}
+
+  /// Rank returns the rank of the tensor.
+  constexpr static size_t Rank()                  { return 1UL; }
+
+  /// Dim returns the dimension for the rank.
+  unsigned int Dim(unsigned int index) const      { if (index > 1) throw std::out_of_range ("index");
+                                                    return dim_[index]; }
+  /// Dim returns the stride for the rank.
+  unsigned int Stride(unsigned int index) const   { if (index > 1) throw std::out_of_range ("index");
+                                                    return stride_[index]; }
+  /// Data returns a pointer to the data buffer.
+  const value_type* Data() const                  { return array_.data(); }
+
+
+  unsigned int dim_[1];
+  unsigned int stride_[1];
+  std::array<value_type, _N> array_;
+};
+
+
+/// TensorSlowCpu<_T, _M, _N> is a specialization of a rank-2 tensor (matrix) for a 'static' array.
+/// Note that the brace-initializer form of Tensors don't support padding.
+template <typename _T, size_t _M, size_t _N>
+struct TensorSlowCpu<2, _T, _M, _N> : TensorBase
+{
+  using value_type = _T;
+
+  // helper function to initialize the std:array from an initializer list
+  constexpr std::array<value_type, _M * _N>
+  get_array(std::initializer_list<std::initializer_list<value_type>>&& init)
+  {
+    std::array<value_type, _M * _N> res{};
+    auto line_it = res.begin();
+    for (auto it : init)
+    {
+      std::copy(it.begin(), it.end(), line_it);
+      line_it += _N;
+    }
+    return res;
+  }
+
+  /// Constructor for a rank-2 (matrix) brace initialization.
+  explicit TensorSlowCpu(std::initializer_list<std::initializer_list<value_type>>&& init)
+    : dim_(_M, _N),
+      stride_(_M, _N),
+      array_(get_array(std::move(init)))
+  {}
+
+  /// Rank returns the rank of the tensor.
+  constexpr static size_t Rank()                  { return 2UL; }
+
+  /// Dim returns the dimension of the rank.
+  unsigned int Dim(unsigned int index) const      { if (index > 2) throw std::out_of_range ("index");
+                                                    return dim_[index]; }
+  /// Dim returns the stride of the rank.
+  unsigned int Stride(unsigned int index) const   { if (index > 2) throw std::out_of_range ("index");
+                                                    return stride_[index]; }
+  /// Data returns a pointer to the data buffer.
+  const value_type* Data() const                  { return array_.data(); }
+
+
+  unsigned int dim_[2];
+  unsigned int stride_[2];
+  std::array<value_type, _M * _N> array_;
 };
 
 
