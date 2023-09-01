@@ -104,3 +104,16 @@ TEST(TensorSlowCPU, TensorAdd)
   };
   EXPECT_EQ(res2, v2);
 }
+
+TEST(TensorSlowCPU, TensorAddAdd)
+{
+  Tensor t31(4U, 3U, 2.1);
+  Tensor t32(4U, 3U, 1.3);
+  Tensor t33(4U, 3U, 2.2);
+  Tensor v3{ { 5.6, 5.6, 5.6 }, { 5.6, 5.6, 5.6 }, { 5.6, 5.6, 5.6 }, { 5.6, 5.6, 5.6 }};
+
+  auto&& op31 = t31 + t32 + t33;
+  auto res3 = op31();
+  std::cout << res3 << std::endl;
+  EXPECT_EQ(res3, v3);
+}

@@ -129,6 +129,10 @@ struct TensorSlowCpu<_Rank, _T> : TensorBase
     other.data_ = nullptr;
   }
 
+  // Constructors for converting from a tensor operator.
+  template <TensorOpFor<TensorSlowCpu> Operator> TensorSlowCpu(Operator&& op) : TensorSlowCpu{std::move(op())} {}
+  template <TensorOpFor<TensorSlowCpu> Operator> TensorSlowCpu(const Operator& op) : TensorSlowCpu{op()} {}
+
   /// Destructor
   ~TensorSlowCpu()                                { delete[] data_; }
 
