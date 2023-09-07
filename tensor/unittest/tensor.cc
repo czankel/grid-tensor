@@ -30,10 +30,10 @@ TEST(TensorSlowCPU, ParameterizedConstructor)
   EXPECT_EQ(memcmp(t11.Data(), data, sizeof(data)), 0);
 
   // buffer allocation
-  Tensor t21i(4U, 1.2);
-  Tensor t21u(5U, grid::Uninitialized<double>{});
-  Tensor t22i(5U, 4U, (char)3);
-  Tensor t22u(7U, 3U, grid::Uninitialized<int>{});
+  Tensor t21i(4UL, 1.2);
+  Tensor t21u(5UL, grid::Uninitialized<double>{});
+  Tensor t22i(5UL, 4UL, (char)3);
+  Tensor t22u(7UL, 3UL, grid::Uninitialized<int>{});
 
   EXPECT_EQ(sizeof(*t22i.Data()), sizeof(char));
 
@@ -91,8 +91,8 @@ TEST(TensorSlowCPU, TensorAdd)
   auto res1b = op1b();
   EXPECT_EQ(memcmp(res1b.Data(), v1, sizeof(v1)), 0);
 
-  Tensor t21(4U, 5U, 1.1);
-  Tensor t22(4U, 5U, 2.4);
+  Tensor t21(4UL, 5UL, 1.1);
+  Tensor t22(4UL, 5UL, 2.4);
 
   auto op2 = std::move(t21) + std::move(t22);
   auto res2 = op2();
@@ -107,9 +107,9 @@ TEST(TensorSlowCPU, TensorAdd)
 
 TEST(TensorSlowCPU, TensorAddAdd)
 {
-  Tensor t31(4U, 3U, 2.1);
-  Tensor t32(4U, 3U, 1.3);
-  Tensor t33(4U, 3U, 2.2);
+  Tensor t31(4UL, 3UL, 2.1);
+  Tensor t32(4UL, 3UL, 1.3);
+  Tensor t33(4UL, 3UL, 2.2);
   Tensor v3{ { 5.6, 5.6, 5.6 }, { 5.6, 5.6, 5.6 }, { 5.6, 5.6, 5.6 }, { 5.6, 5.6, 5.6 }};
 
   auto&& op31 = t31 + t32 + t33;

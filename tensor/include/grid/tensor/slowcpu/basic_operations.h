@@ -29,10 +29,10 @@ bool operator==(_Tensor1&& tensor1, _Tensor2&& tensor2)
   if (rank != tensor2.Rank())
     return false;
 
-  const unsigned int dim0 = rank > 0 ? tensor1.Dim(0) : 1;
-  const unsigned int dim1 = rank > 1 ? tensor1.Dim(1) : 1;
-  const unsigned int dim2 = rank > 2 ? tensor1.Dim(2) : 1;
-  const unsigned int dim3 = rank > 3 ? tensor1.Dim(3) : 1;
+  const size_t dim0 = rank > 0 ? tensor1.Dim(0) : 1;
+  const size_t dim1 = rank > 1 ? tensor1.Dim(1) : 1;
+  const size_t dim2 = rank > 2 ? tensor1.Dim(2) : 1;
+  const size_t dim3 = rank > 3 ? tensor1.Dim(3) : 1;
 
   if ((rank > 0 && tensor2.Dim(0) != dim0) ||
       (rank > 1 && tensor2.Dim(1) != dim1) ||
@@ -41,20 +41,20 @@ bool operator==(_Tensor1&& tensor1, _Tensor2&& tensor2)
        rank > 4)
     return false;
 
-  const unsigned int stride1_0 = rank > 0 ? tensor1.Stride(0) : 1;
-  const unsigned int stride1_1 = rank > 1 ? tensor1.Stride(1) : 1;
-  const unsigned int stride1_2 = rank > 2 ? tensor1.Stride(2) : 1;
-  const unsigned int stride2_0 = rank > 0 ? tensor2.Stride(0) : 1;
-  const unsigned int stride2_1 = rank > 1 ? tensor2.Stride(1) : 1;
-  const unsigned int stride2_2 = rank > 2 ? tensor2.Stride(2) : 1;
+  const size_t stride1_0 = rank > 0 ? tensor1.Stride(0) : 1;
+  const size_t stride1_1 = rank > 1 ? tensor1.Stride(1) : 1;
+  const size_t stride1_2 = rank > 2 ? tensor1.Stride(2) : 1;
+  const size_t stride2_0 = rank > 0 ? tensor2.Stride(0) : 1;
+  const size_t stride2_1 = rank > 1 ? tensor2.Stride(1) : 1;
+  const size_t stride2_2 = rank > 2 ? tensor2.Stride(2) : 1;
 
   const value_type* data0 = tensor1.Data();
   const value_type* data1 = tensor2.Data();
 
-  for (unsigned int c = 0; c < dim3; c++)
-    for (unsigned int k = 0; k < dim2; k++)
-      for (unsigned int m = 0; m < dim1; m++)
-        for (unsigned int n = 0; n < dim0; n++)
+  for (size_t c = 0; c < dim3; c++)
+    for (size_t k = 0; k < dim2; k++)
+      for (size_t m = 0; m < dim1; m++)
+        for (size_t n = 0; n < dim0; n++)
           if (std::abs(data0[((((c * stride1_2) + k) * stride1_1 + m) * stride1_0 + n)] -
                        data1[(((c * stride2_2) + k) * stride2_1 + m) * stride2_0]) > max_abs_error)
             return  false;
@@ -118,7 +118,7 @@ struct TensorAdd<TensorSlowCpu, _T, _Rank, _Tensor1, _Tensor2> : TensorBaseOp //
     const value_type* data1 = tensor1_.Data();
     const value_type* data2 = tensor2_.Data();
 
-    auto res = TensorSlowCpu((unsigned int)dim_m, (unsigned int)dim_n, Uninitialized<value_type>{});
+    auto res = TensorSlowCpu(dim_m, dim_n, Uninitialized<value_type>{});
     value_type* sum = res.Data();
 
     // FIXME: handle stride
@@ -130,7 +130,7 @@ struct TensorAdd<TensorSlowCpu, _T, _Rank, _Tensor1, _Tensor2> : TensorBaseOp //
     auto& tensor1 = std::get<0>(tensors_);
     size_t dim_m = tensor1.Dim(0);
     size_t dim_n = tensor1.Dim(1);
-    auto res = TensorSlowCpu((unsigned int)dim_m, (unsigned int)dim_n, Uninitialized<value_type>{});
+    auto res = TensorSlowCpu(dim_m, dim_n, Uninitialized<value_type>{});
 #endif
     return res;
   }
