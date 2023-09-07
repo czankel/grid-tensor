@@ -11,8 +11,8 @@
 #include "gtest/gtest.h"
 
 
-template <size_t _Rank, typename _T, auto... _Args>
-using Tensor = grid::TensorSlowCpu<_Rank, _T, _Args...>;
+template <typename _T, size_t _Rank, auto... _Args>
+using Tensor = grid::TensorSlowCpu<_T, _Rank, _Args...>;
 
 TEST(TensorSlowCPU, ParameterizedConstructor)
 {

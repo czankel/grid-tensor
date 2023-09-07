@@ -33,7 +33,8 @@ struct TensorBase;
 struct TensorBaseOp {};
 
 // Tensor basic arithmetic operations
-template <template <size_t, typename> typename, size_t, typename, typename... > struct TensorAdd;
+template <template <typename, size_t> typename, typename, size_t, typename... > struct TensorAdd;
+
 
 /// is_tensor_op_v<_TensorOp> returns true if the template is derived from TensorOp
 template <typename _TensorOp>
@@ -43,30 +44,29 @@ inline constexpr bool is_tensor_op_v = std::is_base_of_v<TensorBaseOp, std::remo
 /// Placeholder for specifying that a buffer allocation does not need to be initialized.
 template <typename> struct Uninitialized {};
 
-
 // is_tensor_v returns true if the type is a tensor (derived from TensorBase)
 template <typename _Tensor>
 inline constexpr bool is_tensor_v = std::is_base_of_v<TensorBase, std::remove_cvref_t<_Tensor>>;
 
 // helper functions to identify if a Tensor or TensorOp is for a specific device
-template <typename, template <size_t, typename, auto...> typename>
+template <typename, template <typename, size_t, auto...> typename>
 struct is_same_device : std::false_type {};
 
-template <template <size_t, typename, auto...> typename _Tensor, size_t _Rank, typename _T, auto... _Args>
-struct is_same_device<_Tensor<_Rank, _T, _Args...>, _Tensor> : std::true_type {};
+template <template <typename, size_t, auto...> typename _Tensor, typename _T, size_t _Rank, auto... _Args>
+struct is_same_device<_Tensor<_T, _Rank, _Args...>, _Tensor> : std::true_type {};
 
-template <template <template <size_t, typename, auto...> typename, size_t, typename, typename...> typename _TensorOp,
-          template <size_t, typename, auto...> typename _Tensor, size_t _Rank, typename _T, typename... _Tensors>
-struct is_same_device<_TensorOp<_Tensor, _Rank, _T, _Tensors...>, _Tensor> : std::true_type {};
+template <template <template <typename, size_t, auto...> typename, typename, size_t, typename...> typename _TensorOp,
+          template <typename, size_t, auto...> typename _Tensor, size_t _Rank, typename _T, typename... _Tensors>
+struct is_same_device<_TensorOp<_Tensor, _T, _Rank, _Tensors...>, _Tensor> : std::true_type {};
 
-template <typename _Tensor, template <size_t, typename, auto...> typename _DeviceTensor>
+template <typename _Tensor, template <typename, size_t, auto...> typename _DeviceTensor>
 inline constexpr bool is_same_device_v = is_same_device<std::remove_cvref_t<_Tensor>, _DeviceTensor>::value;
 
 
 // Concepts
 
 /// TensorFor<DEVICE> requires that the provided argument is a Tensor for the specific DEVICE.
-template <typename _Tensor, template <size_t, typename, auto...> typename _DeviceTensor>
+template <typename _Tensor, template <typename, size_t, auto...> typename _DeviceTensor>
 concept TensorFor = is_tensor_v<_Tensor> && is_same_device_v<_Tensor, _DeviceTensor>;
 
 /// AnyTensor requires that the provided argument is a Tensor
@@ -74,7 +74,7 @@ template <typename _Tensor>
 concept AnyTensor = is_tensor_v<_Tensor>;
 
 /// TensorOpFor<DEVICE> requires that the provided argument is a TensorOp for the specific DEVICE.
-template <typename _TensorOp, template <size_t, typename, auto...> typename _DeviceTensor>
+template <typename _TensorOp, template <typename, size_t, auto...> typename _DeviceTensor>
 concept TensorOpFor = is_tensor_op_v<_TensorOp> && is_same_device_v<_TensorOp, _DeviceTensor>;
 
 /// AnyTensorOp requires that the provided argument is a TensorOp
@@ -83,7 +83,7 @@ concept AnyTensorOp = is_tensor_op_v<_TensorOp>;
 
 /// ConvertibleTensorFor<DEVICE> requires that the provided argument can be converted to a Tensor
 /// for the specified DEVICE. Currently, these are Tensors and TensorOps.
-template <typename _Tensor, template <size_t, typename, auto...> typename _DeviceTensor>
+template <typename _Tensor, template <typename, size_t, auto...> typename _DeviceTensor>
 concept ConvertibleTensorFor = (is_tensor_v<_Tensor> || is_tensor_op_v<_Tensor>) && is_same_device_v<_Tensor, _DeviceTensor>;
 
 /// AnyConvertibleTensor requires that the provided argument can be converted to a Tensor.

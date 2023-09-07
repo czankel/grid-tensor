@@ -17,12 +17,12 @@
 
 namespace grid {
 
-/// TensorSlowCpu<_Rank, _T> is a specialization of TensorSlowCpu for a dynamically allocated buffer.
+/// TensorSlowCpu<_T, _Rank> is a specialization of TensorSlowCpu for a dynamically allocated buffer.
 /// Note that this is also the Tensor used for any TensorOp result.
-template <size_t _Rank, typename _T>
-struct TensorSlowCpu<_Rank, _T> : TensorBase
+template <typename _T, size_t _Rank>
+struct TensorSlowCpu<_T, _Rank> : TensorBase
 {
-  using tensor_type = TensorSlowCpu<_Rank, _T>;
+  using tensor_type = TensorSlowCpu<_T, _Rank>;
   using value_type = _T;
 
   /// Constructor for a rank-1 tensor (vector) with a dynamically allocated buffer without padding.
@@ -156,12 +156,12 @@ struct TensorSlowCpu<_Rank, _T> : TensorBase
 };
 
 
-/// TensorSlowCpu<1, _T, _N> is a specialization of a rank-1 tensor (vector) for a 'static' array.
+/// TensorSlowCpu<_T, 1, _N> is a specialization of a rank-1 tensor (vector) for a 'static' array.
 /// Note that the brace-initializer form of Tensors don't support padding.
 template <typename _T, size_t _N>
-struct TensorSlowCpu<1, _T, _N> : TensorBase
+struct TensorSlowCpu<_T, 1, _N> : TensorBase
 {
-  using tensor_type = TensorSlowCpu<1, _T, _N>;
+  using tensor_type = TensorSlowCpu<_T, 1, _N>;
   using value_type = _T;
 
   // helper function to initialize the std:array from an initializer list
@@ -201,9 +201,9 @@ struct TensorSlowCpu<1, _T, _N> : TensorBase
 /// TensorSlowCpu<_T, _M, _N> is a specialization of a rank-2 tensor (matrix) for a 'static' array.
 /// Note that the brace-initializer form of Tensors don't support padding.
 template <typename _T, size_t _M, size_t _N>
-struct TensorSlowCpu<2, _T, _M, _N> : TensorBase
+struct TensorSlowCpu<_T, 2, _M, _N> : TensorBase
 {
-  using tensor_type = TensorSlowCpu<2, _T, _M, _N>;
+  using tensor_type = TensorSlowCpu<_T, 2, _M, _N>;
   using value_type = _T;
 
   // helper function to initialize the std:array from an initializer list
@@ -250,46 +250,46 @@ struct TensorSlowCpu<2, _T, _M, _N> : TensorBase
 
 // Tensor{Ts...} -> Rank-1 tensor with a static/local array (brace-initializer).
 template <typename _T, typename... _Ts>
-explicit TensorSlowCpu(_T, _Ts...) -> TensorSlowCpu<1, std::common_type_t<_T, _Ts...>, sizeof...(_Ts)+1>;
+explicit TensorSlowCpu(_T, _Ts...) -> TensorSlowCpu<std::common_type_t<_T, _Ts...>, 1, sizeof...(_Ts)+1>;
 
 // Tensor{{...},...} -> Rank-2 tensor with a static/local array (brace-initializer).
 template <typename _T, size_t... _N>
-TensorSlowCpu(_T(&&... l)[_N]) -> TensorSlowCpu<2, _T, sizeof...(_N), std::max({_N...})>;
+TensorSlowCpu(_T(&&... l)[_N]) -> TensorSlowCpu<_T, 2, sizeof...(_N), std::max({_N...})>;
 
 
 // Tensor(uint, _T) -> Rank-1 tensor with a dynamically allocated buffer.
 template <typename _T>
-explicit TensorSlowCpu(unsigned int, _T) -> TensorSlowCpu<1, _T>;
+explicit TensorSlowCpu(unsigned int, _T) -> TensorSlowCpu<_T, 1>;
 
 // Tensor(uint, Uninitialized<T>) -> Rank-1 tensor with a dynamically allocated uninitialized buffer.
 template <typename _T>
-explicit TensorSlowCpu(unsigned int, Uninitialized<_T>) -> TensorSlowCpu<1, _T>;
+explicit TensorSlowCpu(unsigned int, Uninitialized<_T>) -> TensorSlowCpu<_T, 1>;
 
 // Tensor(uint, uint, _T) -> Rank-2 tensor with a dynamically allocated buffer.
 template <typename _T>
-explicit TensorSlowCpu(unsigned int, unsigned int, _T) -> TensorSlowCpu<2, _T>;
+explicit TensorSlowCpu(unsigned int, unsigned int, _T) -> TensorSlowCpu<_T, 2>;
 
 // Tensor(uint, Uninitialized<T>) -> Rank-2 tensor with a dynamically allocated uninitialized buffer.
 template <typename _T>
-explicit TensorSlowCpu(unsigned int, unsigned int, Uninitialized<_T>) -> TensorSlowCpu<2, _T>;
+explicit TensorSlowCpu(unsigned int, unsigned int, Uninitialized<_T>) -> TensorSlowCpu<_T, 2>;
 
 // Tensor(uint[], uint[]) -> Rank-N tensor with a dynamically allocated initialized buffer.
 template <typename _T, size_t _N>
-explicit TensorSlowCpu(unsigned int(&&d)[_N], unsigned int(&&s)[_N], _T) -> TensorSlowCpu<_N, _T>;
+explicit TensorSlowCpu(unsigned int(&&d)[_N], unsigned int(&&s)[_N], _T) -> TensorSlowCpu<_T, _N>;
 
 // Tensor(uint[], uinit[]) -> Rank-N tensor with a dynamically allocated uninitialized buffer.
 template <typename _T, size_t _N>
-explicit TensorSlowCpu(unsigned int(&&d)[_N], unsigned int(&&s)[_N], Uninitialized<_T>) -> TensorSlowCpu<_N, _T>;
+explicit TensorSlowCpu(unsigned int(&&d)[_N], unsigned int(&&s)[_N], Uninitialized<_T>) -> TensorSlowCpu<_T, _N>;
 
 // TensorOp -> Tensor (move)
-template <template <template <size_t, typename, auto...> typename, size_t, typename, typename...> typename _TensorOp,
-          template <size_t, typename, auto...> typename _TensorRT, size_t _Rank, typename _T, typename... _Tensors>
-TensorSlowCpu(_TensorOp<_TensorRT, _Rank, _T, _Tensors...>&&) -> TensorSlowCpu<_Rank, _T>;
+template <template <template <typename, size_t, auto...> typename, typename, size_t, typename...> typename _TensorOp,
+          template <typename, size_t, auto...> typename _TensorRT, typename _T, size_t _Rank, typename... _Tensors>
+TensorSlowCpu(_TensorOp<_TensorRT, _T, _Rank, _Tensors...>&&) -> TensorSlowCpu<_T, _Rank>;
 
 // TensorOp -> Tensor (copy)
-template <template <template <size_t, typename, auto...> typename, size_t, typename, typename...> typename _TensorOp,
-          template <size_t, typename, auto...> typename _TensorRT, size_t _Rank, typename _T, typename... _Tensors>
-TensorSlowCpu(const _TensorOp<_TensorRT, _Rank, _T, _Tensors...>&) -> TensorSlowCpu<_Rank, _T>;
+template <template <template <typename, size_t, auto...> typename, typename, size_t, typename...> typename _TensorOp,
+          template <typename, size_t, auto...> typename _TensorRT, typename _T, size_t _Rank, typename... _Tensors>
+TensorSlowCpu(const _TensorOp<_TensorRT,_T,  _Rank, _Tensors...>&) -> TensorSlowCpu<_T, _Rank>;
 
 
 } // end of namespace grid

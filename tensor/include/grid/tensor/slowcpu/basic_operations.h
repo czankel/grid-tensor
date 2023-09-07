@@ -64,11 +64,11 @@ bool operator==(_Tensor1&& tensor1, _Tensor2&& tensor2)
 
 
 /// TensorAdd<TensorSlowCpu> implements tensor addition operation for tensors of the same rank.
-template <size_t _Rank, typename _T, TensorFor<TensorSlowCpu> _Tensor1, TensorFor<TensorSlowCpu> _Tensor2>
-struct TensorAdd<TensorSlowCpu, _Rank, _T, _Tensor1, _Tensor2> : TensorBaseOp //<_Tensor1>
+template <typename _T, size_t _Rank, TensorFor<TensorSlowCpu> _Tensor1, TensorFor<TensorSlowCpu> _Tensor2>
+struct TensorAdd<TensorSlowCpu, _T, _Rank, _Tensor1, _Tensor2> : TensorBaseOp //<_Tensor1>
 {
   constexpr static size_t Rank()                  { return _Rank; }
-  using tensor_type = TensorSlowCpu<_Rank, _T>;
+  using tensor_type = TensorSlowCpu<_T, _Rank>;
   using value_type = _T;
 
   template <ConvertibleTensorFor<TensorSlowCpu> T1, ConvertibleTensorFor<TensorSlowCpu> T2>
@@ -183,7 +183,7 @@ struct TensorAdd<TensorSlowCpu, _Rank, _T, _Tensor1, _Tensor2> : TensorBaseOp //
 
 template <ConvertibleTensorFor<TensorSlowCpu> _Tensor1, ConvertibleTensorFor<TensorSlowCpu> _Tensor2>
 TensorAdd(_Tensor1, _Tensor2)
-  -> TensorAdd<TensorSlowCpu, _Tensor1::Rank(), typename _Tensor1::value_type,
+  -> TensorAdd<TensorSlowCpu, typename _Tensor2::value_type, _Tensor1::Rank(),
                typename _Tensor1::tensor_type, typename _Tensor2::tensor_type>;
 
 } // end of namespace grid

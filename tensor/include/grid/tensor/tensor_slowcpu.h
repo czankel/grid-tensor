@@ -19,7 +19,7 @@
 namespace grid {
 
 /// TensorSlowCpu is an unoptimized tensor implementatoin for the CPU.
-template <size_t, typename _T, auto...> struct TensorSlowCpu;
+template <typename, size_t, auto...> struct TensorSlowCpu;
 
 } // end of namespace grid
 
