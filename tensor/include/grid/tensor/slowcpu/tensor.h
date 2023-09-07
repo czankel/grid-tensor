@@ -99,6 +99,24 @@ struct TensorSlowCpu<_T, _Rank> : TensorBase
       data_(new value_type[std::accumulate(std::begin(stride_), std::end(stride_), 1, std::multiplies<size_t>())])
   {}
 
+  /// Constructor for any rank tensor with a dynamically allocated initialized buffer
+  explicit TensorSlowCpu(const size_t(&dim)[_Rank], const size_t(&stride)[_Rank], value_type init)
+    : dim_(get_array<size_t, _Rank>(dim)),
+      stride_(get_array<size_t, _Rank>(stride)),
+      data_(new value_type[std::accumulate(std::begin(stride_), std::end(stride_), 1, std::multiplies<size_t>())])
+  {
+    size_t count = std::accumulate(std::begin(stride_), std::end(stride_), 1, std::multiplies<size_t>());
+    for (size_t i = 0; i < count; i++)
+      data_[i] = init;
+  }
+
+  /// Constructor for any rank tensor with a dynamically allocated uninitialized buffer
+  explicit TensorSlowCpu(const size_t(&dim)[_Rank], const size_t(&stride)[_Rank], Uninitialized<_T>)
+    : dim_(get_array<size_t, _Rank>(dim)),
+      stride_(get_array<size_t, _Rank>(stride)),
+      data_(new value_type[std::accumulate(std::begin(stride_), std::end(stride_), 1, std::multiplies<size_t>())])
+  {}
+
 
   // Copy constructor
   // TODO: simple copy; implement reference counted buffers
@@ -243,13 +261,23 @@ explicit TensorSlowCpu(size_t, size_t, _T) -> TensorSlowCpu<_T, 2>;
 template <typename _T>
 explicit TensorSlowCpu(size_t, size_t, Uninitialized<_T>) -> TensorSlowCpu<_T, 2>;
 
-// Tensor(uint[], uint[]) -> Rank-N tensor with a dynamically allocated initialized buffer.
-template <typename _T, size_t _N>
-explicit TensorSlowCpu(size_t(&&d)[_N], size_t(&&s)[_N], _T) -> TensorSlowCpu<_T, _N>;
 
-// Tensor(uint[], uinit[]) -> Rank-N tensor with a dynamically allocated uninitialized buffer.
+// Tensor(&[], &[], T) -> Rank-N tensor with a dynamically allocated initialized buffer.
 template <typename _T, size_t _N>
-explicit TensorSlowCpu(size_t(&&d)[_N], size_t(&&s)[_N], Uninitialized<_T>) -> TensorSlowCpu<_T, _N>;
+explicit TensorSlowCpu(const size_t(&)[_N], const size_t(&)[_N], _T) -> TensorSlowCpu<_T, _N>;
+
+// Tensor(&[], &[], Uninitialized<T>) -> Rank-N tensor with a dynamically allocated uninitialized buffer.
+template <typename _T, size_t _N>
+explicit TensorSlowCpu(const size_t(&)[_N], const size_t(&)[_N], Uninitialized<_T>) -> TensorSlowCpu<_T, _N>;
+
+// Tensor(&&[], &&[], _T) -> Rank-N tensor with a dynamically allocated initialized buffer.
+template <typename _T, size_t _N>
+explicit TensorSlowCpu(size_t(&&)[_N], size_t(&&)[_N], _T) -> TensorSlowCpu<_T, _N>;
+
+// Tensor(&&[], &&[]) -> Rank-N tensor with a dynamically allocated uninitialized buffer.
+template <typename _T, size_t _N>
+explicit TensorSlowCpu(size_t(&&)[_N], size_t(&&)[_N], Uninitialized<_T>) -> TensorSlowCpu<_T, _N>;
+
 
 // TensorOp -> Tensor (move)
 template <template <template <typename, size_t, auto...> typename, typename, size_t, typename...> typename _TensorOp,

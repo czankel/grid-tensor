@@ -154,6 +154,25 @@ get_array(std::initializer_list<std::initializer_list<_T>>&& init)
   return arr;
 }
 
+template <typename _T, size_t _N>
+inline constexpr std::array<_T, _N>
+get_array(const _T(&init)[_N])
+{
+  std::array<_T, _N> arr{};
+  std::copy(std::begin(init), std::end(init), arr.begin());
+  return arr;
+}
+
+template <typename _T, size_t _N>
+inline constexpr std::array<_T, _N>
+get_array(_T(&&init)[_N])
+{
+  std::array<_T, _N> arr{};
+  std::copy(std::begin(init), std::end(init), arr.begin());
+  return arr;
+}
+
+
 } // end of namespace grid
 
 #endif  // GRID_TENSOR_TENSOR_H
