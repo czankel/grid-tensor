@@ -58,17 +58,9 @@ struct TensorSlowCpu<_T, _Rank> : TensorBase
     data_(new value_type[dim_m * dim_n])
   {}
 
-  // helper function to extra brace-initializer list
-  constexpr std::array<size_t, _Rank> get_array(std::initializer_list<size_t>&& dim)
-  {
-    std::array<size_t, _Rank> res;
-    std::copy(dim.begin(), dim.end(), res.begin());
-    return res;
-  }
-
   /// Constructor for any rank tensor with a dynamically allocated initialized buffer
   explicit TensorSlowCpu(std::initializer_list<size_t>&& dims, value_type init)
-    : dim_(get_array(std::move(dims))),
+    : dim_(get_array<size_t, _Rank>(std::move(dims))),
       stride_(dim_),
       data_(new value_type[std::accumulate(std::begin(dim_), std::end(dim_), 1, std::multiplies<size_t>())])
   {
@@ -80,7 +72,7 @@ struct TensorSlowCpu<_T, _Rank> : TensorBase
 
   /// Constructor for any rank tensor with a dynamically allocated initialized buffer
   explicit TensorSlowCpu(std::initializer_list<size_t>&& dims, Uninitialized<value_type>)
-    : dim_(get_array(std::move(dims))),
+    : dim_(get_array<size_t, _Rank>(std::move(dims))),
       stride_(dim_),
       data_(new value_type[std::accumulate(std::begin(dim_), std::end(dim_), 1, std::multiplies<size_t>())])
   { }
@@ -89,8 +81,8 @@ struct TensorSlowCpu<_T, _Rank> : TensorBase
   explicit TensorSlowCpu(std::initializer_list<size_t>&& dims,
                          std::initializer_list<size_t>&& strides,
                          value_type init)
-    : dim_(get_array(std::move(dims))),
-      stride_(get_array(std::move(strides))),
+    : dim_(get_array<size_t, _Rank>(std::move(dims))),
+      stride_(get_array<size_t, _Rank>(std::move(strides))),
       data_(new value_type[std::accumulate(std::begin(stride_), std::end(stride_), 1, std::multiplies<size_t>())])
   {
     size_t count = std::accumulate(std::begin(stride_), std::end(stride_), 1, std::multiplies<size_t>());
@@ -102,8 +94,8 @@ struct TensorSlowCpu<_T, _Rank> : TensorBase
   explicit TensorSlowCpu(std::initializer_list<size_t>&& dims,
                          std::initializer_list<size_t>&& strides,
                          Uninitialized<value_type>)
-    : dim_(get_array(std::move(dims))),
-      stride_(get_array(std::move(strides))),
+    : dim_(get_array<size_t, _Rank>(std::move(dims))),
+      stride_(get_array<size_t, _Rank>(std::move(strides))),
       data_(new value_type[std::accumulate(std::begin(stride_), std::end(stride_), 1, std::multiplies<size_t>())])
   {}
 
@@ -164,19 +156,11 @@ struct TensorSlowCpu<_T, 1, _N> : TensorBase
   using tensor_type = TensorSlowCpu<_T, 1, _N>;
   using value_type = _T;
 
-  // helper function to initialize the std:array from an initializer list
-  constexpr std::array<value_type, _N> get_array(std::initializer_list<value_type>&& init)
-  {
-    std::array<value_type,_N> res;
-    std::copy(init.begin(), init.end(), res.begin());
-    return res;
-  }
-
   /// Constructor for a rank-1 tensor (vector) with brace initialization.
   explicit TensorSlowCpu(std::initializer_list<value_type>&& init)
     : dim_(_N),
       stride_(_N),
-      array_(get_array(std::move(init)))
+      array_(get_array<_T, _N>(std::move(init)))
   {}
 
   /// Rank returns the rank of the tensor.
@@ -206,25 +190,11 @@ struct TensorSlowCpu<_T, 2, _M, _N> : TensorBase
   using tensor_type = TensorSlowCpu<_T, 2, _M, _N>;
   using value_type = _T;
 
-  // helper function to initialize the std:array from an initializer list
-  constexpr std::array<value_type, _M * _N>
-  get_array(std::initializer_list<std::initializer_list<value_type>>&& init)
-  {
-    std::array<value_type, _M * _N> res{};
-    auto line_it = res.begin();
-    for (auto it : init)
-    {
-      std::copy(it.begin(), it.end(), line_it);
-      line_it += _N;
-    }
-    return res;
-  }
-
   /// Constructor for a rank-2 (matrix) brace initialization.
   explicit TensorSlowCpu(std::initializer_list<std::initializer_list<value_type>>&& init)
     : dim_(_M, _N),
       stride_(_M, _N),
-      array_(get_array(std::move(init)))
+      array_(get_array<_T, _M, _N>(std::move(init)))
   {}
 
   /// Rank returns the rank of the tensor.

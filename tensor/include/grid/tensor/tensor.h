@@ -150,6 +150,31 @@ auto operator+(_Tensor1&& tensor1, _Tensor2&& tensor2)
 }
 
 
+// helper function to extra brace-initializer list
+template <typename _T, size_t _Count>
+inline constexpr std::array<_T, _Count>
+get_array(std::initializer_list<_T>&& init)
+{
+  std::array<_T, _Count> arr;
+  std::copy(init.begin(), init.end(), arr.begin());
+  return arr;
+}
+
+// helper function to initialize the std:array from an initializer list
+template <typename _T, size_t _M, size_t _N>
+inline constexpr std::array<_T, _M * _N>
+get_array(std::initializer_list<std::initializer_list<_T>>&& init)
+{
+  std::array<_T, _M * _N> arr{};
+  auto line_it = arr.begin();
+  for (auto it : init)
+  {
+    std::copy(it.begin(), it.end(), line_it);
+    line_it += _N;
+  }
+  return arr;
+}
+
 } // end of namespace grid
 
 #endif  // GRID_TENSOR_TENSOR_H
