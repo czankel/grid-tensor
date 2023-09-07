@@ -33,7 +33,7 @@ struct TensorBase;
 struct TensorBaseOp {};
 
 // Tensor basic arithmetic operations
-template <template <typename, size_t> typename, typename, size_t, typename... > struct TensorAdd;
+template <template <typename, size_t, auto...> typename, typename, size_t, typename... > struct TensorAdd;
 
 
 /// is_tensor_op_v<_TensorOp> returns true if the template is derived from TensorOp
