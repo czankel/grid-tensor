@@ -28,43 +28,43 @@ struct TensorSlowCpu<_T, _Rank> : TensorBase
   /// Constructor for a rank-1 tensor (vector) with a dynamically allocated buffer without padding.
   // TODO: initializes entire data buffer based on stride dimensions
   explicit TensorSlowCpu(size_t dim, value_type init)
-    : dim_{dim}, stride_{dim}, data_(new value_type[dim])
+    : dims_{dim}, strides_{dim}, data_(new value_type[dim])
   {
-    size_t count = std::accumulate(std::begin(stride_), std::end(stride_), 1, std::multiplies<size_t>());
+    size_t count = std::accumulate(std::begin(strides_), std::end(strides_), 1, std::multiplies<size_t>());
     for (size_t i = 0; i < count; i++)
       data_[i] = init;
   }
 
   /// Constructor for a rank-1 tensor (vector) with a dynamically allocated uninitialized buffer.
   explicit TensorSlowCpu(size_t dim, Uninitialized<value_type>)
-    : dim_{dim}, stride_{dim}, data_(new value_type[dim])
+    : dims_{dim}, strides_{dim}, data_(new value_type[dim])
   {}
 
   /// Constructor for a rank-2 tensor (matrix) with a dynamically allocated buffer and no padding.
   explicit TensorSlowCpu(size_t dim_m, int dim_n, value_type init)
-    : dim_{dim_m, dim_n},
-      stride_{dim_m, dim_n},
+    : dims_{dim_m, dim_n},
+      strides_{dim_m, dim_n},
       data_(new value_type[dim_m * dim_n])
   {
-    size_t count = std::accumulate(std::begin(stride_), std::end(stride_), 1, std::multiplies<size_t>());
+    size_t count = std::accumulate(std::begin(strides_), std::end(strides_), 1, std::multiplies<size_t>());
     for (size_t i = 0; i < count; i++)
       data_[i] = init;
   }
 
   /// Constructor for a rank-2 tensor (matrix) with a dynamically allocated uninitialized buffer.
   explicit TensorSlowCpu(size_t dim_m, int dim_n, Uninitialized<value_type>)
-  : dim_{dim_m, dim_n},
-    stride_{dim_m, dim_n},
+  : dims_{dim_m, dim_n},
+    strides_{dim_m, dim_n},
     data_(new value_type[dim_m * dim_n])
   {}
 
   /// Constructor for any rank tensor with a dynamically allocated initialized buffer
   explicit TensorSlowCpu(std::initializer_list<size_t>&& dims, value_type init)
-    : dim_(get_array<size_t, _Rank>(std::move(dims))),
-      stride_(dim_),
-      data_(new value_type[std::accumulate(std::begin(dim_), std::end(dim_), 1, std::multiplies<size_t>())])
+    : dims_(get_array<size_t, _Rank>(std::move(dims))),
+      strides_(dims_),
+      data_(new value_type[std::accumulate(std::begin(dims_), std::end(dims_), 1, std::multiplies<size_t>())])
   {
-    size_t count = std::accumulate(std::begin(dim_), std::end(dim_), 1, std::multiplies<size_t>());
+    size_t count = std::accumulate(std::begin(dims_), std::end(dims_), 1, std::multiplies<size_t>());
     for (size_t i = 0; i < count; i++)
       data_[i] = init;
   }
@@ -72,20 +72,20 @@ struct TensorSlowCpu<_T, _Rank> : TensorBase
 
   /// Constructor for any rank tensor with a dynamically allocated initialized buffer
   explicit TensorSlowCpu(std::initializer_list<size_t>&& dims, Uninitialized<value_type>)
-    : dim_(get_array<size_t, _Rank>(std::move(dims))),
-      stride_(dim_),
-      data_(new value_type[std::accumulate(std::begin(dim_), std::end(dim_), 1, std::multiplies<size_t>())])
+    : dims_(get_array<size_t, _Rank>(std::move(dims))),
+      strides_(dims_),
+      data_(new value_type[std::accumulate(std::begin(dims_), std::end(dims_), 1, std::multiplies<size_t>())])
   { }
 
   /// Constructor for any rank tensor with a dynamically allocated initialized buffer with strides.
   explicit TensorSlowCpu(std::initializer_list<size_t>&& dims,
                          std::initializer_list<size_t>&& strides,
                          value_type init)
-    : dim_(get_array<size_t, _Rank>(std::move(dims))),
-      stride_(get_array<size_t, _Rank>(std::move(strides))),
-      data_(new value_type[std::accumulate(std::begin(stride_), std::end(stride_), 1, std::multiplies<size_t>())])
+    : dims_(get_array<size_t, _Rank>(std::move(dims))),
+      strides_(get_array<size_t, _Rank>(std::move(strides))),
+      data_(new value_type[std::accumulate(std::begin(strides_), std::end(strides_), 1, std::multiplies<size_t>())])
   {
-    size_t count = std::accumulate(std::begin(stride_), std::end(stride_), 1, std::multiplies<size_t>());
+    size_t count = std::accumulate(std::begin(strides_), std::end(strides_), 1, std::multiplies<size_t>());
     for (size_t i = 0; i < count; i++)
       data_[i] = init;
   }
@@ -94,46 +94,46 @@ struct TensorSlowCpu<_T, _Rank> : TensorBase
   explicit TensorSlowCpu(std::initializer_list<size_t>&& dims,
                          std::initializer_list<size_t>&& strides,
                          Uninitialized<value_type>)
-    : dim_(get_array<size_t, _Rank>(std::move(dims))),
-      stride_(get_array<size_t, _Rank>(std::move(strides))),
-      data_(new value_type[std::accumulate(std::begin(stride_), std::end(stride_), 1, std::multiplies<size_t>())])
+    : dims_(get_array<size_t, _Rank>(std::move(dims))),
+      strides_(get_array<size_t, _Rank>(std::move(strides))),
+      data_(new value_type[std::accumulate(std::begin(strides_), std::end(strides_), 1, std::multiplies<size_t>())])
   {}
 
   /// Constructor for any rank tensor with a dynamically allocated initialized buffer
   explicit TensorSlowCpu(const size_t(&dim)[_Rank], const size_t(&stride)[_Rank], value_type init)
-    : dim_(get_array<size_t, _Rank>(dim)),
-      stride_(get_array<size_t, _Rank>(stride)),
-      data_(new value_type[std::accumulate(std::begin(stride_), std::end(stride_), 1, std::multiplies<size_t>())])
+    : dims_(get_array<size_t, _Rank>(dim)),
+      strides_(get_array<size_t, _Rank>(stride)),
+      data_(new value_type[std::accumulate(std::begin(strides_), std::end(strides_), 1, std::multiplies<size_t>())])
   {
-    size_t count = std::accumulate(std::begin(stride_), std::end(stride_), 1, std::multiplies<size_t>());
+    size_t count = std::accumulate(std::begin(strides_), std::end(strides_), 1, std::multiplies<size_t>());
     for (size_t i = 0; i < count; i++)
       data_[i] = init;
   }
 
   /// Constructor for any rank tensor with a dynamically allocated uninitialized buffer
   explicit TensorSlowCpu(const size_t(&dim)[_Rank], const size_t(&stride)[_Rank], Uninitialized<_T>)
-    : dim_(get_array<size_t, _Rank>(dim)),
-      stride_(get_array<size_t, _Rank>(stride)),
-      data_(new value_type[std::accumulate(std::begin(stride_), std::end(stride_), 1, std::multiplies<size_t>())])
+    : dims_(get_array<size_t, _Rank>(dim)),
+      strides_(get_array<size_t, _Rank>(stride)),
+      data_(new value_type[std::accumulate(std::begin(strides_), std::end(strides_), 1, std::multiplies<size_t>())])
   {}
 
 
   // Copy constructor
   // TODO: simple copy; implement reference counted buffers
   TensorSlowCpu(const TensorSlowCpu& other)
-    : dim_{other.dim_},
-      stride_{other.stride_},
-      data_(new value_type[std::accumulate(std::begin(stride_), std::end(stride_), 1, std::multiplies<size_t>())])
+    : dims_{other.dims_},
+      strides_{other.strides_},
+      data_(new value_type[std::accumulate(std::begin(strides_), std::end(strides_), 1, std::multiplies<size_t>())])
   {
     memcpy(data_,
            other.data_,
-           std::accumulate(std::begin(stride_), std::end(stride_), sizeof(value_type), std::multiplies<size_t>()));
+           std::accumulate(std::begin(strides_), std::end(strides_), sizeof(value_type), std::multiplies<size_t>()));
   }
 
   // Move constructor
   TensorSlowCpu(TensorSlowCpu&& other)
-    : dim_{other.dim_},
-      stride_{other.stride_},
+    : dims_{other.dims_},
+      strides_{other.strides_},
       data_(std::move(other).data_)
   {
     other.data_ = nullptr;
@@ -150,18 +150,18 @@ struct TensorSlowCpu<_T, _Rank> : TensorBase
   constexpr static size_t Rank()                  { return _Rank; }
 
   /// Dim returns the dimension of the rank.
-  size_t Dim(size_t index) const                  { return dim_[index]; }
+  size_t Dim(size_t index) const                  { return dims_[index]; }
 
   // TODOo: assert on the index; also Dim()
   /// Stride returns the stride of the rank.
-  size_t Stride(size_t index) const               { return stride_[index]; }
+  size_t Stride(size_t index) const               { return strides_[index]; }
 
   /// Data returns a pointer to the data buffer.
   value_type* Data() const                        { return data_; }
 
 
-  std::array<size_t, _Rank> dim_;
-  std::array<size_t, _Rank> stride_;
+  std::array<size_t, _Rank> dims_;
+  std::array<size_t, _Rank> strides_;
   value_type*               data_;
 };
 
@@ -176,8 +176,8 @@ struct TensorSlowCpu<_T, 1, _N> : TensorBase
 
   /// Constructor for a rank-1 tensor (vector) with brace initialization.
   explicit TensorSlowCpu(std::initializer_list<value_type>&& init)
-    : dim_(_N),
-      stride_(_N),
+    : dims_(_N),
+      strides_(_N),
       array_(get_array<_T, _N>(std::move(init)))
   {}
 
@@ -186,16 +186,18 @@ struct TensorSlowCpu<_T, 1, _N> : TensorBase
 
   /// Dim returns the dimension for the rank.
   size_t Dim(size_t index) const                  { if (index > 1) throw std::out_of_range ("index");
-                                                    return dim_[index]; }
+                                                    return dims_[index]; }
   /// Dim returns the stride for the rank.
   size_t Stride(size_t index) const               { if (index > 1) throw std::out_of_range ("index");
-                                                    return stride_[index]; }
+                                                    return strides_[index]; }
+
+
   /// Data returns a pointer to the data buffer.
   const value_type* Data() const                  { return array_.data(); }
 
 
-  size_t                      dim_[1];
-  size_t                      stride_[1];
+  size_t                      dims_[1];
+  size_t                      strides_[1];
   std::array<value_type, _N>  array_;
 };
 
@@ -210,8 +212,8 @@ struct TensorSlowCpu<_T, 2, _M, _N> : TensorBase
 
   /// Constructor for a rank-2 (matrix) brace initialization.
   explicit TensorSlowCpu(std::initializer_list<std::initializer_list<value_type>>&& init)
-    : dim_(_M, _N),
-      stride_(_M, _N),
+    : dims_(_M, _N),
+      strides_(_M, _N),
       array_(get_array<_T, _M, _N>(std::move(init)))
   {}
 
@@ -220,16 +222,16 @@ struct TensorSlowCpu<_T, 2, _M, _N> : TensorBase
 
   /// Dim returns the dimension of the rank.
   size_t Dim(size_t index) const                  { if (index > 2) throw std::out_of_range ("index");
-                                                    return dim_[index]; }
+                                                    return dims_[index]; }
   /// Dim returns the stride of the rank.
   size_t Stride(size_t index) const               { if (index > 2) throw std::out_of_range ("index");
-                                                    return stride_[index]; }
+                                                    return strides_[index]; }
   /// Data returns a pointer to the data buffer.
   const value_type* Data() const                  { return array_.data(); }
 
 
-  size_t                          dim_[2];
-  size_t                          stride_[2];
+  size_t                          dims_[2];
+  size_t                          strides_[2];
   std::array<value_type, _M * _N> array_;
 };
 
