@@ -28,7 +28,9 @@ struct TensorSlowCpu<_T, _Rank> : TensorBase
   /// Constructor for a rank-1 tensor (vector) with a dynamically allocated buffer without padding.
   // TODO: initializes entire data buffer based on stride dimensions
   explicit TensorSlowCpu(size_t dim, value_type init)
-    : dims_{dim}, strides_{make_strides<_T>(dims_)}, data_(new value_type[dim])
+    : dims_{dim},
+      strides_{make_strides<_T>(dims_)},
+      data_(new value_type[dim])
   {
     size_t count = dims_[0] * strides_[0] / sizeof(_T);
     for (size_t i = 0; i < count; i++)
@@ -37,7 +39,9 @@ struct TensorSlowCpu<_T, _Rank> : TensorBase
 
   /// Constructor for a rank-1 tensor (vector) with a dynamically allocated uninitialized buffer.
   explicit TensorSlowCpu(size_t dim, Uninitialized<value_type>)
-    : dims_{dim}, strides_{make_strides<_T>(dims_)}, data_(new value_type[dim])
+    : dims_{dim},
+      strides_{make_strides<_T>(dims_)},
+      data_(new value_type[dim])
   {}
 
   /// Constructor for a rank-2 tensor (matrix) with a dynamically allocated buffer and no padding.
@@ -53,9 +57,9 @@ struct TensorSlowCpu<_T, _Rank> : TensorBase
 
   /// Constructor for a rank-2 tensor (matrix) with a dynamically allocated uninitialized buffer.
   explicit TensorSlowCpu(size_t dim_m, int dim_n, Uninitialized<value_type>)
-  : dims_{dim_m, dim_n},
-    strides_{make_strides<_T>(dims_)},
-    data_(new value_type[dim_m * dim_n])
+    : dims_{dim_m, dim_n},
+      strides_{make_strides<_T>(dims_)},
+      data_(new value_type[dim_m * dim_n])
   {}
 
   /// Constructor for any rank tensor with a dynamically allocated initialized buffer
@@ -142,25 +146,25 @@ struct TensorSlowCpu<_T, _Rank> : TensorBase
   template <TensorOpFor<TensorSlowCpu> Operator> TensorSlowCpu(const Operator& op) : TensorSlowCpu{op()} {}
 
   /// Destructor
-  ~TensorSlowCpu()                                { delete[] data_; }
+  ~TensorSlowCpu()                                        { delete[] data_; }
 
   /// Rank returns the rank of the tensor.
-  constexpr static size_t Rank()                  { return _Rank; }
+  constexpr static size_t Rank()                          { return _Rank; }
 
   /// Dim returns the dimension of the rank.
-  size_t Dim(size_t index) const                  { return dims_[index]; }
+  size_t Dim(size_t index) const                          { return dims_[index]; }
 
   // TODOo: assert on the index; also Dim()
   /// Stride returns the stride of the rank.
-  ssize_t Stride(size_t index) const              { return strides_[index]; }
+  ssize_t Stride(size_t index) const                      { return strides_[index]; }
 
   /// Data returns a pointer to the data buffer.
-  value_type* Data() const                        { return data_; }
+  value_type* Data() const                                { return data_; }
 
 
-  std::array<size_t, _Rank>   dims_;
-  std::array<ssize_t, _Rank>  strides_;
-  value_type*                 data_;
+  std::array<size_t, _Rank>         dims_;
+  std::array<ssize_t, _Rank>        strides_;
+  value_type*                       data_;
 };
 
 
@@ -180,23 +184,23 @@ struct TensorSlowCpu<_T, 1, _N> : TensorBase
   {}
 
   /// Rank returns the rank of the tensor.
-  constexpr static size_t Rank()                  { return 1UL; }
+  constexpr static size_t Rank()                          { return 1UL; }
 
   /// Dim returns the dimension for the rank.
-  size_t Dim(size_t index) const                  { if (index > 1) throw std::out_of_range ("index");
-                                                    return dims_[index]; }
+  size_t Dim(size_t index) const                          { if (index > 1) throw std::out_of_range ("index");
+                                                            return dims_[index]; }
   /// Dim returns the stride for the rank.
-  ssize_t Stride(size_t index) const              { if (index > 1) throw std::out_of_range ("index");
-                                                    return strides_[index]; }
+  ssize_t Stride(size_t index) const                      { if (index > 1) throw std::out_of_range ("index");
+                                                            return strides_[index]; }
 
 
   /// Data returns a pointer to the data buffer.
-  const value_type* Data() const                  { return array_.data(); }
+  const value_type* Data() const                          { return array_.data(); }
 
 
-  size_t                      dims_[1];
-  ssize_t                     strides_[1];
-  std::array<value_type, _N>  array_;
+  size_t                            dims_[1];
+  ssize_t                           strides_[1];
+  std::array<value_type, _N>        array_;
 };
 
 
@@ -216,21 +220,21 @@ struct TensorSlowCpu<_T, 2, _M, _N> : TensorBase
   {}
 
   /// Rank returns the rank of the tensor.
-  constexpr static size_t Rank()                  { return 2UL; }
+  constexpr static size_t Rank()                          { return 2UL; }
 
   /// Dim returns the dimension of the rank.
-  size_t Dim(size_t index) const                  { if (index > 2) throw std::out_of_range ("index");
-                                                    return dims_[index]; }
+  size_t Dim(size_t index) const                          { if (index > 2) throw std::out_of_range ("index");
+                                                            return dims_[index]; }
   /// Dim returns the stride of the rank.
-  ssize_t Stride(size_t index) const              { if (index > 2) throw std::out_of_range ("index");
-                                                    return strides_[index]; }
+  ssize_t Stride(size_t index) const                      { if (index > 2) throw std::out_of_range ("index");
+                                                            return strides_[index]; }
   /// Data returns a pointer to the data buffer.
-  const value_type* Data() const                  { return array_.data(); }
+  const value_type* Data() const                          { return array_.data(); }
 
 
-  size_t                          dims_[2];
-  ssize_t                         strides_[2];
-  std::array<value_type, _M * _N> array_;
+  size_t                            dims_[2];
+  ssize_t                           strides_[2];
+  std::array<value_type, _M * _N>   array_;
 };
 
 
