@@ -9,6 +9,9 @@
 #include <grid/tensor/tensor_slowcpu.h>
 
 #include "gtest/gtest.h"
+#include "gmock/gmock.h"
+
+using testing::ElementsAre;
 
 namespace {
 template <typename _T> constexpr size_t size(size_t count) { return sizeof(_T) * count; }
@@ -17,78 +20,86 @@ template <typename _T> constexpr size_t size(size_t count) { return sizeof(_T) *
 template <typename _T, size_t _Rank, auto... _Args>
 using Tensor = grid::TensorSlowCpu<_T, _Rank, _Args...>;
 
-TEST(TensorSlowCPU, ParameterizedConstructor)
+TEST(TensorSlowCPU, BraceInitializationRank1Integer)
 {
-  // brace-initialization
-  Tensor t11{ 11, 22, 33, 44, 55, 66 };
-  Tensor t12{ { 11, 12 }, { 21, 22, 23 }, { 31, 32, 33, 34 } };
+  Tensor tensor1{ 11, 22, 33, 44, 55, 66 };
 
-  EXPECT_EQ(t11.Rank(), 1);
-  EXPECT_EQ(t12.Rank(), 2);
-
-  EXPECT_EQ(t11.Dim(0), 6);
-  EXPECT_EQ(t12.Dim(0), 3);
+  EXPECT_TRUE(grid::is_tensor_v<decltype(tensor1)>);
+  EXPECT_EQ(tensor1.Rank(), 1);
+  EXPECT_THAT(tensor1.Dims(), ElementsAre(6));
+  EXPECT_THAT(tensor1.Strides(), ElementsAre(size<int>(1)));
 
   int data[] = { 11, 22, 33, 44, 55, 66 };
-  EXPECT_EQ(memcmp(t11.Data(), data, sizeof(data)), 0);
-
-  // buffer allocation
-  Tensor t21i(4UL, 1.2);
-  Tensor t21u(5UL, grid::Uninitialized<double>{});
-  Tensor t22i(5UL, 4UL, (char)3);
-  Tensor t22u(7UL, 3UL, grid::Uninitialized<int>{});
-
-  EXPECT_EQ(sizeof(*t22i.Data()), sizeof(char));
-
-  EXPECT_EQ(t21i.Rank(), 1);
-  EXPECT_EQ(t21u.Rank(), 1);
-  EXPECT_EQ(t22i.Rank(), 2);
-  EXPECT_EQ(t22u.Rank(), 2);
-
-  EXPECT_EQ(t21i.Dim(0), 4);
-  EXPECT_EQ(t21u.Dim(0), 5);
-  EXPECT_EQ(t22i.Dim(0), 5);
-  EXPECT_EQ(t22i.Dim(1), 4);
-  EXPECT_EQ(t22u.Dim(0), 7);
-  EXPECT_EQ(t22u.Dim(1), 3);
-
-  double d21i[] = { 1.2, 1.2, 1.2, 1.2 };
-  EXPECT_EQ(memcmp(t21i.Data(), d21i, sizeof(d21i)), 0);
-
-  char d22i[] = { 3, 3, 3, 3, 3,
-                  3, 3, 3, 3, 3,
-                  3, 3, 3, 3, 3,
-                  3, 3, 3, 3, 3 };
-  EXPECT_EQ(memcmp(t22i.Data(), d22i, sizeof(d22i)), 0);
-
-  Tensor t31{{4, 5, 7}, { size<double>(5 * 8), size<double>(8), size<double>(1) }, 3.3};
-  EXPECT_EQ(t31.Rank(), 3);
-  EXPECT_EQ(t31.Dim(0), 4);
-  EXPECT_EQ(t31.Dim(1), 5);
-  EXPECT_EQ(t31.Dim(2), 7);
-  EXPECT_EQ(t31.Stride(0), size<double>(5 * 8));
-  EXPECT_EQ(t31.Stride(1), size<double>(8));
-  EXPECT_EQ(t31.Stride(2), size<double>(1));
-
-  Tensor t32({1, 2, 3}, { size<double>(4 * 2), size<double>(4), size<double>(1) }, grid::Uninitialized<double>{});
-  EXPECT_EQ(t32.Rank(), 3);
-  EXPECT_EQ(t32.Dim(0), 1);
-  EXPECT_EQ(t32.Dim(1), 2);
-  EXPECT_EQ(t32.Dim(2), 3);
-  EXPECT_EQ(t32.Stride(0), size<double>(4 * 2));
-  EXPECT_EQ(t32.Stride(1), size<double>(4));
-  EXPECT_EQ(t32.Stride(2), size<double>(1));
-
-  size_t dim1[]{3UL, 4UL, 5UL};
-  ssize_t strides1[]{ size<double>(4 * 5), size<double>(5), size<double>(1) };
-  Tensor t41(dim1, strides1, 1.1);
-  EXPECT_EQ(t41.Rank(), 3);
-
-  size_t dim2[]{ 3, 4, 5 };
-  ssize_t stride[] = { size<double>(4 * 5), size<double>(5), size<double>(1) };
-  Tensor t42(dim2, stride, grid::Uninitialized<double>{});
-  EXPECT_EQ(t41.Rank(), 3);
+  EXPECT_EQ(memcmp(tensor1.Data(), data, sizeof(data)), 0);
 }
+
+TEST(TensorSlowCPU, BraceInitializationRank2Integer)
+{
+  Tensor tensor1{ { 11, 12 }, { 21, 22, 23 }, { 31, 32, 33, 34 } };
+
+  EXPECT_EQ(tensor1.Rank(), 2);
+  EXPECT_THAT(tensor1.Dims(), ElementsAre(3, 4));
+  EXPECT_THAT(tensor1.Strides(), ElementsAre(size<int>(4), size<int>(1)));
+
+  const int* data = reinterpret_cast<const int*>(tensor1.Data());
+  EXPECT_EQ(data[0], 11);
+  EXPECT_EQ(data[4], 21);
+  EXPECT_EQ(data[8], 31);
+  EXPECT_EQ(data[9], 32);
+}
+
+TEST(TensorSlowCPU, AllocInitializedRank1Double)
+{
+  Tensor tensor1(4UL, 1.2);
+
+  EXPECT_EQ(tensor1.Rank(), 1);
+  EXPECT_THAT(tensor1.Dims(), ElementsAre(4));
+  EXPECT_THAT(tensor1.Strides(), ElementsAre(size<double>(1)));
+
+  double verify[] = { 1.2, 1.2, 1.2, 1.2 };
+  EXPECT_EQ(memcmp(tensor1.Data(), verify, sizeof(verify)), 0);
+}
+
+TEST(TensorSlowCPU, AllocUninitializedRank1Double)
+{
+  Tensor tensor1(5UL, grid::Uninitialized<double>{});
+  EXPECT_EQ(tensor1.Rank(), 1);
+  EXPECT_THAT(tensor1.Dims(), ElementsAre(5));
+  EXPECT_THAT(tensor1.Strides(), ElementsAre(size<double>(1)));
+}
+
+TEST(TensorSlowCPU, AllocInitializedRank2Char)
+{
+  Tensor tensor1(5UL, 4UL, (char)'3');
+
+  EXPECT_EQ(tensor1.Rank(), 2);
+  EXPECT_THAT(tensor1.Dims(), ElementsAre(5, 4));
+  EXPECT_THAT(tensor1.Strides(), ElementsAre(size<char>(4), size<char>(1)));
+
+  char verify[] = { '3', '3', '3', '3', '3',
+                  '3', '3', '3', '3', '3',
+                  '3', '3', '3', '3', '3',
+                  '3', '3', '3', '3', '3' };
+  EXPECT_EQ(memcmp(tensor1.Data(), verify, sizeof(verify)), 0);
+}
+
+TEST(TensorSlowCPU, AllocUninitializedRank2Double)
+{
+  Tensor tensor1(7UL, 3UL, grid::Uninitialized<int>{});
+
+  EXPECT_EQ(tensor1.Rank(), 2);
+  EXPECT_THAT(tensor1.Dims(), ElementsAre(7, 3));
+  EXPECT_THAT(tensor1.Strides(), ElementsAre(size<int>(3), size<int>(1)));
+}
+
+TEST(TensorSlowCPU, AllocUninitializedPattedRank3Double)
+{
+  Tensor tensor1({3, 2, 1}, {size<double>(2 * 2 * 4), size<double>(2 * 2), size<double>(2)}, grid::Uninitialized<double>{});
+  EXPECT_EQ(tensor1.Rank(), 3);
+  EXPECT_THAT(tensor1.Dims(), ElementsAre(3, 2, 1));
+  EXPECT_THAT(tensor1.Strides(), ElementsAre(size<double>(2 * 2 * 4), size<double>(2 * 2), size<double>(2)));
+}
+
 
 TEST(TensorSlowCPU, TensorAdd)
 {

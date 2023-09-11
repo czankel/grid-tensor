@@ -299,6 +299,7 @@ if (BUILD_TEST)
   add_executable(gridtensor_test ${gridtensor_test_SOURCES})
   target_link_libraries(gridtensor_test gridtensor gtest gtest_main)
   target_include_directories(gridtensor_test PRIVATE ${googletest_SOURCE_DIR}/googletest/include)
+  target_include_directories(gridtensor_test PRIVATE ${googletest_SOURCE_DIR}/googlemock/include)
 endif()
 
 ##
