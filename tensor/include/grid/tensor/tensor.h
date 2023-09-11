@@ -106,7 +106,7 @@ struct TensorBase
         }
       }
     };
-    const value_type* ptr = tensor.Data();
+    const value_type* ptr = reinterpret_cast<const value_type*>(tensor.Data());
     print(0, ptr);
     os << std::flush;
 

@@ -48,8 +48,8 @@ bool operator==(_Tensor1&& tensor1, _Tensor2&& tensor2)
   const size_t stride2_1 = rank > 1 ? tensor2.Stride(1) / sizeof(value_type) : 1;
   const size_t stride2_2 = rank > 2 ? tensor2.Stride(2) / sizeof(value_type) : 1;
 
-  const value_type* data0 = tensor1.Data();
-  const value_type* data1 = tensor2.Data();
+  const value_type* data0 = reinterpret_cast<const value_type*>(tensor1.Data());
+  const value_type* data1 = reinterpret_cast<const value_type*>(tensor2.Data());
 
   for (size_t c = 0; c < dim3; c++)
     for (size_t k = 0; k < dim2; k++)
@@ -95,12 +95,12 @@ struct TensorAdd<TensorSlowCpu, _T, _Rank, _Tensor1, _Tensor2> : TensorBaseOp //
     size_t dim_m = tensor1_.Dim(0);
 
     // FIXME: stride
-    const value_type* data1 = tensor1_.Data();
-    const value_type* data2 = tensor2_.Data();
+    const value_type* data1 = reinterpret_cast<const value_type*>(tensor1_.Data());
+    const value_type* data2 = reinterpret_cast<const value_type*>(tensor2_.Data());
 
     // FIXME: this would be a local variable???
     auto res = TensorSlowCpu(dim_m, Uninitialized<value_type>{});
-    value_type* sum = res.Data();
+    value_type* sum = reinterpret_cast<value_type*>(res.Data());
 
     for (size_t i = 0; i < dim_m; i++)
       sum[i] = data1[i] + data2[i];
@@ -115,11 +115,11 @@ struct TensorAdd<TensorSlowCpu, _T, _Rank, _Tensor1, _Tensor2> : TensorBaseOp //
     size_t dim_m = tensor1_.Dim(0);
     size_t dim_n = tensor1_.Dim(1);
 
-    const value_type* data1 = tensor1_.Data();
-    const value_type* data2 = tensor2_.Data();
+    const value_type* data1 = reinterpret_cast<const value_type*>(tensor1_.Data());
+    const value_type* data2 = reinterpret_cast<const value_type*>(tensor2_.Data());
 
     auto res = TensorSlowCpu(dim_m, dim_n, Uninitialized<value_type>{});
-    value_type* sum = res.Data();
+    value_type* sum = reinterpret_cast<value_type*>(res.Data());
 
     // FIXME: handle stride
     for (size_t i = 0; i < dim_m; i++)
