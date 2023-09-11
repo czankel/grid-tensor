@@ -13,6 +13,7 @@
 #include <array>
 #include <cstring>
 #include <initializer_list>
+#include <memory>
 #include <numeric>
 
 namespace grid {
@@ -30,7 +31,8 @@ struct TensorSlowCpu<_T, _Rank> : TensorBase
   explicit TensorSlowCpu(size_t dim, value_type init)
     : dims_{dim},
       strides_{make_strides<_T>(dims_)},
-      data_(new char[dims_[0] * strides_[0]])
+      shared_(new char[dims_[0] * strides_[0]]),
+      data_(shared_.get())
   {
     size_t count = dims_[0] * strides_[0] / sizeof(_T);
     value_type* ptr = reinterpret_cast<value_type*>(data_);
@@ -42,14 +44,16 @@ struct TensorSlowCpu<_T, _Rank> : TensorBase
   explicit TensorSlowCpu(size_t dim, Uninitialized<value_type>)
     : dims_{dim},
       strides_{make_strides<_T>(dims_)},
-      data_(new char[dims_[0] * strides_[0]])
+      shared_(new char[dims_[0] * strides_[0]]),
+      data_(shared_.get())
   {}
 
   /// Constructor for a rank-2 tensor (matrix) with a dynamically allocated buffer and no padding.
   explicit TensorSlowCpu(size_t dim_m, int dim_n, value_type init)
     : dims_{dim_m, dim_n},
       strides_{make_strides<_T>(dims_)},
-      data_(new char[dims_[0] * strides_[0]])
+      shared_(new char[dims_[0] * strides_[0]]),
+      data_(shared_.get())
   {
     size_t count = dims_[0] * strides_[0] / sizeof(_T);
     value_type* ptr = reinterpret_cast<value_type*>(data_);
@@ -61,14 +65,16 @@ struct TensorSlowCpu<_T, _Rank> : TensorBase
   explicit TensorSlowCpu(size_t dim_m, int dim_n, Uninitialized<value_type>)
     : dims_{dim_m, dim_n},
       strides_{make_strides<_T>(dims_)},
-      data_(new char[dims_[0] * strides_[0]])
+      shared_(new char[dims_[0] * strides_[0]]),
+      data_(shared_.get())
   {}
 
   /// Constructor for any rank tensor with a dynamically allocated initialized buffer
   explicit TensorSlowCpu(std::initializer_list<size_t>&& dims, value_type init)
     : dims_(get_array<size_t, _Rank>(std::move(dims))),
       strides_{make_strides<_T>(dims_)},
-      data_(new char[dims_[0] * strides_[0]])
+      shared_(new char[dims_[0] * strides_[0]]),
+      data_(shared_.get())
   {
     size_t count = dims_[0] * strides_[0] / sizeof(_T);
     value_type* ptr = reinterpret_cast<value_type*>(data_);
@@ -81,7 +87,8 @@ struct TensorSlowCpu<_T, _Rank> : TensorBase
   explicit TensorSlowCpu(std::initializer_list<size_t>&& dims, Uninitialized<value_type>)
     : dims_(get_array<size_t, _Rank>(std::move(dims))),
       strides_{make_strides<_T>(dims_)},
-      data_(new char[dims_[0] * strides_[0]])
+      shared_(new char[dims_[0] * strides_[0]]),
+      data_(shared_.get())
   { }
 
   /// Constructor for any rank tensor with a dynamically allocated initialized buffer with strides.
@@ -90,7 +97,8 @@ struct TensorSlowCpu<_T, _Rank> : TensorBase
                          value_type init)
     : dims_(get_array<size_t, _Rank>(std::move(dims))),
       strides_(get_array<ssize_t, _Rank>(std::move(strides))),
-      data_(new char[dims_[0] * strides_[0]])
+      shared_(new char[dims_[0] * strides_[0]]),
+      data_(shared_.get())
   {
     size_t count = dims_[0] * strides_[0] / sizeof(_T);
     value_type* ptr = reinterpret_cast<value_type*>(data_);
@@ -104,14 +112,16 @@ struct TensorSlowCpu<_T, _Rank> : TensorBase
                          Uninitialized<value_type>)
     : dims_(get_array<size_t, _Rank>(std::move(dims))),
       strides_(get_array<ssize_t, _Rank>(std::move(strides))),
-      data_(new char[dims_[0] * strides_[0]])
+      shared_(new char[dims_[0] * strides_[0]]),
+      data_(shared_.get())
   {}
 
   /// Constructor for any rank tensor with a dynamically allocated initialized buffer
   explicit TensorSlowCpu(const size_t(&dim)[_Rank], const ssize_t(&stride)[_Rank], value_type init)
     : dims_(get_array<size_t, _Rank>(dim)),
       strides_(get_array<ssize_t, _Rank>(stride)),
-      data_(new char[dims_[0] * strides_[0]])
+      shared_(new char[dims_[0] * strides_[0]]),
+      data_(shared_.get())
   {
     size_t count = dims_[0] * strides_[0] / sizeof(_T);
     value_type* ptr = reinterpret_cast<value_type*>(data_);
@@ -123,7 +133,8 @@ struct TensorSlowCpu<_T, _Rank> : TensorBase
   explicit TensorSlowCpu(const size_t(&dim)[_Rank], const ssize_t(&stride)[_Rank], Uninitialized<_T>)
     : dims_(get_array<size_t, _Rank>(dim)),
       strides_(get_array<ssize_t, _Rank>(stride)),
-      data_(new char[dims_[0] * strides_[0]])
+      shared_(new char[dims_[0] * strides_[0]]),
+      data_(shared_.get())
   {}
 
 
@@ -132,17 +143,16 @@ struct TensorSlowCpu<_T, _Rank> : TensorBase
   TensorSlowCpu(const TensorSlowCpu& other)
     : dims_{other.dims_},
       strides_{other.strides_},
-      data_(new char[dims_[0] * strides_[0]])
-  {
-    memcpy(data_, other.data_, dims_[0] * strides_[0] / sizeof(_T));
-    value_type* ptr = reinterpret_cast<value_type*>(data_);
-  }
+      shared_(other.shared_),
+      data_(other.data_)
+  {}
 
   // Move constructor
   TensorSlowCpu(TensorSlowCpu&& other)
     : dims_{other.dims_},
       strides_{other.strides_},
-      data_(std::move(other).data_)
+      shared_(std::move(other.shared_)),
+      data_(shared_.get())
   {
     other.data_ = nullptr;
   }
@@ -152,7 +162,7 @@ struct TensorSlowCpu<_T, _Rank> : TensorBase
   template <TensorOpFor<TensorSlowCpu> Operator> TensorSlowCpu(const Operator& op) : TensorSlowCpu{op()} {}
 
   /// Destructor
-  ~TensorSlowCpu()                                        { delete[] data_; }
+  ~TensorSlowCpu()                                        { }
 
   /// Rank returns the rank of the tensor.
   constexpr static size_t Rank()                          { return _Rank; }
@@ -170,6 +180,7 @@ struct TensorSlowCpu<_T, _Rank> : TensorBase
 
   std::array<size_t, _Rank>         dims_;
   std::array<ssize_t, _Rank>        strides_;
+  std::shared_ptr<char[]>           shared_;
   char*                             data_;
 };
 

@@ -118,7 +118,6 @@ TEST(TensorSlowCPU, TensorAdd)
   EXPECT_EQ(res2, v2);
 }
 
-#if 0
 TEST(TensorSlowCPU, TensorAddAdd)
 {
   Tensor t31(4UL, 3UL, 2.1);
@@ -130,4 +129,3 @@ TEST(TensorSlowCPU, TensorAddAdd)
   auto res3 = op31();
   EXPECT_EQ(res3, v3);
 }
-#endif
