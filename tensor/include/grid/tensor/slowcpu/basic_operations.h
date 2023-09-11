@@ -41,12 +41,12 @@ bool operator==(_Tensor1&& tensor1, _Tensor2&& tensor2)
        rank > 4)
     return false;
 
-  const size_t stride1_0 = rank > 0 ? tensor1.Stride(0) : 1;
-  const size_t stride1_1 = rank > 1 ? tensor1.Stride(1) : 1;
-  const size_t stride1_2 = rank > 2 ? tensor1.Stride(2) : 1;
-  const size_t stride2_0 = rank > 0 ? tensor2.Stride(0) : 1;
-  const size_t stride2_1 = rank > 1 ? tensor2.Stride(1) : 1;
-  const size_t stride2_2 = rank > 2 ? tensor2.Stride(2) : 1;
+  const size_t stride1_0 = rank > 0 ? tensor1.Stride(0) / sizeof(value_type) : 1;
+  const size_t stride1_1 = rank > 1 ? tensor1.Stride(1) / sizeof(value_type) : 1;
+  const size_t stride1_2 = rank > 2 ? tensor1.Stride(2) / sizeof(value_type) : 1;
+  const size_t stride2_0 = rank > 0 ? tensor2.Stride(0) / sizeof(value_type) : 1;
+  const size_t stride2_1 = rank > 1 ? tensor2.Stride(1) / sizeof(value_type) : 1;
+  const size_t stride2_2 = rank > 2 ? tensor2.Stride(2) / sizeof(value_type) : 1;
 
   const value_type* data0 = tensor1.Data();
   const value_type* data1 = tensor2.Data();
@@ -55,8 +55,8 @@ bool operator==(_Tensor1&& tensor1, _Tensor2&& tensor2)
     for (size_t k = 0; k < dim2; k++)
       for (size_t m = 0; m < dim1; m++)
         for (size_t n = 0; n < dim0; n++)
-          if (std::abs(data0[((((c * stride1_2) + k) * stride1_1 + m) * stride1_0 + n)] -
-                       data1[(((c * stride2_2) + k) * stride2_1 + m) * stride2_0]) > max_abs_error)
+          if (std::abs(data0[c * stride1_0 + k * stride1_1 + m * stride1_2 + n] -
+                       data1[c * stride2_0 + k * stride2_1 + m * stride2_2 + n]) > max_abs_error)
             return  false;
 
   return true;
@@ -123,9 +123,8 @@ struct TensorAdd<TensorSlowCpu, _T, _Rank, _Tensor1, _Tensor2> : TensorBaseOp //
 
     // FIXME: handle stride
     for (size_t i = 0; i < dim_m; i++)
-      for (size_t j = 0; j < dim_n; j++) {
+      for (size_t j = 0; j < dim_n; j++)
         sum[i * dim_n + j] = data1[i * dim_n + j] + data2[i * dim_n + j];
-      }
 #if 0
     auto& tensor1 = std::get<0>(tensors_);
     size_t dim_m = tensor1.Dim(0);

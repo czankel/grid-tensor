@@ -172,6 +172,26 @@ get_array(_T(&&init)[_N])
   return arr;
 }
 
+// helper function to return the strides from dimensions. Use: make_strides<TYPE>(std::array)
+template <typename _T, size_t _Rank, size_t... Is>
+constexpr std::array<size_t, _Rank>
+make_strides_impl(const std::array<size_t, _Rank>& dims, std::index_sequence<Is...>)
+{
+  auto multiply = [&dims](size_t index) {
+    size_t res = sizeof(_T);
+    for (size_t i = 0; i < _Rank - 1 - index; i++)
+      res *= dims[_Rank - 1 - i];
+    return res;
+  };
+  return std::array<size_t, _Rank>{multiply(Is)...};
+}
+
+template <typename _T, size_t _Rank, typename Indices = std::make_index_sequence<_Rank>>
+std::array<size_t, _Rank> make_strides(const std::array<size_t, _Rank>& dims)
+{
+  return make_strides_impl<_T>(dims, Indices{});
+}
+
 
 } // end of namespace grid
 
