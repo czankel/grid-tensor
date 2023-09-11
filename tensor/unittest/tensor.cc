@@ -80,12 +80,12 @@ TEST(TensorSlowCPU, ParameterizedConstructor)
   EXPECT_EQ(t32.Stride(2), size<double>(1));
 
   size_t dim1[]{3UL, 4UL, 5UL};
-  size_t strides1[]{ size<double>(4 * 5), size<double>(5), size<double>(1) };
+  ssize_t strides1[]{ size<double>(4 * 5), size<double>(5), size<double>(1) };
   Tensor t41(dim1, strides1, 1.1);
   EXPECT_EQ(t41.Rank(), 3);
 
   size_t dim2[]{ 3, 4, 5 };
-  size_t stride[] = { size<double>(4 * 5), size<double>(5), size<double>(1) };
+  ssize_t stride[] = { size<double>(4 * 5), size<double>(5), size<double>(1) };
   Tensor t42(dim2, stride, grid::Uninitialized<double>{});
   EXPECT_EQ(t41.Rank(), 3);
 }

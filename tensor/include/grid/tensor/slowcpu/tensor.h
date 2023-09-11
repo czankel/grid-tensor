@@ -79,10 +79,10 @@ struct TensorSlowCpu<_T, _Rank> : TensorBase
 
   /// Constructor for any rank tensor with a dynamically allocated initialized buffer with strides.
   explicit TensorSlowCpu(std::initializer_list<size_t>&& dims,
-                         std::initializer_list<size_t>&& strides,
+                         std::initializer_list<ssize_t>&& strides,
                          value_type init)
     : dims_(get_array<size_t, _Rank>(std::move(dims))),
-      strides_(get_array<size_t, _Rank>(std::move(strides))),
+      strides_(get_array<ssize_t, _Rank>(std::move(strides))),
       data_(new value_type[dims_[0] * strides_[0] / sizeof(_T)])
   {
     size_t count = dims_[0] * strides_[0] / sizeof(_T);
@@ -92,17 +92,17 @@ struct TensorSlowCpu<_T, _Rank> : TensorBase
 
   /// Constructor for any rank tensor with a dynamically allocated uninitialized buffer with strides.
   explicit TensorSlowCpu(std::initializer_list<size_t>&& dims,
-                         std::initializer_list<size_t>&& strides,
+                         std::initializer_list<ssize_t>&& strides,
                          Uninitialized<value_type>)
     : dims_(get_array<size_t, _Rank>(std::move(dims))),
-      strides_(get_array<size_t, _Rank>(std::move(strides))),
+      strides_(get_array<ssize_t, _Rank>(std::move(strides))),
       data_(new value_type[dims_[0] * strides_[0] / sizeof(_T)])
   {}
 
   /// Constructor for any rank tensor with a dynamically allocated initialized buffer
-  explicit TensorSlowCpu(const size_t(&dim)[_Rank], const size_t(&stride)[_Rank], value_type init)
+  explicit TensorSlowCpu(const size_t(&dim)[_Rank], const ssize_t(&stride)[_Rank], value_type init)
     : dims_(get_array<size_t, _Rank>(dim)),
-      strides_(get_array<size_t, _Rank>(stride)),
+      strides_(get_array<ssize_t, _Rank>(stride)),
       data_(new value_type[dims_[0] * strides_[0] / sizeof(_T)])
   {
     size_t count = dims_[0] * strides_[0] / sizeof(_T);
@@ -111,9 +111,9 @@ struct TensorSlowCpu<_T, _Rank> : TensorBase
   }
 
   /// Constructor for any rank tensor with a dynamically allocated uninitialized buffer
-  explicit TensorSlowCpu(const size_t(&dim)[_Rank], const size_t(&stride)[_Rank], Uninitialized<_T>)
+  explicit TensorSlowCpu(const size_t(&dim)[_Rank], const ssize_t(&stride)[_Rank], Uninitialized<_T>)
     : dims_(get_array<size_t, _Rank>(dim)),
-      strides_(get_array<size_t, _Rank>(stride)),
+      strides_(get_array<ssize_t, _Rank>(stride)),
       data_(new value_type[dims_[0] * strides_[0] / sizeof(_T)])
   {}
 
@@ -152,15 +152,15 @@ struct TensorSlowCpu<_T, _Rank> : TensorBase
 
   // TODOo: assert on the index; also Dim()
   /// Stride returns the stride of the rank.
-  size_t Stride(size_t index) const               { return strides_[index]; }
+  ssize_t Stride(size_t index) const              { return strides_[index]; }
 
   /// Data returns a pointer to the data buffer.
   value_type* Data() const                        { return data_; }
 
 
-  std::array<size_t, _Rank> dims_;
-  std::array<size_t, _Rank> strides_;
-  value_type*               data_;
+  std::array<size_t, _Rank>   dims_;
+  std::array<ssize_t, _Rank>  strides_;
+  value_type*                 data_;
 };
 
 
@@ -186,7 +186,7 @@ struct TensorSlowCpu<_T, 1, _N> : TensorBase
   size_t Dim(size_t index) const                  { if (index > 1) throw std::out_of_range ("index");
                                                     return dims_[index]; }
   /// Dim returns the stride for the rank.
-  size_t Stride(size_t index) const               { if (index > 1) throw std::out_of_range ("index");
+  ssize_t Stride(size_t index) const              { if (index > 1) throw std::out_of_range ("index");
                                                     return strides_[index]; }
 
 
@@ -195,7 +195,7 @@ struct TensorSlowCpu<_T, 1, _N> : TensorBase
 
 
   size_t                      dims_[1];
-  size_t                      strides_[1];
+  ssize_t                     strides_[1];
   std::array<value_type, _N>  array_;
 };
 
@@ -222,14 +222,14 @@ struct TensorSlowCpu<_T, 2, _M, _N> : TensorBase
   size_t Dim(size_t index) const                  { if (index > 2) throw std::out_of_range ("index");
                                                     return dims_[index]; }
   /// Dim returns the stride of the rank.
-  size_t Stride(size_t index) const               { if (index > 2) throw std::out_of_range ("index");
+  ssize_t Stride(size_t index) const              { if (index > 2) throw std::out_of_range ("index");
                                                     return strides_[index]; }
   /// Data returns a pointer to the data buffer.
   const value_type* Data() const                  { return array_.data(); }
 
 
   size_t                          dims_[2];
-  size_t                          strides_[2];
+  ssize_t                         strides_[2];
   std::array<value_type, _M * _N> array_;
 };
 
@@ -264,19 +264,19 @@ explicit TensorSlowCpu(size_t, size_t, Uninitialized<_T>) -> TensorSlowCpu<_T, 2
 
 // Tensor(&[], &[], T) -> Rank-N tensor with a dynamically allocated initialized buffer.
 template <typename _T, size_t _N>
-explicit TensorSlowCpu(const size_t(&)[_N], const size_t(&)[_N], _T) -> TensorSlowCpu<_T, _N>;
+explicit TensorSlowCpu(const size_t(&)[_N], const ssize_t(&)[_N], _T) -> TensorSlowCpu<_T, _N>;
 
 // Tensor(&[], &[], Uninitialized<T>) -> Rank-N tensor with a dynamically allocated uninitialized buffer.
 template <typename _T, size_t _N>
-explicit TensorSlowCpu(const size_t(&)[_N], const size_t(&)[_N], Uninitialized<_T>) -> TensorSlowCpu<_T, _N>;
+explicit TensorSlowCpu(const size_t(&)[_N], const ssize_t(&)[_N], Uninitialized<_T>) -> TensorSlowCpu<_T, _N>;
 
 // Tensor(&&[], &&[], _T) -> Rank-N tensor with a dynamically allocated initialized buffer.
 template <typename _T, size_t _N>
-explicit TensorSlowCpu(size_t(&&)[_N], size_t(&&)[_N], _T) -> TensorSlowCpu<_T, _N>;
+explicit TensorSlowCpu(size_t(&&)[_N], ssize_t(&&)[_N], _T) -> TensorSlowCpu<_T, _N>;
 
 // Tensor(&&[], &&[]) -> Rank-N tensor with a dynamically allocated uninitialized buffer.
 template <typename _T, size_t _N>
-explicit TensorSlowCpu(size_t(&&)[_N], size_t(&&)[_N], Uninitialized<_T>) -> TensorSlowCpu<_T, _N>;
+explicit TensorSlowCpu(size_t(&&)[_N], ssize_t(&&)[_N], Uninitialized<_T>) -> TensorSlowCpu<_T, _N>;
 
 
 // TensorOp -> Tensor (move)
