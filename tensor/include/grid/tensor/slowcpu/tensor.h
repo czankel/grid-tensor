@@ -15,6 +15,7 @@
 #include <initializer_list>
 #include <memory>
 #include <numeric>
+#include <span>
 
 namespace grid {
 
@@ -26,6 +27,42 @@ struct TensorSlowCpu<_T, _Rank> : TensorBase
   using tensor_type = TensorSlowCpu<_T, _Rank>;
   using value_type = _T;
 
+
+  // helper function to initialize the tensor memory buffer.
+  inline void
+  initialize(char* ptr,
+             std::span<size_t, 0> dims,
+             std::span<ssize_t, 0> strides,
+             value_type init)
+  {
+    *reinterpret_cast<value_type*>(ptr) = init;
+  }
+
+  inline void
+  initialize(char* ptr,
+             std::span<size_t, 1> dims,
+             std::span<ssize_t, 1> strides,
+             value_type init)
+  {
+    for (size_t i = 0; i < dims[0]; i++, ptr += strides[0])
+      *reinterpret_cast<value_type*>(ptr) = init;
+  }
+
+  template <size_t _N>
+  inline void
+  initialize(char* ptr,
+             std::span<size_t, _N> dims,
+             std::span<ssize_t, _N> strides,
+             value_type init)
+  {
+    for (size_t i = 0; i < dims[0]; i++, ptr += strides[0])
+      initialize(ptr,
+                 std::span<size_t, _N - 1>(dims.begin() + 1, dims.end()),
+                 std::span<ssize_t, _N - 1>(strides.begin() + 1, strides.end()),
+                 init);
+  }
+
+
   /// Constructor for a rank-1 tensor (vector) with a dynamically allocated buffer without padding.
   // TODO: initializes entire data buffer based on stride dimensions
   explicit TensorSlowCpu(size_t dim, value_type init)
@@ -34,10 +71,7 @@ struct TensorSlowCpu<_T, _Rank> : TensorBase
       shared_(new char[dims_[0] * strides_[0]]),
       data_(shared_.get())
   {
-    size_t count = dims_[0] * strides_[0] / sizeof(_T);
-    value_type* ptr = reinterpret_cast<value_type*>(data_);
-    for (size_t i = 0; i < count; i++)
-      ptr[i] = init;
+    initialize(data_, std::span{dims_}, std::span{strides_}, init);
   }
 
   /// Constructor for a rank-1 tensor (vector) with a dynamically allocated uninitialized buffer.
@@ -55,10 +89,7 @@ struct TensorSlowCpu<_T, _Rank> : TensorBase
       shared_(new char[dims_[0] * strides_[0]]),
       data_(shared_.get())
   {
-    size_t count = dims_[0] * strides_[0] / sizeof(_T);
-    value_type* ptr = reinterpret_cast<value_type*>(data_);
-    for (size_t i = 0; i < count; i++)
-      ptr[i] = init;
+    initialize(data_, std::span{dims_}, std::span{strides_}, init);
   }
 
   /// Constructor for a rank-2 tensor (matrix) with a dynamically allocated uninitialized buffer.
@@ -76,10 +107,7 @@ struct TensorSlowCpu<_T, _Rank> : TensorBase
       shared_(new char[dims_[0] * strides_[0]]),
       data_(shared_.get())
   {
-    size_t count = dims_[0] * strides_[0] / sizeof(_T);
-    value_type* ptr = reinterpret_cast<value_type*>(data_);
-    for (size_t i = 0; i < count; i++)
-      ptr[i] = init;
+    initialize(data_, std::span{dims_}, std::span{strides_}, init);
   }
 
 
@@ -100,10 +128,7 @@ struct TensorSlowCpu<_T, _Rank> : TensorBase
       shared_(new char[dims_[0] * strides_[0]]),
       data_(shared_.get())
   {
-    size_t count = dims_[0] * strides_[0] / sizeof(_T);
-    value_type* ptr = reinterpret_cast<value_type*>(data_);
-    for (size_t i = 0; i < count; i++)
-      ptr[i] = init;
+    initialize(data_, std::span{dims_}, std::span{strides_}, init);
   }
 
   /// Constructor for any rank tensor with a dynamically allocated uninitialized buffer with strides.
@@ -123,10 +148,7 @@ struct TensorSlowCpu<_T, _Rank> : TensorBase
       shared_(new char[dims_[0] * strides_[0]]),
       data_(shared_.get())
   {
-    size_t count = dims_[0] * strides_[0] / sizeof(_T);
-    value_type* ptr = reinterpret_cast<value_type*>(data_);
-    for (size_t i = 0; i < count; i++)
-      ptr[i] = init;
+    initialize(data_, std::span{dims_}, std::span{strides_}, init);
   }
 
   /// Constructor for any rank tensor with a dynamically allocated uninitialized buffer
@@ -174,6 +196,12 @@ struct TensorSlowCpu<_T, _Rank> : TensorBase
   /// Stride returns the stride of the rank.
   ssize_t Stride(size_t index) const                      { return strides_[index]; }
 
+  /// Dims returns the dimensions for the axis.
+  std::array<size_t, _Rank> Dims() const                  { return dims_; }
+
+  /// Strides returns the strides for the axis.
+  std::array<ssize_t, _Rank> Strides() const              { return strides_; }
+
   /// Data returns a pointer to the data buffer.
   char* Data() const                                      { return data_; }
 
@@ -210,6 +238,11 @@ struct TensorSlowCpu<_T, 1, _N> : TensorBase
   ssize_t Stride(size_t index) const                      { if (index > 1) throw std::out_of_range ("index");
                                                             return strides_[index]; }
 
+  /// Dims returns the dimension for the axis.
+  constexpr std::array<size_t, 1> Dims() const            { return { _N }; }
+
+  /// Strides returns the strides for the axis.
+  constexpr std::array<ssize_t, 1> Strides() const        { return { sizeof(_T) }; }
 
   /// Data returns a pointer to the data buffer.
   const char* Data() const                                { return reinterpret_cast<const char*>(array_.data()); }
@@ -245,6 +278,13 @@ struct TensorSlowCpu<_T, 2, _M, _N> : TensorBase
   /// Dim returns the stride of the rank.
   ssize_t Stride(size_t index) const                      { if (index > 2) throw std::out_of_range ("index");
                                                             return strides_[index]; }
+
+  /// Dims returns the dimensions for the axis.
+  constexpr std::array<const size_t, 2> Dims() const      { return { _M, _N }; }
+
+  /// Strides returns the strides for the axis.
+  constexpr std::array<ssize_t, 2> Strides() const        { return { sizeof(value_type) * _N, sizeof(value_type) }; }
+
   /// Data returns a pointer to the data buffer.
   const char* Data() const                                { return reinterpret_cast<const char*>(array_.data()); }
 
