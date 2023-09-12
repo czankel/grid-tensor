@@ -197,10 +197,10 @@ struct TensorSlowCpu<_T, _Rank> : TensorBase
   ssize_t Stride(size_t index) const                      { return strides_[index]; }
 
   /// Dims returns the dimensions for the axis.
-  std::array<size_t, _Rank> Dims() const                  { return dims_; }
+  const std::array<size_t, _Rank>& Dims() const           { return dims_; }
 
   /// Strides returns the strides for the axis.
-  std::array<ssize_t, _Rank> Strides() const              { return strides_; }
+  const std::array<ssize_t, _Rank>& Strides() const       { return strides_; }
 
   /// Data returns a pointer to the data buffer.
   char* Data() const                                      { return data_; }
@@ -223,8 +223,8 @@ struct TensorSlowCpu<_T, 1, _N> : TensorBase
 
   /// Constructor for a rank-1 tensor (vector) with brace initialization.
   explicit TensorSlowCpu(std::initializer_list<value_type>&& init)
-    : dims_(_N),
-      strides_(sizeof(_T)),
+    : dims_{_N},
+      strides_{sizeof(_T)},
       array_(get_array<_T, _N>(std::move(init)))
   {}
 
@@ -238,18 +238,18 @@ struct TensorSlowCpu<_T, 1, _N> : TensorBase
   ssize_t Stride(size_t index) const                      { if (index > 1) throw std::out_of_range ("index");
                                                             return strides_[index]; }
 
-  /// Dims returns the dimension for the axis.
-  constexpr std::array<size_t, 1> Dims() const            { return { _N }; }
+  /// Dims returns the dimensions for the axis.
+  const std::array<size_t, 1>& Dims() const               { return dims_; }
 
   /// Strides returns the strides for the axis.
-  constexpr std::array<ssize_t, 1> Strides() const        { return { sizeof(_T) }; }
+  const std::array<ssize_t, 1>& Strides() const           { return strides_; }
 
   /// Data returns a pointer to the data buffer.
   const char* Data() const                                { return reinterpret_cast<const char*>(array_.data()); }
 
 
-  size_t                            dims_[1];
-  ssize_t                           strides_[1];
+  std::array<size_t, 1>             dims_;
+  std::array<ssize_t, 1>            strides_;
   std::array<value_type, _N>        array_;
 };
 
@@ -264,7 +264,7 @@ struct TensorSlowCpu<_T, 2, _M, _N> : TensorBase
 
   /// Constructor for a rank-2 (matrix) brace initialization.
   explicit TensorSlowCpu(std::initializer_list<std::initializer_list<value_type>>&& init)
-    : dims_(_M, _N),
+    : dims_{_M, _N},
       strides_{ sizeof(_T) * _N, sizeof(_T)},
       array_(get_array<_T, _M, _N>(std::move(init)))
   {}
@@ -280,17 +280,17 @@ struct TensorSlowCpu<_T, 2, _M, _N> : TensorBase
                                                             return strides_[index]; }
 
   /// Dims returns the dimensions for the axis.
-  constexpr std::array<const size_t, 2> Dims() const      { return { _M, _N }; }
+  const std::array<size_t, 2>& Dims() const               { return dims_; }
 
   /// Strides returns the strides for the axis.
-  constexpr std::array<ssize_t, 2> Strides() const        { return { sizeof(value_type) * _N, sizeof(value_type) }; }
+  const std::array<ssize_t, 2>& Strides() const           { return strides_; }
 
   /// Data returns a pointer to the data buffer.
   const char* Data() const                                { return reinterpret_cast<const char*>(array_.data()); }
 
 
-  size_t                            dims_[2];
-  ssize_t                           strides_[2];
+  std::array<size_t, 2>             dims_;
+  std::array<ssize_t, 2>            strides_;
   std::array<value_type, _M * _N>   array_;
 };
 
