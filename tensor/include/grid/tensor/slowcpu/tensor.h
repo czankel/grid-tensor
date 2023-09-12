@@ -21,6 +21,7 @@ namespace grid {
 
 /// TensorSlowCpu<_T, _Rank> is a specialization of TensorSlowCpu for a dynamically allocated buffer.
 /// Note that this is also the Tensor used for any TensorOp result.
+/// TODO: see if constructors can be combined using implicit conversion
 template <typename _T, size_t _Rank>
 struct TensorSlowCpu<_T, _Rank> : TensorBase
 {
@@ -64,7 +65,6 @@ struct TensorSlowCpu<_T, _Rank> : TensorBase
 
 
   /// Constructor for a rank-1 tensor (vector) with a dynamically allocated buffer without padding.
-  // TODO: initializes entire data buffer based on stride dimensions
   explicit TensorSlowCpu(size_t dim, value_type init)
     : dims_{dim},
       strides_{make_strides<_T>(dims_)},
@@ -156,6 +156,49 @@ struct TensorSlowCpu<_T, _Rank> : TensorBase
     : dims_(get_array<size_t, _Rank>(dim)),
       strides_(get_array<ssize_t, _Rank>(stride)),
       shared_(new char[dims_[0] * strides_[0]]),
+      data_(shared_.get())
+  {}
+
+
+  /// Constructor for any rank tensor with a dynamically allocated initialized buffer.
+  explicit TensorSlowCpu(std::array<size_t, _Rank> dims,
+                         value_type init)
+    : dims_(dims),
+      strides_(make_strides<_T>(dims)),
+      shared_(new char[strides_[0] * dims_[0]]),
+      data_(shared_.get())
+  {
+    initialize<_Rank>(data_, dims_, strides_, init);
+  }
+
+  /// Constructor for any rank tensor with a dynamically allocated initialized buffer with padding.
+  explicit TensorSlowCpu(std::array<size_t, _Rank> dims,
+                         std::array<ssize_t, _Rank> strides,
+                         value_type init)
+    : dims_{dims},
+      strides_{strides},
+      shared_(new char[strides_[0] * dims_[0]]),
+      data_(shared_.get())
+  {
+    initialize<_Rank>(data_, dims_, strides_, init);
+  }
+
+  /// Constructor for any rank tensor with a dynamically allocated uninitialized buffer.
+  explicit TensorSlowCpu(std::array<size_t, _Rank> dims,
+                         Uninitialized<value_type>)
+    : dims_{dims},
+      strides_{make_strides<_T>(dims)},
+      shared_(new char[strides_[0] * dims_[0]]),
+      data_(shared_.get())
+  {}
+
+  /// Constructor for any rank tensor with a dynamically allocated uninitialized buffer with padding.
+  explicit TensorSlowCpu(std::array<size_t, _Rank> dims,
+                         std::array<ssize_t, _Rank> strides,
+                         Uninitialized<value_type>)
+    : dims_{dims},
+      strides_{strides},
+      shared_(new char[strides_[0] * dims_[0]]),
       data_(shared_.get())
   {}
 
@@ -334,6 +377,23 @@ explicit TensorSlowCpu(const size_t(&&)[_N], _T) -> TensorSlowCpu<_T, _N>;
 // Tensor(&&[], Uninitialized<T>) -> Rank-N tensor with a dynamically allocated uninitialized buffer.
 template <typename _T, size_t _N>
 explicit TensorSlowCpu(const size_t(&&)[_N], Uninitialized<_T>) -> TensorSlowCpu<_T, _N>;
+
+
+// Tensor(array, T)
+template <typename _T, size_t _N>
+TensorSlowCpu(std::array<size_t, _N>, _T) -> TensorSlowCpu<_T, _N>;
+
+// Tensor(array, array, T)
+template <typename _T, size_t _N>
+explicit TensorSlowCpu(std::array<size_t, _N>, std::array<ssize_t, _N>, _T) -> TensorSlowCpu<_T, _N>;
+
+// Tensor(array, Uninitialized<T>)
+template <typename _T, size_t _N>
+explicit TensorSlowCpu(std::array<size_t, _N>, Uninitialized<_T>) -> TensorSlowCpu<_T, _N>;
+
+// Tensor(array, array, Uninitialized<T>)
+template <typename _T, size_t _N>
+explicit TensorSlowCpu(std::array<size_t, _N>, std::array<ssize_t, _N>, Uninitialized<_T>) -> TensorSlowCpu<_T, _N>;
 
 
 // TensorOp -> Tensor (move)
