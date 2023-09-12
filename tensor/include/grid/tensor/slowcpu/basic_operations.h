@@ -14,52 +14,74 @@
 namespace grid {
 
 
-// Operator==
+namespace details {
+
+template <typename _T, size_t>
+inline std::enable_if_t<!std::is_floating_point_v<_T>, bool>
+equals(const char* src1, const char* src2,
+       std::span<size_t, 1> dims,
+       std::span<ssize_t, 1> strides1,
+       std::span<ssize_t, 1> strides2)
+{
+  for (size_t i = 0; i < dims[0]; i++, src1 += strides1[0], src2 += strides2[0])
+    if (*reinterpret_cast<const _T*>(src1) != *reinterpret_cast<const _T*>(src2))
+      return false;
+  return true;
+}
+
+template <typename _T, size_t>
+inline std::enable_if_t<std::is_floating_point_v<_T>, bool>
+equals(const char* src1, const char* src2,
+       std::span<size_t, 1> dims,
+       std::span<ssize_t, 1> strides1,
+       std::span<ssize_t, 1> strides2)
+{
+  constexpr _T max_abs_error = std::numeric_limits<_T>::epsilon() * 100;
+
+  for (size_t i = 0; i < dims[0]; i++, src1 += strides1[0], src2 += strides2[0])
+  {
+    _T data0 = *reinterpret_cast<const _T*>(src1);
+    _T data1 = *reinterpret_cast<const _T*>(src2);
+
+    if (std::abs(data0 - data1) > max_abs_error)
+      return false;
+  }
+  return true;
+}
+
+template <typename _T, size_t _N>
+inline std::enable_if_t<(_N > 1), bool>
+equals(const char* src1, const char* src2,
+       std::span<size_t, _N> dims,
+       std::span<ssize_t, _N> strides1,
+       std::span<ssize_t, _N> strides2)
+{
+  static_assert(_N != std::dynamic_extent, "dynamic_extent not allowed");
+  for (size_t i = 0; i < dims[0]; i++, src1 += strides1[0], src2 += strides2[0])
+    if (!equals<_T, _N - 1>(src1, src2,
+                            std::span<size_t, _N - 1>(dims.begin() + 1, _N - 1),
+                            std::span<ssize_t, _N - 1>(strides1.begin() + 1, _N - 1),
+                            std::span<ssize_t, _N - 1>(strides2.begin() + 1, _N - 1)))
+      return false;
+
+  return true;
+}
+
+} // end of namespace details
+
+
 template <TensorFor<TensorSlowCpu> _Tensor1, TensorFor<TensorSlowCpu> _Tensor2>
 bool operator==(_Tensor1&& tensor1, _Tensor2&& tensor2)
 {
-  using value_type = typename std::remove_cvref_t<_Tensor1>::value_type;
-  if constexpr (!std::is_same_v<typename std::remove_cvref_t<_Tensor1>::value_type,
-                                typename std::remove_cvref_t<_Tensor2>::value_type>)
-    return false;
+  constexpr size_t _Rank = tensor1.Rank();
+  static_assert(_Rank == tensor2.Rank(), "ranks mismatch between tensors");
 
-  constexpr value_type max_abs_error = std::numeric_limits<value_type>::epsilon() * 100;
-
-  size_t rank = tensor1.Rank();
-  if (rank != tensor2.Rank())
-    return false;
-
-  const size_t dim0 = rank > 0 ? tensor1.Dim(0) : 1;
-  const size_t dim1 = rank > 1 ? tensor1.Dim(1) : 1;
-  const size_t dim2 = rank > 2 ? tensor1.Dim(2) : 1;
-  const size_t dim3 = rank > 3 ? tensor1.Dim(3) : 1;
-
-  if ((rank > 0 && tensor2.Dim(0) != dim0) ||
-      (rank > 1 && tensor2.Dim(1) != dim1) ||
-      (rank > 2 && tensor2.Dim(2) != dim2) ||
-      (rank > 3 && tensor2.Dim(3) != dim3) ||
-       rank > 4)
-    return false;
-
-  const size_t stride1_0 = rank > 0 ? tensor1.Stride(0) / sizeof(value_type) : 1;
-  const size_t stride1_1 = rank > 1 ? tensor1.Stride(1) / sizeof(value_type) : 1;
-  const size_t stride1_2 = rank > 2 ? tensor1.Stride(2) / sizeof(value_type) : 1;
-  const size_t stride2_0 = rank > 0 ? tensor2.Stride(0) / sizeof(value_type) : 1;
-  const size_t stride2_1 = rank > 1 ? tensor2.Stride(1) / sizeof(value_type) : 1;
-  const size_t stride2_2 = rank > 2 ? tensor2.Stride(2) / sizeof(value_type) : 1;
-
-  const value_type* data0 = reinterpret_cast<const value_type*>(tensor1.Data());
-  const value_type* data1 = reinterpret_cast<const value_type*>(tensor2.Data());
-
-  for (size_t c = 0; c < dim3; c++)
-    for (size_t k = 0; k < dim2; k++)
-      for (size_t m = 0; m < dim1; m++)
-        for (size_t n = 0; n < dim0; n++)
-          if (std::abs(data0[c * stride1_0 + k * stride1_1 + m * stride1_2 + n] -
-                       data1[c * stride2_0 + k * stride2_1 + m * stride2_2 + n]) > max_abs_error)
-            return  false;
-
-  return true;
+  return details::equals<typename std::remove_cvref_t<_Tensor1>::value_type, _Rank>(
+                         reinterpret_cast<const char*>(tensor1.Data()),
+                         reinterpret_cast<const char*>(tensor2.Data()),
+                         std::span<size_t, _Rank>(tensor1.Dims().begin(), _Rank),
+                         std::span<ssize_t, _Rank>(tensor1.Strides().begin(), _Rank),
+                         std::span<ssize_t, _Rank>(tensor2.Strides().begin(), _Rank));
 }
 
 
