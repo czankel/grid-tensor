@@ -77,9 +77,9 @@ TEST(TensorSlowCPU, AllocInitializedRank2Char)
   EXPECT_THAT(tensor1.Strides(), ElementsAre(size<char>(4), size<char>(1)));
 
   char verify[] = { '3', '3', '3', '3', '3',
-                  '3', '3', '3', '3', '3',
-                  '3', '3', '3', '3', '3',
-                  '3', '3', '3', '3', '3' };
+                    '3', '3', '3', '3', '3',
+                    '3', '3', '3', '3', '3',
+                    '3', '3', '3', '3', '3' };
   EXPECT_EQ(memcmp(tensor1.Data(), verify, sizeof(verify)), 0);
 }
 
@@ -91,6 +91,22 @@ TEST(TensorSlowCPU, AllocUninitializedRank2Double)
   EXPECT_THAT(tensor1.Dims(), ElementsAre(7, 3));
   EXPECT_THAT(tensor1.Strides(), ElementsAre(size<int>(3), size<int>(1)));
 }
+
+TEST(TensorSlowCPU, AllocInitializedRank3Double)
+{
+  Tensor tensor1{{4, 5, 7}, 3.3};
+
+  EXPECT_EQ(tensor1.Rank(), 3);
+  EXPECT_THAT(tensor1.Dims(), ElementsAre(4, 5, 7));
+  EXPECT_THAT(tensor1.Strides(), ElementsAre(size<double>(7 * 5), size<double>(7), size<double>(1)));
+}
+
+TEST(TensorSlowCPU, AllocUninitializedRank3Double)
+{
+  Tensor t33({3, 2, 1}, grid::Uninitialized<double>{});
+  EXPECT_THAT(t33.Strides(), ElementsAre(size<double>(2 * 1), size<double>(1), size<double>(1)));
+}
+
 
 TEST(TensorSlowCPU, AllocUninitializedPattedRank3Double)
 {

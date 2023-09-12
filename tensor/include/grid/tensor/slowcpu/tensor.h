@@ -340,6 +340,23 @@ template <typename _T, size_t _N>
 explicit TensorSlowCpu(size_t(&&)[_N], ssize_t(&&)[_N], Uninitialized<_T>) -> TensorSlowCpu<_T, _N>;
 
 
+// Tensor(&[], T) -> Rank-N tensor with a dynamically allocated initialized buffer.
+template <typename _T, size_t _N>
+explicit TensorSlowCpu(const size_t(&)[_N], _T) -> TensorSlowCpu<_T, _N>;
+
+// Tensor(&[], Uninitialized<T>) -> Rank-N tensor with a dynamically allocated uninitialized buffer.
+template <typename _T, size_t _N>
+explicit TensorSlowCpu(const size_t(&)[_N], Uninitialized<_T>) -> TensorSlowCpu<_T, _N>;
+
+// Tensor(&&[], T) -> Rank-N tensor with a dynamically allocated initialized buffer.
+template <typename _T, size_t _N>
+explicit TensorSlowCpu(const size_t(&&)[_N], _T) -> TensorSlowCpu<_T, _N>;
+
+// Tensor(&&[], Uninitialized<T>) -> Rank-N tensor with a dynamically allocated uninitialized buffer.
+template <typename _T, size_t _N>
+explicit TensorSlowCpu(const size_t(&&)[_N], Uninitialized<_T>) -> TensorSlowCpu<_T, _N>;
+
+
 // TensorOp -> Tensor (move)
 template <template <template <typename, size_t, auto...> typename, typename, size_t, typename...> typename _TensorOp,
           template <typename, size_t, auto...> typename _TensorRT, typename _T, size_t _Rank, typename... _Tensors>
