@@ -74,44 +74,7 @@ concept TensorRank = (is_tensor_v<_Tensor> || is_tensor_op_v<_Tensor>) && _Tenso
 /// optimizations specific to CPUs and accelerators.
 struct TensorBase
 {
-  /// operator<< outputs the tensor buffer.
-  inline friend std::ostream& operator<<(std::ostream& os, const AnyTensor auto& tensor)
-  {
-    using value_type = std::remove_reference_t<decltype(tensor)>::value_type;
-    constexpr size_t rank = tensor.Rank();
-
-    std::function<void(int, const value_type*&)> print;
-    print = [&os, &tensor, &print](size_t index, const value_type*& ptr) {
-      os << "{ ";
-      if (index < rank - 1)
-      {
-        for (size_t i = tensor.Dim(index); i > 0; i--)
-        {
-          print(index + 1, ptr);
-          if (i != 1)
-            os << ", ";
-          else
-            os << " }";
-        }
-      }
-      else
-      {
-        for (size_t i = tensor.Dim(index); i > 0; i--)
-        {
-          os << *ptr++;
-          if (i != 1)
-            os << ", ";
-          else
-            os << " }";
-        }
-      }
-    };
-    const value_type* ptr = reinterpret_cast<const value_type*>(tensor.Data());
-    print(0, ptr);
-    os << std::flush;
-
-    return os;
-  }
+  friend std::ostream& operator<<(std::ostream& os, const AnyTensor auto& tensor);
 };
 
 // Tensor basic arithmetic operations
@@ -192,6 +155,50 @@ std::array<ssize_t, _Rank> make_strides(const std::array<size_t, _Rank>& dims)
   return make_strides_impl<_T>(dims, Indices{});
 }
 
+/// operator<< outputs the tensor buffer.
+std::ostream& operator<<(std::ostream& os, const grid::AnyTensor auto& tensor)
+{
+  using value_type = std::remove_reference_t<decltype(tensor)>::value_type;
+  constexpr size_t rank = tensor.Rank();
+
+  auto dims = tensor.Dims();
+  auto strides = tensor.Strides();
+
+  std::function<void(int, const value_type*&)> print;
+  print = [&os, &tensor, &dims, &strides, &print](size_t index, const value_type*& ptr) {
+    os << "{ ";
+    if (index < rank -1)
+    {
+      for (size_t i = dims[index]; i > 0; i--)
+      {
+        print(index + 1, ptr);
+        if (i != 1)
+          os << ", ";
+        else
+          os << " }";
+        ptr += strides[index] / sizeof(*ptr);
+      }
+    }
+    else
+    {
+      auto* p = ptr;
+      for (size_t i = dims[index]; i > 0; i--)
+      {
+        os << *p;
+        if (i != 1)
+          os << ", ";
+        else
+          os << " }";
+        p += strides[index] / sizeof(*ptr);
+      }
+    }
+  };
+  const value_type* ptr = reinterpret_cast<const value_type*>(tensor.Data());
+  print(0, ptr);
+  os << std::flush;
+
+  return os;
+}
 
 } // end of namespace grid
 
