@@ -117,6 +117,50 @@ TEST(TensorSlowCPU, AllocUninitializedPattedRank3Double)
 }
 
 
+TEST(TensorSlowCpu, TensorMMap)
+{
+  std::FILE* tmpf = std::tmpfile();
+
+  std::array<size_t, 4> ds1 = {2, 3, 2, 4};
+  std::fwrite(ds1.data(), sizeof ds1[0], ds1.size(), tmpf);
+
+  std::array<double, 4> row1 = {1.2, 2.3, 3.4, 0.0};
+  std::fwrite(row1.data(), sizeof row1[0], row1.size(), tmpf);
+  std::fwrite(row1.data(), sizeof row1[0], row1.size(), tmpf);
+
+  std::array<size_t, 4> ds2 = {2, 3, 2, 3};
+  std::fwrite(ds2.data(), sizeof ds2[0], ds2.size(), tmpf);
+
+  std::array<double, 3> row2 = {4.3, 3.2, 2.1};
+  std::fwrite(row2.data(), sizeof row2[0], row2.size(), tmpf);
+  std::fwrite(row2.data(), sizeof row2[0], row2.size(), tmpf);
+
+  size_t file_size = std::ftell(tmpf);
+  EXPECT_EQ(file_size, sizeof(size_t) * 8 + sizeof(double) * (8 + 6));
+
+  std::rewind(tmpf);
+
+  int fd = fileno(tmpf);
+  auto mmap = std::make_shared<grid::MMap>(fd, file_size);
+  grid::MMapView view(mmap);
+
+  auto dims1 = view.Read<std::array<size_t, 2>>();
+  auto strides1 = view.Read<std::array<size_t, 2>>();
+  Tensor tensor1(view.Array<double>(0UL, dims1, grid::make_strides<double>(strides1)));
+
+
+  auto dims2 = view.Read<std::array<size_t, 2>>();
+  auto strides2 = view.Read<std::array<size_t, 2>>();
+  Tensor tensor2(view.Array<double>(0UL, dims2, grid::make_strides<double>(strides2)));
+
+  auto res = (tensor1 + tensor2)();
+  Tensor v{ { 5.5, 5.5, 5.5 }, { 5.5, 5.5, 5.5 } };
+  EXPECT_EQ(res, v);
+
+  std::fclose(tmpf);
+}
+
+
 TEST(TensorSlowCPU, TensorAdd)
 {
   Tensor t11{ 11, 22, 33, 44, 55, 66 };

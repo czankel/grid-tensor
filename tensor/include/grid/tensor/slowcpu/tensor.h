@@ -17,6 +17,9 @@
 #include <numeric>
 #include <span>
 
+#include <grid/tensor/mmap.h>
+
+
 namespace grid {
 
 /// TensorSlowCpu<_T, _Rank> is a specialization of TensorSlowCpu for a dynamically allocated buffer.
@@ -317,6 +320,53 @@ struct TensorSlowCpu<_T, 2, _M, _N> : TensorBase
 };
 
 
+/// TensorSLowCpu<_T, _Rank, kMemoryMapped> is a tensor for memory-mapped data
+template <typename _T, size_t _Rank>
+struct TensorSlowCpu<_T, _Rank, kMemoryMapped> : TensorBase
+{
+  using tensor_type = TensorSlowCpu<_T, _Rank, kMemoryMapped>;
+  using value_type = _T;
+
+  /// Constructor for a memory-mapped buffer.
+  explicit TensorSlowCpu(const MMapArray<_T, _Rank>& arr)
+    : dims_(arr.dims_),
+      strides_(arr.strides_),
+      mmap_(arr.mmap_),
+      data_(static_cast<char*>(mmap_->Address()) + arr.offset_)
+  {}
+
+  // Constructor for a memory-mapped buffer.
+  explicit TensorSlowCpu(MMapArray<_T, _Rank>&& arr)
+    : dims_(std::move(arr.dims_)),
+      strides_(std::move(arr.strides_)),
+      mmap_(std::move(arr.mmap_)),
+      data_(static_cast<char*>(mmap_->Address()) + arr.offset_)
+  {}
+
+
+  /// Rank returns the rank of the tensor.
+  constexpr static size_t Rank()                          { return _Rank; }
+
+  /// Dims returns the dimensions of the tensor.
+  const std::array<size_t, _Rank>& Dims() const           { return dims_; }
+
+  /// Strides returns the strides of the tensor.
+  const std::array<ssize_t, _Rank>& Strides() const       { return strides_; }
+
+  /// Size returns the data buffer size.
+  size_t Size()                                           { return strides_[0] * dims_[0]; }
+
+  /// Data returns a pointer to the data buffer.
+  char* Data() const                                      { return data_; }
+
+
+  std::array<size_t, _Rank>   dims_;
+  std::array<ssize_t, _Rank>  strides_;
+  std::shared_ptr<MMap>       mmap_;
+  char*                       data_;
+};
+
+
 // CTAD rules
 
 // Tensor{Ts...} -> Rank-1 tensor with a static/local array (brace-initializer).
@@ -394,6 +444,11 @@ explicit TensorSlowCpu(std::array<size_t, _N>, Uninitialized<_T>) -> TensorSlowC
 // Tensor(array, array, Uninitialized<T>)
 template <typename _T, size_t _N>
 explicit TensorSlowCpu(std::array<size_t, _N>, std::array<ssize_t, _N>, Uninitialized<_T>) -> TensorSlowCpu<_T, _N>;
+
+
+// Tensor<mmap, dim, strides> -> Rank-N tensor for a memory mapped buffer
+template <typename _T, size_t _N>
+explicit TensorSlowCpu(MMapArray<_T, _N>) -> TensorSlowCpu<_T, _N, kMemoryMapped>;
 
 
 // TensorOp -> Tensor (move)

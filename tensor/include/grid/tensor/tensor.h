@@ -19,6 +19,13 @@
 namespace grid {
 
 
+/// Non-type enumerator for tensor template parameters
+enum TensorType
+{
+  kMemoryMapped,      /// Memory mapped tensor
+};
+
+
 /// TensorBaseOp provides a base class for identifying tensor operator classes.
 ///
 /// All Tensor operators/operations are required to derive from this class.
