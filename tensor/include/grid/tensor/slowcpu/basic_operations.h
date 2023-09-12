@@ -114,7 +114,7 @@ struct TensorAdd<TensorSlowCpu, _T, _Rank, _Tensor1, _Tensor2> : TensorBaseOp //
   template <TensorRank<1> = _Tensor1, TensorRank<1> = _Tensor2>
   auto operator()() const
   {
-    size_t dim_m = tensor1_.Dim(0);
+    size_t dim_m = tensor1_.Dims()[0];
 
     // FIXME: stride
     const value_type* data1 = reinterpret_cast<const value_type*>(tensor1_.Data());
@@ -134,8 +134,8 @@ struct TensorAdd<TensorSlowCpu, _T, _Rank, _Tensor1, _Tensor2> : TensorBaseOp //
   template <TensorRank<2> = _Tensor1, TensorRank<2> = _Tensor2>
   auto operator()() const
   {
-    size_t dim_m = tensor1_.Dim(0);
-    size_t dim_n = tensor1_.Dim(1);
+    size_t dim_m = tensor1_.Dims()[0];
+    size_t dim_n = tensor1_.Dims()[1];
 
     const value_type* data1 = reinterpret_cast<const value_type*>(tensor1_.Data());
     const value_type* data2 = reinterpret_cast<const value_type*>(tensor2_.Data());

@@ -189,13 +189,6 @@ struct TensorSlowCpu<_T, _Rank> : TensorBase
   /// Rank returns the rank of the tensor.
   constexpr static size_t Rank()                          { return _Rank; }
 
-  /// Dim returns the dimension of the rank.
-  size_t Dim(size_t index) const                          { return dims_[index]; }
-
-  // TODOo: assert on the index; also Dim()
-  /// Stride returns the stride of the rank.
-  ssize_t Stride(size_t index) const                      { return strides_[index]; }
-
   /// Dims returns the dimensions for the axis.
   const std::array<size_t, _Rank>& Dims() const           { return dims_; }
 
@@ -231,13 +224,6 @@ struct TensorSlowCpu<_T, 1, _N> : TensorBase
   /// Rank returns the rank of the tensor.
   constexpr static size_t Rank()                          { return 1UL; }
 
-  /// Dim returns the dimension for the rank.
-  size_t Dim(size_t index) const                          { if (index > 1) throw std::out_of_range ("index");
-                                                            return dims_[index]; }
-  /// Dim returns the stride for the rank.
-  ssize_t Stride(size_t index) const                      { if (index > 1) throw std::out_of_range ("index");
-                                                            return strides_[index]; }
-
   /// Dims returns the dimensions for the axis.
   const std::array<size_t, 1>& Dims() const               { return dims_; }
 
@@ -271,13 +257,6 @@ struct TensorSlowCpu<_T, 2, _M, _N> : TensorBase
 
   /// Rank returns the rank of the tensor.
   constexpr static size_t Rank()                          { return 2UL; }
-
-  /// Dim returns the dimension of the rank.
-  size_t Dim(size_t index) const                          { if (index > 2) throw std::out_of_range ("index");
-                                                            return dims_[index]; }
-  /// Dim returns the stride of the rank.
-  ssize_t Stride(size_t index) const                      { if (index > 2) throw std::out_of_range ("index");
-                                                            return strides_[index]; }
 
   /// Dims returns the dimensions for the axis.
   const std::array<size_t, 2>& Dims() const               { return dims_; }
