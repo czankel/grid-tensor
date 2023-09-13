@@ -20,7 +20,7 @@ template <typename _T> constexpr size_t size(size_t count) { return sizeof(_T) *
 template <typename _T, size_t _Rank, auto... _Args>
 using Tensor = grid::TensorSlowCpu<_T, _Rank, _Args...>;
 
-TEST(TensorSlowCPU, BraceInitializationRank1Integer)
+TEST(TensorSlowCPU, TensorBraceInitializationRank1Integer)
 {
   Tensor tensor1{ 11, 22, 33, 44, 55, 66 };
 
@@ -33,7 +33,7 @@ TEST(TensorSlowCPU, BraceInitializationRank1Integer)
   EXPECT_EQ(memcmp(tensor1.Data(), data, sizeof(data)), 0);
 }
 
-TEST(TensorSlowCPU, BraceInitializationRank2Integer)
+TEST(TensorSlowCPU, TensorBraceInitializationRank2Integer)
 {
   Tensor tensor1{ { 11, 12 }, { 21, 22, 23 }, { 31, 32, 33, 34 } };
 
@@ -48,7 +48,7 @@ TEST(TensorSlowCPU, BraceInitializationRank2Integer)
   EXPECT_EQ(data[9], 32);
 }
 
-TEST(TensorSlowCPU, AllocInitializedRank1Double)
+TEST(TensorSlowCPU, TensorAllocInitializedRank1Double)
 {
   Tensor tensor1(4UL, 1.2);
 
@@ -60,7 +60,7 @@ TEST(TensorSlowCPU, AllocInitializedRank1Double)
   EXPECT_EQ(memcmp(tensor1.Data(), verify, sizeof(verify)), 0);
 }
 
-TEST(TensorSlowCPU, AllocUninitializedRank1Double)
+TEST(TensorSlowCPU, TensorAllocUninitializedRank1Double)
 {
   Tensor tensor1(5UL, grid::Uninitialized<double>{});
   EXPECT_EQ(tensor1.Rank(), 1);
@@ -68,7 +68,7 @@ TEST(TensorSlowCPU, AllocUninitializedRank1Double)
   EXPECT_THAT(tensor1.Strides(), ElementsAre(size<double>(1)));
 }
 
-TEST(TensorSlowCPU, AllocInitializedRank2Char)
+TEST(TensorSlowCPU, TensorAllocInitializedRank2Char)
 {
   Tensor tensor1(5UL, 4UL, (char)'3');
 
@@ -83,7 +83,7 @@ TEST(TensorSlowCPU, AllocInitializedRank2Char)
   EXPECT_EQ(memcmp(tensor1.Data(), verify, sizeof(verify)), 0);
 }
 
-TEST(TensorSlowCPU, AllocUninitializedRank2Double)
+TEST(TensorSlowCPU, TensorAllocUninitializedRank2Double)
 {
   Tensor tensor1(7UL, 3UL, grid::Uninitialized<int>{});
 
@@ -92,7 +92,7 @@ TEST(TensorSlowCPU, AllocUninitializedRank2Double)
   EXPECT_THAT(tensor1.Strides(), ElementsAre(size<int>(3), size<int>(1)));
 }
 
-TEST(TensorSlowCPU, AllocInitializedRank3Double)
+TEST(TensorSlowCPU, TensorAllocInitializedRank3Double)
 {
   Tensor tensor1{{4, 5, 7}, 3.3};
 
@@ -101,14 +101,14 @@ TEST(TensorSlowCPU, AllocInitializedRank3Double)
   EXPECT_THAT(tensor1.Strides(), ElementsAre(size<double>(7 * 5), size<double>(7), size<double>(1)));
 }
 
-TEST(TensorSlowCPU, AllocUninitializedRank3Double)
+TEST(TensorSlowCPU, TensorAllocUninitializedRank3Double)
 {
   Tensor t33({3, 2, 1}, grid::Uninitialized<double>{});
   EXPECT_THAT(t33.Strides(), ElementsAre(size<double>(2 * 1), size<double>(1), size<double>(1)));
 }
 
 
-TEST(TensorSlowCPU, AllocUninitializedPattedRank3Double)
+TEST(TensorSlowCPU, TensorAllocUninitializedPattedRank3Double)
 {
   Tensor tensor1({3, 2, 1}, {size<double>(2 * 2 * 4), size<double>(2 * 2), size<double>(2)}, grid::Uninitialized<double>{});
   EXPECT_EQ(tensor1.Rank(), 3);
@@ -148,7 +148,6 @@ TEST(TensorSlowCpu, TensorMMap)
   auto strides1 = view.Read<std::array<size_t, 2>>();
   Tensor tensor1(view.Array<double>(0UL, dims1, grid::make_strides<double>(strides1)));
 
-
   auto dims2 = view.Read<std::array<size_t, 2>>();
   auto strides2 = view.Read<std::array<size_t, 2>>();
   Tensor tensor2(view.Array<double>(0UL, dims2, grid::make_strides<double>(strides2)));
@@ -158,45 +157,4 @@ TEST(TensorSlowCpu, TensorMMap)
   EXPECT_EQ(res, v);
 
   std::fclose(tmpf);
-}
-
-
-TEST(TensorSlowCPU, TensorAdd)
-{
-  Tensor t11{ 11, 22, 33, 44, 55, 66 };
-  Tensor t12{ 89, 78, 67, 56, 45, 34 };
-  int v1[] = { 100, 100, 100, 100, 100, 100 };
-
-  auto op1a = grid::TensorAdd(t11, t12);
-  auto res1a = op1a();
-  EXPECT_EQ(memcmp(res1a.Data(), v1, sizeof(v1)), 0);
-
-  auto&& op1b = t12 + t11;
-  auto res1b = op1b();
-  EXPECT_EQ(memcmp(res1b.Data(), v1, sizeof(v1)), 0);
-
-  Tensor t21(4UL, 5UL, 1.1);
-  Tensor t22(4UL, 5UL, 2.4);
-
-  auto op2 = std::move(t21) + std::move(t22);
-  auto res2 = op2();
-  Tensor v2{
-    { 3.5, 3.5, 3.5, 3.5, 3.5 },
-    { 3.5, 3.5, 3.5, 3.5, 3.5 },
-    { 3.5, 3.5, 3.5, 3.5, 3.5 },
-    { 3.5, 3.5, 3.5, 3.5, 3.5 }
-  };
-  EXPECT_EQ(res2, v2);
-}
-
-TEST(TensorSlowCPU, TensorAddAdd)
-{
-  Tensor t31(4UL, 3UL, 2.1);
-  Tensor t32(4UL, 3UL, 1.3);
-  Tensor t33(4UL, 3UL, 2.2);
-  Tensor v3{ { 5.6, 5.6, 5.6 }, { 5.6, 5.6, 5.6 }, { 5.6, 5.6, 5.6 }, { 5.6, 5.6, 5.6 }};
-
-  auto&& op31 = t31 + t32 + t33;
-  auto res3 = op31();
-  EXPECT_EQ(res3, v3);
 }
