@@ -87,6 +87,7 @@ struct TensorBase
 // Tensor basic arithmetic operations
 
 template <template <typename, size_t, auto...> typename, typename, size_t, typename... > struct TensorAdd;
+template <template <typename, size_t, auto...> typename, typename, size_t, typename... > struct TensorMul;
 
 
 // Operator overloading
@@ -96,6 +97,13 @@ template <AnyConvertibleTensor _Tensor1, AnyConvertibleTensor _Tensor2>
 auto operator+(_Tensor1&& tensor1, _Tensor2&& tensor2)
 {
   return TensorAdd(std::forward<_Tensor1>(tensor1), std::forward<_Tensor2>(tensor2));
+}
+
+// operator* (TensorType, TensorType)
+template <AnyConvertibleTensor _Tensor1, AnyConvertibleTensor _Tensor2>
+auto operator*(_Tensor1&& tensor1, _Tensor2&& tensor2)
+{
+  return TensorMul(std::forward<_Tensor1>(tensor1), std::forward<_Tensor2>(tensor2));
 }
 
 

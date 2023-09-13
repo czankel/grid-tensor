@@ -25,5 +25,6 @@ template <typename, size_t, auto...> struct TensorSlowCpu;
 
 #include "slowcpu/tensor.h"
 #include "slowcpu/basic_operations.h"
+#include "slowcpu/multiplication.h"
 
 #endif  // GRID_TENSOR_TENSOR_SLOWCPU_H
