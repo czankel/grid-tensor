@@ -20,6 +20,14 @@ template <typename _T> constexpr size_t size(size_t count) { return sizeof(_T) *
 template <typename _T, size_t _Rank, auto... _Args>
 using Tensor = grid::TensorSlowCpu<_T, _Rank, _Args...>;
 
+TEST(TensorSlowCPU, TensorBaseInitializationRank0Integer)
+{
+  Tensor tensor{ 4 };
+  EXPECT_EQ(tensor.Rank(), 0);
+  EXPECT_THAT(tensor.Dims(), ElementsAre());
+  EXPECT_THAT(tensor.Strides(), ElementsAre());
+}
+
 TEST(TensorSlowCPU, TensorBraceInitializationRank1Integer)
 {
   Tensor tensor1{ 11, 22, 33, 44, 55, 66 };
