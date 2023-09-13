@@ -31,17 +31,6 @@ struct TensorSlowCpu<_T, _Rank> : TensorBase
   using tensor_type = TensorSlowCpu<_T, _Rank>;
   using value_type = _T;
 
-
-  // helper function to initialize the tensor memory buffer.
-  inline void
-  initialize(char* ptr,
-             std::span<size_t, 0> dims,
-             std::span<ssize_t, 0> strides,
-             value_type init)
-  {
-    *reinterpret_cast<value_type*>(ptr) = init;
-  }
-
   inline void
   initialize(char* ptr,
              std::span<size_t, 1> dims,
@@ -251,6 +240,40 @@ struct TensorSlowCpu<_T, _Rank> : TensorBase
   char*                             data_;
 };
 
+/// TensorSlowCpu<_T, 0, 1> is a specialization of a rank-0 tensor.
+template <typename _T>
+struct TensorSlowCpu<_T, 0> : TensorBase
+{
+  using tensor_type = TensorSlowCpu<_T, 0>;
+  using value_type = _T;
+
+  /// Constructor for a rank-1 tensor (vector) with brace initialization.
+  explicit TensorSlowCpu(_T init) : array_{init} {}
+
+  explicit TensorSlowCpu(Uninitialized<_T>) {}
+
+  explicit TensorSlowCpu(const std::array<size_t, 0>&, _T init) : array_{init} {}
+
+  explicit TensorSlowCpu(const std::array<size_t, 0>&, Uninitialized<_T>) {}
+
+  /// Rank returns the rank of the tensor.
+  constexpr static size_t Rank()                          { return 0UL; }
+
+  /// Dims returns the dimensions for the axis.
+  const std::array<size_t, 0>& Dims() const               { return dims_; }
+
+  /// Strides returns the strides for the axis.
+  const std::array<ssize_t, 0>& Strides() const           { return {strides_}; }
+
+  /// Data returns a pointer to the data buffer.
+  char* Data()                                            { return reinterpret_cast<char*>(array_.data()); }
+  const char* Data() const                                { return reinterpret_cast<const char*>(array_.data()); }
+
+  constexpr static std::array<size_t, 0>  dims_{};
+  constexpr static std::array<ssize_t, 0> strides_ = {};
+  std::array<value_type, 1>               array_;
+};
+
 
 /// TensorSlowCpu<_T, 1, _N> is a specialization of a rank-1 tensor (vector) for a 'static' array.
 /// Note that the brace-initializer form of Tensors don't support padding.
@@ -368,6 +391,14 @@ struct TensorSlowCpu<_T, _Rank, kMemoryMapped> : TensorBase
 
 
 // CTAD rules
+
+// Tensor{T} -> Rank-0 tensor with a static/local array
+template <typename _T>
+explicit TensorSlowCpu(_T) -> TensorSlowCpu<_T, 0>;
+
+// Tensor{Uninitailzied<T>} -> Rank-0 tensor with a static/local array
+template <typename _T>
+explicit TensorSlowCpu(Uninitialized<_T>) -> TensorSlowCpu<_T, 0>;
 
 // Tensor{Ts...} -> Rank-1 tensor with a static/local array (brace-initializer).
 template <typename _T, typename... _Ts>
