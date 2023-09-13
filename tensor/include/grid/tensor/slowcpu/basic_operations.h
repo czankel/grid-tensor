@@ -19,6 +19,29 @@ namespace details {
 template <typename _T, size_t>
 inline std::enable_if_t<!std::is_floating_point_v<_T>, bool>
 equals(const char* src1, const char* src2,
+       std::span<const size_t,  0>,
+       std::span<const ssize_t, 0>,
+       std::span<const ssize_t, 0>)
+{
+  return *reinterpret_cast<const _T*>(src1) == *reinterpret_cast<const _T*>(src2);
+}
+
+template <typename _T, size_t>
+inline std::enable_if_t<std::is_floating_point_v<_T>, bool>
+equals(const char* src1, const char* src2,
+       std::span<const size_t,  0>,
+       std::span<const ssize_t, 0>,
+       std::span<const ssize_t, 0>)
+{
+  constexpr _T max_abs_error = std::numeric_limits<_T>::epsilon() * 100;
+  _T data0 = *reinterpret_cast<const _T*>(src1);
+  _T data1 = *reinterpret_cast<const _T*>(src2);
+  return std::abs(data0 - data1) <= max_abs_error;
+}
+
+template <typename _T, size_t>
+inline std::enable_if_t<!std::is_floating_point_v<_T>, bool>
+equals(const char* src1, const char* src2,
        std::span<const size_t,  1> dims,
        std::span<const ssize_t, 1> strides1,
        std::span<const ssize_t, 1> strides2)
@@ -87,7 +110,7 @@ bool operator==(_Tensor1&& tensor1, _Tensor2&& tensor2)
 
 /// TensorAdd<TensorSlowCpu> implements tensor addition operation for tensors of the same rank.
 template <typename _T, size_t _Rank, TensorFor<TensorSlowCpu> _Tensor1, TensorFor<TensorSlowCpu> _Tensor2>
-struct TensorAdd<TensorSlowCpu, _T, _Rank, _Tensor1, _Tensor2> : TensorBaseOp //<_Tensor1>
+struct TensorAdd<TensorSlowCpu, _T, _Rank, _Tensor1, _Tensor2> : TensorBaseOp
 {
   constexpr static size_t Rank()                  { return _Rank; }
   using tensor_type = TensorSlowCpu<_T, _Rank>;
@@ -107,6 +130,16 @@ struct TensorAdd<TensorSlowCpu, _T, _Rank, _Tensor1, _Tensor2> : TensorBaseOp //
   TensorAdd(TensorAdd&& other) = delete;
   TensorAdd& operator=(const TensorAdd& other) = delete;
   TensorAdd& operator=(TensorAdd&& other) = delete;
+
+  inline void add(char* dest, const char* src1, const char* src2,
+                  std::span<const size_t,  0> dims,
+                  std::span<const ssize_t, 0>,
+                  std::span<const ssize_t, 0>,
+                  std::span<const ssize_t, 0>) const
+  {
+    *reinterpret_cast<value_type*>(dest) =
+      *reinterpret_cast<const value_type*>(src1) + *reinterpret_cast<const value_type*>(src2);
+  }
 
   // TODO: move conditional up the call chain (create addslow and addfast call-chains)
   inline void add(char* dest, const char* src1, const char* src2,

@@ -201,7 +201,11 @@ std::ostream& operator<<(std::ostream& os, const grid::AnyTensor auto& tensor)
     }
   };
   const value_type* ptr = reinterpret_cast<const value_type*>(tensor.Data());
-  print(0, ptr);
+  if (rank > 0)
+    print(0, ptr);
+  else
+    os << "{ " << *ptr << " }";
+
   os << std::flush;
 
   return os;
