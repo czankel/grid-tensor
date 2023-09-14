@@ -6,4 +6,5 @@
 
 grid_add_sources(gridtensor
 	tensor.cc
+	mmap.cc
 )
