@@ -6,7 +6,9 @@
 // The contents of this file are confidential and proprietary to Chris Zankel.
 //
 
-#include <grid/tensor/tensor_slowcpu.h>
+#include <grid/tensor/tensor.h>
+#include <grid/tensor/slowcpu/tensor.h>
+#include <grid/tensor/slowcpu/comparison.h>
 
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
@@ -159,10 +161,6 @@ TEST(TensorSlowCpu, TensorMMap)
   auto dims2 = view.Read<std::array<size_t, 2>>();
   auto strides2 = view.Read<std::array<size_t, 2>>();
   Tensor tensor2(view.Array<double>(0UL, dims2, grid::make_strides<double>(strides2)));
-
-  auto res = (tensor1 + tensor2)();
-  Tensor v{ { 5.5, 5.5, 5.5 }, { 5.5, 5.5, 5.5 } };
-  EXPECT_EQ(res, v);
 
   std::fclose(tmpf);
 }

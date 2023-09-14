@@ -6,8 +6,10 @@
 // The contents of this file are confidential and proprietary to Chris Zankel.
 //
 
-// FIXME: include only slowcpu/tensor and slowcpu/multiplication?? unless ...
-#include <grid/tensor/tensor_slowcpu.h>
+#include <grid/tensor/tensor.h>
+#include <grid/tensor/slowcpu/tensor.h>
+#include <grid/tensor/slowcpu/comparison.h>
+#include <grid/tensor/slowcpu/multiplication.h>
 
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
