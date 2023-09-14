@@ -6,6 +6,8 @@
 // The contents of this file are confidential and proprietary to Chris Zankel.
 //
 
+// DO NOT INCLUDE THIS FILE DIRECTLY
+
 #ifndef GRID_TENSOR_SLOWCPU_TENSOR_H
 #define GRID_TENSOR_SLOWCPU_TENSOR_H
 
@@ -21,6 +23,10 @@
 
 
 namespace grid {
+
+/// TensorSlowCpu is an unoptimized tensor implementatoin for the CPU.
+template <typename, size_t, auto...> struct TensorSlowCpu;
+
 
 /// TensorSlowCpu<_T, _Rank> is a specialization of TensorSlowCpu for a dynamically allocated buffer.
 /// Note that this is also the Tensor used for any TensorOp result.

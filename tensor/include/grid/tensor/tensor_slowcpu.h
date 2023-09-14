@@ -16,15 +16,9 @@
 
 #include "tensor.h"
 
-namespace grid {
-
-/// TensorSlowCpu is an unoptimized tensor implementatoin for the CPU.
-template <typename, size_t, auto...> struct TensorSlowCpu;
-
-} // end of namespace grid
-
 #include "slowcpu/tensor.h"
-#include "slowcpu/basic_operations.h"
+#include "slowcpu/comparison.h"
+#include "slowcpu/addition.h"
 #include "slowcpu/multiplication.h"
 
 #endif  // GRID_TENSOR_TENSOR_SLOWCPU_H

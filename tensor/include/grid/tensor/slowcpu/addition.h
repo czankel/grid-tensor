@@ -8,104 +8,10 @@
 
 // DO NOT INCLUDE THIS FILE DIRECTLY
 
-#ifndef GRID_TENSOR_SLOWCPU_OPERATORS_H
-#define GRID_TENSOR_SLOWCPU_OPERATORS_H
+#ifndef GRID_TENSOR_SLOWCPU_ADDITION_H
+#define GRID_TENSOR_SLOWCPU_ADDITION_H
 
 namespace grid {
-
-
-namespace details {
-
-template <typename _T, size_t>
-inline std::enable_if_t<!std::is_floating_point_v<_T>, bool>
-equals(const char* src1, const char* src2,
-       std::span<const size_t,  0>,
-       std::span<const ssize_t, 0>,
-       std::span<const ssize_t, 0>)
-{
-  return *reinterpret_cast<const _T*>(src1) == *reinterpret_cast<const _T*>(src2);
-}
-
-template <typename _T, size_t>
-inline std::enable_if_t<std::is_floating_point_v<_T>, bool>
-equals(const char* src1, const char* src2,
-       std::span<const size_t,  0>,
-       std::span<const ssize_t, 0>,
-       std::span<const ssize_t, 0>)
-{
-  constexpr _T max_abs_error = std::numeric_limits<_T>::epsilon() * 100;
-  _T data0 = *reinterpret_cast<const _T*>(src1);
-  _T data1 = *reinterpret_cast<const _T*>(src2);
-  return std::abs(data0 - data1) <= max_abs_error;
-}
-
-template <typename _T, size_t>
-inline std::enable_if_t<!std::is_floating_point_v<_T>, bool>
-equals(const char* src1, const char* src2,
-       std::span<const size_t,  1> dims,
-       std::span<const ssize_t, 1> strides1,
-       std::span<const ssize_t, 1> strides2)
-{
-  for (size_t i = 0; i < dims[0]; i++, src1 += strides1[0], src2 += strides2[0])
-    if (*reinterpret_cast<const _T*>(src1) != *reinterpret_cast<const _T*>(src2))
-      return false;
-  return true;
-}
-
-template <typename _T, size_t>
-inline std::enable_if_t<std::is_floating_point_v<_T>, bool>
-equals(const char* src1, const char* src2,
-       std::span<const size_t,  1> dims,
-       std::span<const ssize_t, 1> strides1,
-       std::span<const ssize_t, 1> strides2)
-{
-  constexpr _T max_abs_error = std::numeric_limits<_T>::epsilon() * 100;
-
-  for (size_t i = 0; i < dims[0]; i++, src1 += strides1[0], src2 += strides2[0])
-  {
-    _T data0 = *reinterpret_cast<const _T*>(src1);
-    _T data1 = *reinterpret_cast<const _T*>(src2);
-
-    if (std::abs(data0 - data1) > max_abs_error)
-      return false;
-  }
-  return true;
-}
-
-template <typename _T, size_t _N>
-inline std::enable_if_t<(_N > 1), bool>
-equals(const char* src1, const char* src2,
-       std::span<const size_t,  _N> dims,
-       std::span<const ssize_t, _N> strides1,
-       std::span<const ssize_t, _N> strides2)
-{
-  static_assert(_N != std::dynamic_extent, "dynamic_extent not allowed");
-  for (size_t i = 0; i < dims[0]; i++, src1 += strides1[0], src2 += strides2[0])
-    if (!equals<_T, _N - 1>(src1, src2,
-                            std::span<const size_t,  _N - 1>(dims.begin() + 1, _N - 1),
-                            std::span<const ssize_t, _N - 1>(strides1.begin() + 1, _N - 1),
-                            std::span<const ssize_t, _N - 1>(strides2.begin() + 1, _N - 1)))
-      return false;
-
-  return true;
-}
-
-} // end of namespace details
-
-
-template <TensorFor<TensorSlowCpu> _Tensor1, TensorFor<TensorSlowCpu> _Tensor2>
-bool operator==(_Tensor1&& tensor1, _Tensor2&& tensor2)
-{
-  constexpr size_t _Rank = tensor1.Rank();
-  static_assert(_Rank == tensor2.Rank(), "ranks mismatch between tensors");
-
-  return details::equals<typename std::remove_cvref_t<_Tensor1>::value_type, _Rank>(
-                         reinterpret_cast<const char*>(tensor1.Data()),
-                         reinterpret_cast<const char*>(tensor2.Data()),
-                         std::span(tensor1.Dims()),
-                         std::span(tensor1.Strides()),
-                         std::span(tensor2.Strides()));
-}
 
 
 /// TensorAdd<TensorSlowCpu> implements tensor addition operation for tensors of the same rank.
@@ -140,6 +46,7 @@ struct TensorAdd<TensorSlowCpu, _T, _Rank, _Tensor1, _Tensor2> : TensorBaseOp
     *reinterpret_cast<value_type*>(dest) =
       *reinterpret_cast<const value_type*>(src1) + *reinterpret_cast<const value_type*>(src2);
   }
+
 
   // TODO: move conditional up the call chain (create addslow and addfast call-chains)
   inline void add(char* dest, const char* src1, const char* src2,
@@ -200,4 +107,4 @@ TensorAdd(_Tensor1, _Tensor2)
 
 } // end of namespace grid
 
-#endif // GRID_TENSOR_SLOWCPU_OPERATORS_H
+#endif // GRID_TENSOR_SLOWCPU_ADDITION_H
