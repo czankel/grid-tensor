@@ -59,14 +59,15 @@ equals(const char* src1, const char* src2,
        std::span<const ssize_t, 1> strides1,
        std::span<const ssize_t, 1> strides2)
 {
-  constexpr _T max_abs_error = std::numeric_limits<_T>::epsilon() * 100;
+  constexpr _T max_abs_error = std::numeric_limits<_T>::epsilon();
 
   for (size_t i = 0; i < dims[0]; i++, src1 += strides1[0], src2 += strides2[0])
   {
     _T data0 = *reinterpret_cast<const _T*>(src1);
     _T data1 = *reinterpret_cast<const _T*>(src2);
 
-    if (std::abs(data0 - data1) > max_abs_error)
+    auto max = std::max(std::abs(data0), std::abs(data1));
+    if (std::abs(data0 - data1) > max * max_abs_error)
       return false;
   }
   return true;
