@@ -90,6 +90,7 @@ struct TensorBase
 
 template <template <typename, size_t, auto...> typename, typename, size_t, typename... > struct TensorAdd;
 template <template <typename, size_t, auto...> typename, typename, size_t, typename... > struct TensorMul;
+template <template <typename, size_t, auto...> typename, typename, size_t, typename... > struct TensorRmsNorm;
 
 
 // Operator overloading
