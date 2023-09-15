@@ -76,6 +76,8 @@ concept AnyConvertibleTensor = is_tensor_v<_Tensor> || is_tensor_op_v<_Tensor>;
 template <typename _Tensor, size_t _Rank>
 concept TensorRank = (is_tensor_v<_Tensor> || is_tensor_op_v<_Tensor>) && _Tensor::Rank() == _Rank;
 
+template <typename _Tensor, size_t _Rank>
+concept TensorNotRank = (is_tensor_v<_Tensor> || is_tensor_op_v<_Tensor>) && _Tensor::Rank() != _Rank;
 
 /// TensorBase provides a base class for derived "device" tensor implementations with
 /// optimizations specific to CPUs and accelerators.

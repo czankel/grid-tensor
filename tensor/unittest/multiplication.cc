@@ -49,3 +49,23 @@ TEST(TensorSlowCPU, TensorMatMul)
   auto res = op();
   EXPECT_EQ(res, expected);
 }
+
+TEST(TensorSlowCPU, TensorScaleRight)
+{
+  Tensor tensor1{ { 4.4, 6.6, 8.8 }, { 7.7, 5.5, 3.3 } };
+  Tensor tensor2{ 1.0/11. };
+
+  Tensor result = tensor1 * tensor2;
+  Tensor expected{ { 0.4, 0.6, 0.8 }, { 0.7, 0.5, 0.3 } };
+  EXPECT_EQ(result, expected);
+}
+
+TEST(TensorSlowCPU, TensorScalexLeft)
+{
+  Tensor tensor1{ 1.0/11. };
+  Tensor tensor2{ { 4.4, 6.6, 8.8 }, { 7.7, 5.5, 3.3 } };
+
+  Tensor result = tensor1 * tensor2;
+  Tensor expected{ { 0.4, 0.6, 0.8 }, { 0.7, 0.5, 0.3 } };
+  EXPECT_EQ(result, expected);
+}
