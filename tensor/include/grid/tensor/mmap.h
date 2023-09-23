@@ -12,6 +12,7 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <unistd.h>
 
 #include <sys/mman.h>
 
@@ -19,6 +20,7 @@
 #include <memory>
 #include <numeric>
 #include <stdexcept>
+#include <string>
 
 namespace grid {
 
