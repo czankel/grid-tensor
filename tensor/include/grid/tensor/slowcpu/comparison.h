@@ -11,6 +11,8 @@
 #ifndef GRID_TENSOR_SLOWCPU_COMPARISON_H
 #define GRID_TENSOR_SLOWCPU_COMPARISON_H
 
+#include <type_traits>
+
 namespace grid {
 
 
@@ -94,11 +96,13 @@ equals(const char* src1, const char* src2,
 } // end of namespace details
 
 
+// TODO: will https://open-std.org/JTC1/SC22/WG21/docs/papers/2019/p1045r1.html help for using tensor.Rank() as constexpr?
 template <TensorFor<TensorSlowCpu> _Tensor1, TensorFor<TensorSlowCpu> _Tensor2>
 bool operator==(_Tensor1&& tensor1, _Tensor2&& tensor2)
 {
-  constexpr size_t _Rank = tensor1.Rank();
-  static_assert(_Rank == tensor2.Rank(), "ranks mismatch between tensors");
+  constexpr size_t _Rank = std::decay_t<decltype(tensor1)>::Rank();
+  static_assert(_Rank == std::decay_t<decltype(tensor2)>::Rank(),
+                "ranks mismatch between tensors");
 
   return details::equals<typename std::remove_cvref_t<_Tensor1>::value_type, _Rank>(
                          reinterpret_cast<const char*>(tensor1.Data()),
