@@ -176,14 +176,14 @@ std::array<ssize_t, _Rank> make_strides(const std::array<size_t, _Rank>& dims)
 /// operator<< outputs the tensor buffer.
 std::ostream& operator<<(std::ostream& os, const grid::AnyTensor auto& tensor)
 {
-  using value_type = std::remove_reference_t<decltype(tensor)>::value_type;
-  constexpr size_t rank = tensor.Rank();
+  using value_type = typename std::remove_reference_t<decltype(tensor)>::value_type;
+  size_t rank = tensor.Rank();
 
   auto dims = tensor.Dims();
   auto strides = tensor.Strides();
 
   std::function<void(int, const value_type*&)> print;
-  print = [&os, &tensor, &dims, &strides, &print](size_t index, const value_type*& ptr) {
+  print = [&os, &dims, &strides, &print, &rank](size_t index, const value_type*& ptr) {
     os << "{ ";
     if (index < rank -1)
     {
