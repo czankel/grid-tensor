@@ -23,11 +23,29 @@ template <typename _Tensor>
 inline constexpr bool is_tensor_v = std::is_base_of_v<TensorBase, std::remove_cvref_t<_Tensor>>;
 
 // helper functions to identify if a Tensor or TensorOp is for a specific device
-template <typename, template <typename, size_t, auto...> typename>
-struct is_same_device : std::false_type {};
+namespace details
+{
+  template <template <typename, size_t, auto...> typename _Tensor,
+            typename _T, size_t _Rank, auto... _Args>
+  std::true_type test_ptr_conv(const volatile _Tensor<_T, _Rank, _Args...>*);
+  template<typename, typename>
+  std::false_type test_ptr_conv(const volatile void*);
 
-template <template <typename, size_t, auto...> typename _Tensor, typename _T, size_t _Rank, auto... _Args>
-struct is_same_device<_Tensor<_T, _Rank, _Args...>, _Tensor> : std::true_type {};
+  template <typename _Tensor, template <typename, size_t, auto...> typename _DeviceTensor>
+  auto test_is_same_device(int)
+    -> decltype(test_ptr_conv<_DeviceTensor>(static_cast<_Tensor*>(nullptr)));
+
+  template<typename, typename>
+  auto test_is_same_device(...) -> std::true_type; // private or ambiguous base
+}
+
+template <typename _Tensor, template <typename, size_t, auto...> typename _DeviceTensor>
+struct is_same_device :
+    std::integral_constant<
+        bool,
+        std::is_class<_Tensor>::value &&
+        decltype(details::test_is_same_device<_Tensor, _DeviceTensor>(0))::value
+    > {};
 
 template <template <template <typename, size_t, auto...> typename, typename, size_t, typename...> typename _TensorOp,
           template <typename, size_t, auto...> typename _Tensor, size_t _Rank, typename _T, typename... _Tensors>
