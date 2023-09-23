@@ -1,6 +1,6 @@
 grid_add_sources(gridtensor_test
-  tensor.cc
-  addition.cc
-  multiplication.cc
-  rms_norm.cc
+  tensor_slowcpu.cc
+  addition_slowcpu.cc
+  multiplication_slowcpu.cc
+  rms_norm_slowcpu.cc
 )
