@@ -6,33 +6,29 @@
 // The contents of this file are confidential and proprietary to Chris Zankel.
 //
 
-#include <grid/tensor/tensor.h>
-#include <grid/tensor/slowcpu/tensor.h>
-#include <grid/tensor/slowcpu/comparison.h>
-
-#include "gtest/gtest.h"
-#include "gmock/gmock.h"
-
 using testing::ElementsAre;
 
+// helper to get the size of a type of (optional) array of COUNT elements or the TYPE:
+//  size_t bytes = size<TYPE>(COUNT)
 namespace {
-template <typename _T> constexpr size_t size(size_t count) { return sizeof(_T) * count; }
+template <typename _T> constexpr size_t size(size_t count = 1) { return sizeof(_T) * count; }
 }
 
-template <typename _T, size_t _Rank, auto... _Args>
-using Tensor = grid::TensorSlowCpu<_T, _Rank, _Args...>;
+// Use Google's Type-Parameterized Tests so these tests can be re-used for other device implementations.
 
-TEST(TensorSlowCPU, TensorBaseInitializationRank0Integer)
+template <typename T> class TensorTestSuite : public testing::Test {};
+TYPED_TEST_SUITE_P(TensorTestSuite);
+
+
+TYPED_TEST_P(TensorTestSuite, TensorBraceInitializationRank0Integer)
 {
-  Tensor tensor{ 4 };
+  typename TypeParam::Tensor tensor{ 4 };
   EXPECT_EQ(tensor.Rank(), 0);
-  EXPECT_THAT(tensor.Dims(), ElementsAre());
-  EXPECT_THAT(tensor.Strides(), ElementsAre());
 }
 
-TEST(TensorSlowCPU, TensorBraceInitializationRank1Integer)
+TYPED_TEST_P(TensorTestSuite, TensorBraceInitializationRank1Integer)
 {
-  Tensor tensor1{ 11, 22, 33, 44, 55, 66 };
+  typename TypeParam::Tensor tensor1{ 11, 22, 33, 44, 55, 66 };
 
   EXPECT_TRUE(grid::is_tensor_v<decltype(tensor1)>);
   EXPECT_EQ(tensor1.Rank(), 1);
@@ -43,9 +39,9 @@ TEST(TensorSlowCPU, TensorBraceInitializationRank1Integer)
   EXPECT_EQ(memcmp(tensor1.Data(), data, sizeof(data)), 0);
 }
 
-TEST(TensorSlowCPU, TensorBraceInitializationRank2Integer)
+TYPED_TEST_P(TensorTestSuite, TensorBraceInitializationRank2Integer)
 {
-  Tensor tensor1{ { 11, 12 }, { 21, 22, 23 }, { 31, 32, 33, 34 } };
+  typename TypeParam::Tensor tensor1{ { 11, 12 }, { 21, 22, 23 }, { 31, 32, 33, 34 } };
 
   EXPECT_EQ(tensor1.Rank(), 2);
   EXPECT_THAT(tensor1.Dims(), ElementsAre(3, 4));
@@ -58,9 +54,9 @@ TEST(TensorSlowCPU, TensorBraceInitializationRank2Integer)
   EXPECT_EQ(data[9], 32);
 }
 
-TEST(TensorSlowCPU, TensorAllocInitializedRank1Double)
+TYPED_TEST_P(TensorTestSuite, TensorAllocInitializedRank1Double)
 {
-  Tensor tensor1(4UL, 1.2);
+  typename TypeParam::Tensor tensor1(4UL, 1.2);
 
   EXPECT_EQ(tensor1.Rank(), 1);
   EXPECT_THAT(tensor1.Dims(), ElementsAre(4));
@@ -70,17 +66,17 @@ TEST(TensorSlowCPU, TensorAllocInitializedRank1Double)
   EXPECT_EQ(memcmp(tensor1.Data(), verify, sizeof(verify)), 0);
 }
 
-TEST(TensorSlowCPU, TensorAllocUninitializedRank1Double)
+TYPED_TEST_P(TensorTestSuite, TensorAllocUninitializedRank1Double)
 {
-  Tensor tensor1(5UL, grid::Uninitialized<double>{});
+  typename TypeParam::Tensor tensor1(5UL, grid::Uninitialized<double>{});
   EXPECT_EQ(tensor1.Rank(), 1);
   EXPECT_THAT(tensor1.Dims(), ElementsAre(5));
   EXPECT_THAT(tensor1.Strides(), ElementsAre(size<double>(1)));
 }
 
-TEST(TensorSlowCPU, TensorAllocInitializedRank2Char)
+TYPED_TEST_P(TensorTestSuite, TensorAllocInitializedRank2Char)
 {
-  Tensor tensor1(5UL, 4UL, (char)'3');
+  typename TypeParam::Tensor tensor1(5UL, 4UL, (char)'3');
 
   EXPECT_EQ(tensor1.Rank(), 2);
   EXPECT_THAT(tensor1.Dims(), ElementsAre(5, 4));
@@ -93,41 +89,40 @@ TEST(TensorSlowCPU, TensorAllocInitializedRank2Char)
   EXPECT_EQ(memcmp(tensor1.Data(), verify, sizeof(verify)), 0);
 }
 
-TEST(TensorSlowCPU, TensorAllocUninitializedRank2Double)
+TYPED_TEST_P(TensorTestSuite, TensorAllocUninitializedRank2Double)
 {
-  Tensor tensor1(7UL, 3UL, grid::Uninitialized<int>{});
+  typename TypeParam::Tensor tensor1(7UL, 3UL, grid::Uninitialized<int>{});
 
   EXPECT_EQ(tensor1.Rank(), 2);
   EXPECT_THAT(tensor1.Dims(), ElementsAre(7, 3));
   EXPECT_THAT(tensor1.Strides(), ElementsAre(size<int>(3), size<int>(1)));
 }
 
-TEST(TensorSlowCPU, TensorAllocInitializedRank3Double)
+TYPED_TEST_P(TensorTestSuite, TensorAllocInitializedRank3Double)
 {
-  Tensor tensor1{{4, 5, 7}, 3.3};
+  typename TypeParam::Tensor tensor1{{4, 5, 7}, 3.3};
 
   EXPECT_EQ(tensor1.Rank(), 3);
   EXPECT_THAT(tensor1.Dims(), ElementsAre(4, 5, 7));
   EXPECT_THAT(tensor1.Strides(), ElementsAre(size<double>(7 * 5), size<double>(7), size<double>(1)));
 }
 
-TEST(TensorSlowCPU, TensorAllocUninitializedRank3Double)
+TYPED_TEST_P(TensorTestSuite, TensorAllocUninitializedRank3Double)
 {
-  Tensor t33({3, 2, 1}, grid::Uninitialized<double>{});
+  typename TypeParam::Tensor t33({3, 2, 1}, grid::Uninitialized<double>{});
   EXPECT_THAT(t33.Strides(), ElementsAre(size<double>(2 * 1), size<double>(1), size<double>(1)));
 }
 
-
-TEST(TensorSlowCPU, TensorAllocUninitializedPattedRank3Double)
+TYPED_TEST_P(TensorTestSuite, TensorAllocUninitializedPattedRank3Double)
 {
-  Tensor tensor1({3, 2, 1}, {size<double>(2 * 2 * 4), size<double>(2 * 2), size<double>(2)}, grid::Uninitialized<double>{});
+  typename TypeParam::Tensor tensor1({3, 2, 1}, {size<double>(2 * 2 * 4), size<double>(2 * 2), size<double>(2)}, grid::Uninitialized<double>{});
   EXPECT_EQ(tensor1.Rank(), 3);
   EXPECT_THAT(tensor1.Dims(), ElementsAre(3, 2, 1));
   EXPECT_THAT(tensor1.Strides(), ElementsAre(size<double>(2 * 2 * 4), size<double>(2 * 2), size<double>(2)));
 }
 
 
-TEST(TensorSlowCpu, TensorMMap)
+TYPED_TEST_P(TensorTestSuite, TensorMMap)
 {
   std::FILE* tmpf = std::tmpfile();
 
@@ -156,11 +151,25 @@ TEST(TensorSlowCpu, TensorMMap)
 
   auto dims1 = view.Read<std::array<size_t, 2>>();
   auto strides1 = view.Read<std::array<size_t, 2>>();
-  Tensor tensor1(view.Array<double>(0UL, dims1, grid::make_strides<double>(strides1)));
+  typename TypeParam::Tensor tensor1(view.Array<double>(0UL, dims1, grid::make_strides<double>(strides1)));
 
   auto dims2 = view.Read<std::array<size_t, 2>>();
   auto strides2 = view.Read<std::array<size_t, 2>>();
-  Tensor tensor2(view.Array<double>(0UL, dims2, grid::make_strides<double>(strides2)));
+  typename TypeParam::Tensor tensor2(view.Array<double>(0UL, dims2, grid::make_strides<double>(strides2)));
 
   std::fclose(tmpf);
 }
+
+
+REGISTER_TYPED_TEST_SUITE_P(TensorTestSuite,
+    TensorBraceInitializationRank0Integer,
+    TensorBraceInitializationRank1Integer,
+    TensorBraceInitializationRank2Integer,
+    TensorAllocInitializedRank1Double,
+    TensorAllocUninitializedRank1Double,
+    TensorAllocInitializedRank2Char,
+    TensorAllocUninitializedRank2Double,
+    TensorAllocInitializedRank3Double,
+    TensorAllocUninitializedRank3Double,
+    TensorAllocUninitializedPattedRank3Double,
+    TensorMMap);
