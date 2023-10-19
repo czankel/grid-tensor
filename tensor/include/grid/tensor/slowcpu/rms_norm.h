@@ -20,9 +20,8 @@ namespace grid {
 
 /// TensorRmsNorm<TensorSlowCpu> implements RMS norm.
 template <typename _T, size_t _Rank, TensorFor<TensorSlowCpu> _Tensor>
-struct TensorRmsNorm<TensorSlowCpu, _T, _Rank, _Tensor> : TensorBaseOp
+struct TensorRmsNorm<TensorSlowCpu, _T, _Rank, _Tensor>
 {
-  using tensor_type = TensorSlowCpu<_T, _Rank>;
   using value_type = _T;
 
   template <ConvertibleTensorFor<TensorSlowCpu> T1>
@@ -77,7 +76,7 @@ struct TensorRmsNorm<TensorSlowCpu, _T, _Rank, _Tensor> : TensorBaseOp
 
   // Functor
   // FIXME limit to floating point? inline std::enable_if_t<!std::is_floating_point_v<_T>...
-  tensor_type operator()() const
+  auto operator()() const
   {
     auto [value, count] = SumSquare(reinterpret_cast<const char*>(tensor_.Data()),
                                     std::span(tensor_.Dims()),
@@ -96,7 +95,7 @@ struct TensorRmsNorm<TensorSlowCpu, _T, _Rank, _Tensor> : TensorBaseOp
 
 template <ConvertibleTensorFor<TensorSlowCpu> _Tensor>
 TensorRmsNorm(_Tensor)
-  -> TensorRmsNorm<TensorSlowCpu, typename _Tensor::value_type, _Tensor::Rank(), typename _Tensor::tensor_type>;
+  -> TensorRmsNorm<TensorSlowCpu, typename _Tensor::value_type, _Tensor::Rank(), typename to_tensor<_Tensor>::type>;
 
 } // end of namespace grid
 

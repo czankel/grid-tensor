@@ -13,36 +13,32 @@
 #include <functional>
 #include <iomanip>
 #include <iostream>
+#include <numeric>
 
 #include <grid/tensor/tensor_traits.h>
 
-namespace grid {
-
-
-/// Non-type enumerator for tensor template parameters
-enum TensorType
-{
-  kMemoryMapped,      /// Memory mapped tensor
-};
-
-
-/// TensorBaseOp provides a base class for identifying tensor operator classes.
+// FIXME
+/// Tensor describes ... ///  implementation of "AI Tensors".
+///These tensors implmeneted t storing data and typical vector and matrix operations rather than a mathematical or
+// physical definition of a Tensor.
 ///
-/// All Tensor operators/operations are required to derive from this class.
-/// They must include a type for the resulting tensor and one for the underlying
-/// primitive type:
+/// Tensor Operations  provides a base class for identifying tensor operator classes.
 ///
-///  typedef tensor_type;
 ///  typedef value_type;
 ///
-/// Tensor operators must also provide the following functions, similar to Tensors.
-///
-///  size_t Rank()
-struct TensorBaseOp {};
 
+namespace grid {
+
+/// MemoryMapped is used as a non-type template parameter declaring a memory-mapped tensor type.
+/// Defining a memory-mapped tensor ... TensorImplementation<double, 2, grid::MemoryMapped{})
+struct MemoryMapped {};
+
+/// TensorView is used as a non-type template parameter declaring a tensor view type.
+/// This is only used internally.
+struct TensorView {};
 
 /// Placeholder for specifying that a buffer allocation does not need to be initialized.
-template <typename> struct Uninitialized {};
+template <typename T> struct Uninitialized { using type = T; };
 
 
 // Concepts
@@ -55,6 +51,7 @@ concept TensorFor = is_tensor_v<_Tensor> && is_same_device_v<_Tensor, _DeviceTen
 template <typename _Tensor>
 concept AnyTensor = is_tensor_v<_Tensor>;
 
+
 /// TensorOpFor<DEVICE> requires that the provided argument is a TensorOp for the specific DEVICE.
 template <typename _TensorOp, template <typename, size_t, auto...> typename _DeviceTensor>
 concept TensorOpFor = is_tensor_op_v<_TensorOp> && is_same_device_v<_TensorOp, _DeviceTensor>;
@@ -64,7 +61,6 @@ template <typename _TensorOp>
 concept AnyTensorOp = is_tensor_op_v<_TensorOp>;
 
 /// ConvertibleTensorFor<DEVICE> requires that the provided argument can be converted to a Tensor
-/// for the specified DEVICE. Currently, these are Tensors and TensorOps.
 template <typename _Tensor, template <typename, size_t, auto...> typename _DeviceTensor>
 concept ConvertibleTensorFor = (is_tensor_v<_Tensor> || is_tensor_op_v<_Tensor>) && is_same_device_v<_Tensor, _DeviceTensor>;
 
@@ -76,17 +72,20 @@ concept AnyConvertibleTensor = is_tensor_v<_Tensor> || is_tensor_op_v<_Tensor>;
 template <typename _Tensor, size_t _Rank>
 concept TensorRank = (is_tensor_v<_Tensor> || is_tensor_op_v<_Tensor>) && _Tensor::Rank() == _Rank;
 
+/// TensorNotRank<RANK> requires that the provided argument is a tensor that is not of the rank RANK.
 template <typename _Tensor, size_t _Rank>
 concept TensorNotRank = (is_tensor_v<_Tensor> || is_tensor_op_v<_Tensor>) && _Tensor::Rank() != _Rank;
 
-/// TensorBase provides a base class for derived "device" tensor implementations with
-/// optimizations specific to CPUs and accelerators.
-struct TensorBase
-{
-  friend std::ostream& operator<<(std::ostream& os, const AnyTensor auto& tensor);
-};
+// Viewable requires that a tensor can be made "viewable", which means it is not a view itself.
+template <typename _Tensor>
+concept Viewable = requires (const _Tensor& t) { t.View; };
 
-// Tensor basic arithmetic operations
+/// TensorViewFor<DEVICE> requires that the provided argument is a tensor view and for a specific device
+template <typename _Tensor, template <typename, size_t, auto...> typename _DeviceTensor>
+concept TensorViewFor = !Viewable<_Tensor> && is_same_device_v<_Tensor, _DeviceTensor>;
+
+
+// Supported basic arithmetic operations for all Tensor implementations.
 
 template <template <typename, size_t, auto...> typename, typename, size_t, typename... > struct TensorAdd;
 template <template <typename, size_t, auto...> typename, typename, size_t, typename... > struct TensorMul;
@@ -110,17 +109,22 @@ auto operator*(_Tensor1&& tensor1, _Tensor2&& tensor2)
 }
 
 
-// helper function to extra brace-initializer list
-template <typename _T, size_t _Count>
-inline constexpr std::array<_T, _Count>
-get_array(std::initializer_list<_T>&& init)
+// helper function to get an array from a brace-initializer list.
+template <typename _T, size_t... _Ns>
+inline constexpr std::array<_T, sizeof...(_Ns)>
+get_array_impl(std::initializer_list<_T>&& init, std::index_sequence<_Ns...>)
 {
-  std::array<_T, _Count> arr;
-  std::copy(init.begin(), init.end(), arr.begin());
-  return arr;
+  return std::array<_T, sizeof...(_Ns)>{ *(init.begin() + _Ns) ... };
 }
 
-// helper function to initialize the std:array from an initializer list
+template <typename _T, size_t _N, typename _Ns = std::make_index_sequence<_N>>
+inline constexpr std::array<_T, _N>
+get_array(std::initializer_list<_T>&& init)
+{
+  return get_array_impl(std::move(init), _Ns{});
+}
+
+// helper function to return an array from a two-dimensional initializer list
 template <typename _T, size_t _M, size_t _N>
 inline constexpr std::array<_T, _M * _N>
 get_array(std::initializer_list<std::initializer_list<_T>>&& init)
@@ -135,19 +139,42 @@ get_array(std::initializer_list<std::initializer_list<_T>>&& init)
   return arr;
 }
 
+// helper function to return an array from a three-dimensional initializer list
+template <typename _T, size_t _C, size_t _M, size_t _N>
+inline constexpr std::array<_T, _C * _M * _N>
+get_array(std::initializer_list<std::initializer_list<std::initializer_list<_T>>>&& init)
+{
+  printf("C\n");
+  std::array<_T, _C * _M * _N> arr{};
+  auto line_it = arr.begin();
+  for (auto lt : init)
+  {
+    for (auto it : lt)
+    {
+      std::copy(it.begin(), it.end(), line_it);
+      line_it += _N;
+    }
+  }
+  return arr;
+}
+
+// helper function to re turn an array from a c-array.
 template <typename _T, size_t _N>
 inline constexpr std::array<_T, _N>
 get_array(const _T(&init)[_N])
 {
+  printf("D\n");
   std::array<_T, _N> arr{};
   std::copy(std::begin(init), std::end(init), arr.begin());
   return arr;
 }
 
+// helper function to re turn an array from an rvalue c-array.
 template <typename _T, size_t _N>
 inline constexpr std::array<_T, _N>
 get_array(_T(&&init)[_N])
 {
+  printf("E\n");
   std::array<_T, _N> arr{};
   std::copy(std::begin(init), std::end(init), arr.begin());
   return arr;
@@ -183,7 +210,7 @@ std::ostream& operator<<(std::ostream& os, const grid::AnyTensor auto& tensor)
   auto strides = tensor.Strides();
 
   std::function<void(int, const value_type*&)> print;
-  print = [&os, &dims, &strides, &print, &rank](size_t index, const value_type*& ptr) {
+  print = [&os, &dims, &strides, &print, &rank](size_t index, const value_type* ptr) {
     os << "{ ";
     if (index < rank -1)
     {
@@ -211,6 +238,7 @@ std::ostream& operator<<(std::ostream& os, const grid::AnyTensor auto& tensor)
       }
     }
   };
+
   const value_type* ptr = reinterpret_cast<const value_type*>(tensor.Data());
   if (rank > 0)
     print(0, ptr);

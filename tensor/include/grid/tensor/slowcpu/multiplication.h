@@ -19,10 +19,9 @@ namespace grid {
 /// TensorMul<TensorSlowCpu> implements tensor multiplication operation for tensors of the same rank.
 /// Including matrix multiplication (MatMul) and vector dot-product (VecDot).
 template <typename _T, size_t _Rank, TensorFor<TensorSlowCpu> _Tensor1, TensorFor<TensorSlowCpu> _Tensor2>
-struct TensorMul<TensorSlowCpu, _T, _Rank, _Tensor1, _Tensor2> : TensorBaseOp
+struct TensorMul<TensorSlowCpu, _T, _Rank, _Tensor1, _Tensor2>
 {
   constexpr static size_t Rank()                          { return _Rank; }
-  using tensor_type = TensorSlowCpu<_T, _Rank>;
   using value_type = _T;
 
   template <ConvertibleTensorFor<TensorSlowCpu> T1, ConvertibleTensorFor<TensorSlowCpu> T2>
@@ -170,7 +169,7 @@ struct TensorMul<TensorSlowCpu, _T, _Rank, _Tensor1, _Tensor2> : TensorBaseOp
 template <ConvertibleTensorFor<TensorSlowCpu> _Tensor1, ConvertibleTensorFor<TensorSlowCpu> _Tensor2>
 TensorMul(_Tensor1, _Tensor2)
   -> TensorMul<TensorSlowCpu, typename _Tensor2::value_type, std::max(_Tensor1::Rank(), _Tensor2::Rank()),
-               typename _Tensor1::tensor_type, typename _Tensor2::tensor_type>;
+               typename to_tensor<_Tensor1>::type, typename to_tensor<_Tensor2>::type>;
 
 
 } // end of namespace grid

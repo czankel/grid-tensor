@@ -10,17 +10,20 @@
 #define GRID_TENSOR_TENSOR_TRAITS_H
 
 namespace grid {
+struct TensorBaseOp {};
 
-struct TensorBase;
-struct TensorBaseOp;
-
+// FIXME add more rquirements
 /// is_tensor_op_v<_TensorOp> returns true if the template is derived from TensorOp
 template <typename _TensorOp>
-inline constexpr bool is_tensor_op_v = std::is_base_of_v<TensorBaseOp, std::remove_cvref_t<_TensorOp>>;
+inline constexpr bool is_tensor_op_v = requires (const _TensorOp& t) { t.operator()(); };
 
-// is_tensor_v returns true if the type is a tensor (derived from TensorBase)
+
+//std::is_base_of_v<TensorBaseOp, std::remove_cvref_t<_TensorOp>>;
+
 template <typename _Tensor>
-inline constexpr bool is_tensor_v = std::is_base_of_v<TensorBase, std::remove_cvref_t<_Tensor>>;
+inline constexpr bool is_tensor_v =
+  std::is_class_v<typename std::remove_cvref_t<_Tensor>> &&
+  requires (const _Tensor& t) { t.Rank(), t.Dims(); t.Strides(); };
 
 // helper functions to identify if a Tensor or TensorOp is for a specific device
 namespace details
@@ -47,12 +50,45 @@ struct is_same_device :
         decltype(details::test_is_same_device<_Tensor, _DeviceTensor>(0))::value
     > {};
 
+// TODO: these are not really c FIXME
+
 template <template <template <typename, size_t, auto...> typename, typename, size_t, typename...> typename _TensorOp,
           template <typename, size_t, auto...> typename _Tensor, size_t _Rank, typename _T, typename... _Tensors>
 struct is_same_device<_TensorOp<_Tensor, _T, _Rank, _Tensors...>, _Tensor> : std::true_type {};
 
+
 template <typename _Tensor, template <typename, size_t, auto...> typename _DeviceTensor>
 inline constexpr bool is_same_device_v = is_same_device<std::remove_cvref_t<_Tensor>, _DeviceTensor>::value;
+
+
+// helper class to check if the variadic tensor parameter arguments include a specific non-type
+template <typename, auto, typename = void> struct has_any : std::false_type {};
+template <template <typename, size_t, auto...> typename _Tensor, typename _T, size_t _Rank, auto... _Args, auto _Arg>
+struct has_any<_Tensor<_T, _Rank, _Args...>, _Arg, typename std::enable_if<((_Arg == _Args) || ...)>::type> : std::true_type {};
+
+// helper class for identifying the result tensor of a tensor operation class
+template <typename _TensorOp> struct result_of;
+template <template <template <typename, size_t, auto...> typename, typename, size_t, typename...> typename _TensorOp,
+          template <typename, size_t, auto...> typename _Tensor, size_t _Rank, typename _T, typename... _Tensors>
+struct result_of<_TensorOp<_Tensor, _T, _Rank, _Tensors...>>
+{
+  using type = _Tensor<_T, _Rank>;
+};
+
+// helper class for getting the tensor type of the tensor or tensor operation, which returns the default tensor.
+template <typename _Tensor>
+struct to_tensor
+{
+  using type = _Tensor;
+};
+
+template <typename _Tensor>
+requires (is_tensor_op_v<_Tensor>)
+struct to_tensor<_Tensor>
+{
+  using type = result_of<_Tensor>::type;
+};
+
 
 } // end of namespace grid
 

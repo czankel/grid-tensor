@@ -22,15 +22,18 @@ TYPED_TEST_SUITE_P(TensorTestSuite);
 
 TYPED_TEST_P(TensorTestSuite, TensorBraceInitializationRank0Integer)
 {
-  typename TypeParam::Tensor t{ 4 };
-  EXPECT_EQ(tensor1.Rank(), 0);
+  typename TypeParam::Tensor tensor{ 4 };
+  EXPECT_EQ(tensor.Rank(), 0);
 }
 
 TYPED_TEST_P(TensorTestSuite, TensorBraceInitializationRank1Integer)
 {
   typename TypeParam::Tensor tensor1{ 11, 22, 33, 44, 55, 66 };
 
+  std::cout << tensor1 << std::endl;
+
   EXPECT_TRUE(grid::is_tensor_v<decltype(tensor1)>);
+  printf("%s\n", typeid(typename std::remove_reference_t<decltype(tensor1)>::value_type).name());
   EXPECT_EQ(tensor1.Rank(), 1);
   EXPECT_THAT(tensor1.Dims(), ElementsAre(6));
   EXPECT_THAT(tensor1.Strides(), ElementsAre(size<int>(1)));
@@ -52,6 +55,34 @@ TYPED_TEST_P(TensorTestSuite, TensorBraceInitializationRank2Integer)
   EXPECT_EQ(data[4], 21);
   EXPECT_EQ(data[8], 31);
   EXPECT_EQ(data[9], 32);
+}
+
+TYPED_TEST_P(TensorTestSuite, TensorBraceInitializationRank3Integer)
+{
+  typename TypeParam::Tensor tensor1{ { { 111, 112, 113, 114, 115 },
+                                        { 121, 122, 123, 124, 125 },
+                                        { 131, 132, 133, 134, 135 },
+                                        { 141, 142, 143, 144, 145 } },
+                                      { { 211, 212, 213, 214, 215 },
+                                        { 221, 222, 223, 224, 225 },
+                                        { 231, 232, 233, 234, 235 },
+                                        { 241, 242, 243, 244, 245 } },
+                                      { { 311, 312, 313, 314, 315 },
+                                        { 321, 322, 323, 324, 325 },
+                                        { 331, 332, 333, 334, 335 },
+                                        { 341, 342, 343, 344, 345 } } };
+
+  EXPECT_EQ(tensor1.Rank(), 3);
+  EXPECT_THAT(tensor1.Dims(), ElementsAre(3, 4, 5));
+  EXPECT_THAT(tensor1.Strides(), ElementsAre(size<int>(4*5), size<int>(5), size<int>(1)));
+
+  const int* data = reinterpret_cast<const int*>(tensor1.Data());
+  EXPECT_EQ(data[0],  111);
+  EXPECT_EQ(data[6],  122);
+  EXPECT_EQ(data[12], 133);
+  EXPECT_EQ(data[18], 144);
+  EXPECT_EQ(data[20], 211);
+  EXPECT_EQ(data[59], 345);
 }
 
 TYPED_TEST_P(TensorTestSuite, TensorAllocInitializedRank1Double)
@@ -121,7 +152,6 @@ TYPED_TEST_P(TensorTestSuite, TensorAllocUninitializedPattedRank3Double)
   EXPECT_THAT(tensor1.Strides(), ElementsAre(size<double>(2 * 2 * 4), size<double>(2 * 2), size<double>(2)));
 }
 
-
 TYPED_TEST_P(TensorTestSuite, TensorMMap)
 {
   std::FILE* tmpf = std::tmpfile();
@@ -151,13 +181,51 @@ TYPED_TEST_P(TensorTestSuite, TensorMMap)
 
   auto dims1 = view.Read<std::array<size_t, 2>>();
   auto strides1 = view.Read<std::array<size_t, 2>>();
-  typename TypeParam::Tensor tensor1(view.Array<double>(0UL, dims1, grid::make_strides<double>(strides1)));
+  typename TypeParam::Tensor tensor1(view.Array<double>(dims1, grid::make_strides<double>(strides1)));
 
   auto dims2 = view.Read<std::array<size_t, 2>>();
   auto strides2 = view.Read<std::array<size_t, 2>>();
-  typename TypeParam::Tensor tensor2(view.Array<double>(0UL, dims2, grid::make_strides<double>(strides2)));
+  typename TypeParam::Tensor tensor2(view.Array<double>(dims2, grid::make_strides<double>(strides2)));
 
   std::fclose(tmpf);
+}
+
+TYPED_TEST_P(TensorTestSuite, TensorViewBraceInitializationTensor)
+{
+  typename TypeParam::Tensor tensor1{ { { 111, 112, 113, 114, 115 },
+                                        { 121, 122, 123, 124, 125 },
+                                        { 131, 132, 133, 134, 135 },
+                                        { 141, 142, 143, 144, 145 } },
+                                      { { 211, 212, 213, 214, 215 },
+                                        { 221, 222, 223, 224, 225 },
+                                        { 231, 232, 233, 234, 235 },
+                                        { 241, 242, 243, 244, 245 } },
+                                      { { 311, 312, 313, 314, 315 },
+                                        { 321, 322, 323, 324, 325 },
+                                        { 331, 332, 333, 334, 335 },
+                                        { 341, 342, 343, 344, 345 } } };
+
+  auto view_row = tensor1.View({ 2 }, {1, 2, 0});
+
+  EXPECT_EQ(view_row.Rank(), 1);
+  EXPECT_THAT(view_row.Dims(), ElementsAre(5));
+  EXPECT_THAT(view_row.Strides(), ElementsAre(size<int>(1)));
+  typename TypeParam::Tensor expected{231, 232, 233, 234, 235};
+  EXPECT_EQ(view_row, expected);
+}
+
+TYPED_TEST_P(TensorTestSuite, TensorViewAllocInitializationTensor)
+{
+  typename TypeParam::Tensor tensor(4UL, 5UL, 1.1);
+  tensor.View({0}, {0, 1}) = typename TypeParam::Tensor{2.1, 3.2, 4.3, 5.4, 6.5};
+
+  typename TypeParam::Tensor expected{ { 1.1, 2.1, 1.1, 1.1, 1.1},
+                                       { 1.1, 3.2, 1.1, 1.1, 1.1},
+                                       { 1.1, 4.3, 1.1, 1.1, 1.1},
+                                       { 1.1, 5.4, 1.1, 1.1, 1.1} };
+
+  EXPECT_THAT(tensor.Dims(), ElementsAre(4, 5));
+  EXPECT_EQ(tensor, expected);
 }
 
 
@@ -165,6 +233,7 @@ REGISTER_TYPED_TEST_SUITE_P(TensorTestSuite,
     TensorBraceInitializationRank0Integer,
     TensorBraceInitializationRank1Integer,
     TensorBraceInitializationRank2Integer,
+    TensorBraceInitializationRank3Integer,
     TensorAllocInitializedRank1Double,
     TensorAllocUninitializedRank1Double,
     TensorAllocInitializedRank2Char,
@@ -172,4 +241,6 @@ REGISTER_TYPED_TEST_SUITE_P(TensorTestSuite,
     TensorAllocInitializedRank3Double,
     TensorAllocUninitializedRank3Double,
     TensorAllocUninitializedPattedRank3Double,
-    TensorMMap);
+    TensorMMap,
+    TensorViewBraceInitializationTensor,
+    TensorViewAllocInitializationTensor);

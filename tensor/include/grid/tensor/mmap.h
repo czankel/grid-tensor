@@ -31,26 +31,21 @@ template <typename, size_t> struct MMapArray;
 class MMap
 {
  public:
-  MMap() = default;
+  MMap() : fd_(-1), addr_(nullptr), file_size_(0) {}
 
   /// Constructor for memory-mapped file specified by the file name/path.
   MMap(const std::string& name);
 
   /// Constructor for memory-mapped file specified by file-descriptor and memory-mapped size.
   MMap(int fd, size_t file_size)
-    : fd_(fd),
-      addr_(static_cast<char*>(mmap(NULL, file_size, PROT_READ, MAP_FILE | MAP_SHARED, fd_, 0))),
-      file_size_(file_size)
-  {}
+  {
+    Map(fd, file_size);
+  }
 
   /// Copy constructor.
   MMap(const MMap& other)
-    : fd_(dup(other.fd_)),
-      addr_(static_cast<char*>(mmap(NULL, other.Size(), PROT_READ, MAP_FILE | MAP_SHARED, fd_, 0))),
-      file_size_(other.Size())
   {
-    if (addr_ == MAP_FAILED)
-      throw("mmap failed");
+    Map(other.fd_, other.file_size_);
   }
 
   /// Move constructor.
@@ -64,10 +59,24 @@ class MMap
   /// Destructor.
   ~MMap()
   {
-    if (addr_ != nullptr && file_size_ > 0)
-      ::munmap(addr_, file_size_);
-    if (fd_ != 0)
-      ::close(fd_);
+    Close();
+  }
+
+  MMap& operator=(MMap&& other)
+  {
+    Close();
+    fd_ = other.fd_;
+    file_size_ = other.file_size_;
+    addr_ = other.addr_;
+
+    return *this;
+  }
+
+
+  MMap& operator=(const MMap& other)
+  {
+    Map(dup(other.fd_), other.file_size_);
+    return *this;
   }
 
 
@@ -80,6 +89,24 @@ class MMap
   // End of the mmaped region
   void* End() const                                       { return addr_ + file_size_; }
 
+ private:
+  void Close()
+  {
+    if (addr_ != nullptr && file_size_ > 0)
+      munmap(addr_, file_size_);
+    if (fd_ != -1)
+      close(fd_);
+  }
+
+  void Map(int fd, size_t file_size)
+  {
+    fd_ = fd;
+    addr_ = static_cast<char*>(mmap(NULL, file_size, PROT_READ, MAP_FILE | MAP_SHARED, fd, 0));
+    file_size_ = file_size;
+
+    if (addr_ == MAP_FAILED)
+      throw("mmap failed");
+  }
 
  protected:
   int     fd_;
@@ -93,11 +120,11 @@ class MMap
 class MMapView
 {
  public:
-  MMapView(std::shared_ptr<MMap> mmap)
+  MMapView(std::shared_ptr<MMap> mmap, size_t offset = 0UL)
     : mmap_(mmap),
-      addr_(static_cast<char*>(mmap->Address())),
-      pos_(static_cast<char*>(mmap->Address())),
-      end_(static_cast<char*>(mmap->End()))
+      addr_(static_cast<char*>(mmap->Address()) + offset),
+      pos_(static_cast<char*>(mmap->Address()) + offset),
+      end_(static_cast<char*>(mmap->End()) - offset)
   {}
 
   /// Read returns the value of the specified type at the current position and advances the position.
@@ -150,7 +177,7 @@ class MMapView
 
     uint32_t len;
     memcpy(&len, pos_, sizeof(uint32_t));
-
+printf("len %u\n", len);
     char* str = next;
     next += len;
     if (next > end_)
@@ -174,10 +201,19 @@ class MMapView
 
   /// Array returns a MMapArray of the specified primitive for a memory mapped reagion.
   template <typename _T, size_t _Rank>  MMapArray<_T, _Rank>
-  Array(size_t offset, const size_t(&)[_Rank], const ssize_t(&)[_Rank]);
+  Array(const size_t(&)[_Rank], const ssize_t(&)[_Rank], size_t offset = 0UL);
 
   template <typename _T, size_t _Rank>  MMapArray<_T, _Rank>
-  Array(size_t offset, const std::array<size_t, _Rank>&, const std::array<ssize_t, _Rank>&);
+  Array(const std::array<size_t, _Rank>&, const std::array<ssize_t, _Rank>&, size_t offset = 0UL);
+
+
+  /// Array returns a MMapArray of the specified primitive for a memory mapped reagion.
+  template <typename _T, size_t _Rank>  MMapArray<_T, _Rank>
+  Array(const size_t(&)[_Rank], size_t offset = 0UL);
+
+  template <typename _T, size_t _Rank>  MMapArray<_T, _Rank>
+  Array(const std::array<size_t, _Rank>&, size_t offset = 0UL);
+
 
   /// Align aligns the position to the next aligned position.
   void Align(int alignment)
@@ -190,7 +226,7 @@ class MMapView
 
     pos_ = next;
   }
-  
+
   // Address returns the base address of the view
   void* Address() const                                   { return addr_; }
 
@@ -234,9 +270,9 @@ struct MMapArray
 {
   /// Constructor for an array of a memory-mapped file for the given dimentions and strides.
   MMapArray(std::shared_ptr<MMap> mmap,
-            size_t offset,
             const size_t(&dims)[_Rank],
-            const ssize_t(&strides)[_Rank])
+            const ssize_t(&strides)[_Rank],
+            size_t offset = 0UL)
     : mmap_(std::move(mmap)),
       offset_(offset),
       dims_(get_array<size_t, _Rank>(dims)),
@@ -246,14 +282,27 @@ struct MMapArray
       throw std::out_of_range("array exceesing memory-mapped range");
   }
 
+  /// Constructor for an array of a memory-mapped file for the given dimentions and strides.
+  MMapArray(std::shared_ptr<MMap> mmap,
+            const size_t(&dims)[_Rank],
+            size_t offset = 0UL)
+    : mmap_(std::move(mmap)),
+      offset_(offset),
+      dims_(get_array<size_t, _Rank>(dims)),
+      strides_(make_strides<_T>(dims_))
+  {
+    if (offset_ + Size() > mmap_->Size())
+      throw std::out_of_range("array exceesing memory-mapped range");
+  }
+
   /// Constructor for an array of a memory-mapped file for the given dimentions (no padding).
   MMapArray(std::shared_ptr<MMap> mmap,
-            size_t offset,
-            const std::array<size_t, _Rank>& dims)
+            const std::array<size_t, _Rank>& dims,
+            size_t offset = 0UL)
     : mmap_(std::move(mmap)),
       offset_(offset),
       dims_(dims),
-      strides_(get_strides<_T>(dims_))
+      strides_(make_strides<_T>(dims_))
   {
     if (offset_ + Size() > mmap_->Size())
       throw std::out_of_range("array exceesing memory-mapped range");
@@ -261,9 +310,10 @@ struct MMapArray
 
 
   /// Constructor for an array of a memory-mapped file for the given dimentions (no padding).
-  MMapArray(std::shared_ptr<MMap> mmap, size_t offset,
+  MMapArray(std::shared_ptr<MMap> mmap,
             const std::array<size_t, _Rank>& dims,
-            const std::array<ssize_t, _Rank>& strides)
+            const std::array<ssize_t, _Rank>& strides,
+            size_t offset = 0UL)
     : mmap_(std::move(mmap)),
       offset_(offset),
       dims_(dims),
@@ -285,9 +335,9 @@ struct MMapArray
 
 
 template <typename _T, size_t _Rank>  MMapArray<_T, _Rank>
-inline MMapView::Array(size_t offset,
-                       const size_t(&dims)[_Rank],
-                       const ssize_t(&strides)[_Rank])
+inline MMapView::Array(const size_t(&dims)[_Rank],
+                       const ssize_t(&strides)[_Rank],
+                       size_t offset)
 {
   auto arr = MMapArray<_T, _Rank>(mmap_, pos_ - static_cast<char*>(mmap_->Address()), dims, strides);
   pos_ += arr.Size();
@@ -296,11 +346,19 @@ inline MMapView::Array(size_t offset,
 
 
 template <typename _T, size_t _Rank>  MMapArray<_T, _Rank>
-inline MMapView::Array(size_t offset,
-                       const std::array<size_t, _Rank>& dims,
-                       const std::array<ssize_t, _Rank>& strides)
+inline MMapView::Array(const std::array<size_t, _Rank>& dims,
+                       const std::array<ssize_t, _Rank>& strides,
+                       size_t offset)
 {
-  auto arr = MMapArray<_T, _Rank>(mmap_, pos_ - static_cast<char*>(mmap_->Address()), dims, strides);
+  auto arr = MMapArray<_T, _Rank>(mmap_, dims, strides, pos_ - static_cast<char*>(mmap_->Address()));
+  pos_ += arr.Size();
+  return arr;
+}
+
+template <typename _T, size_t _Rank>  MMapArray<_T, _Rank>
+inline MMapView::Array(const size_t(&dims)[_Rank], size_t offset)
+{
+  auto arr = MMapArray<_T, _Rank>(mmap_, dims, pos_ - static_cast<char*>(mmap_->Address()));
   pos_ += arr.Size();
   return arr;
 }
@@ -309,4 +367,3 @@ inline MMapView::Array(size_t offset,
 } // namespace grid
 
 #endif // GRID_TENSOR_MMAP_H
-
