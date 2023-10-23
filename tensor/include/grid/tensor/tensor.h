@@ -29,6 +29,8 @@
 
 namespace grid {
 
+constexpr static size_t kMaxRank = 4;
+
 /// MemoryMapped is used as a non-type template parameter declaring a memory-mapped tensor type.
 /// Defining a memory-mapped tensor ... TensorImplementation<double, 2, grid::MemoryMapped{})
 struct MemoryMapped {};

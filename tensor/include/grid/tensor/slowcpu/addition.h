@@ -82,12 +82,14 @@ struct TensorAdd<TensorSlowCpu, _T, _Rank, _Tensor1, _Tensor2>
     auto& dims = tensor1_.Dims();
     auto result = TensorSlowCpu(dims, Uninitialized<value_type>{});
 
+    // FIXME ?? strides1 = concatenate({0,0...}, tensor1_.Strides());
+
     add(reinterpret_cast<char*>(result.Data()),
         reinterpret_cast<const char*>(tensor1_.Data()),
         reinterpret_cast<const char*>(tensor2_.Data()),
         std::span(dims),
         std::span(result.Strides()),
-        std::span(tensor1_.Strides()),
+        std::span(tensor1_.Strides()),  // FIXME: "broadcase" expand strides one example: Strides(size_t offset = 0), and e.g. use: tensor1_.Strides(-2) or create new stride
         std::span(tensor2_.Strides()));
     return result;
   }

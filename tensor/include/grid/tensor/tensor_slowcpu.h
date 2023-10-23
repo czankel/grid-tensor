@@ -20,5 +20,6 @@
 #include "slowcpu/comparison.h"
 #include "slowcpu/addition.h"
 #include "slowcpu/multiplication.h"
+#include "slowcpu/rms_norm.h"
 
 #endif  // GRID_TENSOR_TENSOR_SLOWCPU_H

@@ -228,6 +228,20 @@ TYPED_TEST_P(TensorTestSuite, TensorViewAllocInitializationTensor)
   EXPECT_EQ(tensor, expected);
 }
 
+TYPED_TEST_P(TensorTestSuite, TensorBroadcast1to2)
+{
+  typename TypeParam::Tensor tensor(4UL, 1.1);
+  auto b = tensor. template Broadcast<2>();
+  // std::cout << b.Info();
+  std::cout << "Dims: ";
+  for (size_t d : b.Dims())
+    std::cout << d << ',';
+  std::cout << "\nStrides: ";
+  for (size_t s : b.Strides())
+    std::cout << s << ',';
+  std::cout << "\nContent:\n";
+  std::cout << b << '\n';
+}
 
 REGISTER_TYPED_TEST_SUITE_P(TensorTestSuite,
     TensorBraceInitializationRank0Integer,
@@ -243,4 +257,5 @@ REGISTER_TYPED_TEST_SUITE_P(TensorTestSuite,
     TensorAllocUninitializedPattedRank3Double,
     TensorMMap,
     TensorViewBraceInitializationTensor,
-    TensorViewAllocInitializationTensor);
+    TensorViewAllocInitializationTensor,
+    TensorBroadcast1to2);

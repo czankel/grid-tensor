@@ -252,6 +252,7 @@ printf("len %u\n", len);
   /// Seek advances the current position by len bytes.
   void Seek(ssize_t len)
   {
+    printf("pos %p len %ld end %p\n", pos_, len, end_);
     if (pos_ + len > end_ || pos_ + len < addr_)
       throw std::out_of_range("mmap seek: exceeding memory-mapped area");
 
@@ -278,8 +279,9 @@ struct MMapArray
       dims_(get_array<size_t, _Rank>(dims)),
       strides_(get_array<ssize_t, _Rank>(strides))
   {
+    printf("Axs offset %lu  Size %lu\n", offset_, Size());
     if (offset_ + Size() > mmap_->Size())
-      throw std::out_of_range("array exceesing memory-mapped range");
+      throw std::out_of_range("array exceeding memory-mapped range");
   }
 
   /// Constructor for an array of a memory-mapped file for the given dimentions and strides.
@@ -291,8 +293,10 @@ struct MMapArray
       dims_(get_array<size_t, _Rank>(dims)),
       strides_(make_strides<_T>(dims_))
   {
+    printf("xxs offset %lu  Size %lu %lu\n", offset_, Size(), mmap_->Size());
+    printf("dims %lu %lu strides %lu\n", dims_[0], dims_[1], strides_[0]);
     if (offset_ + Size() > mmap_->Size())
-      throw std::out_of_range("array exceesing memory-mapped range");
+      throw std::out_of_range("array exceeding memory-mapped range");
   }
 
   /// Constructor for an array of a memory-mapped file for the given dimentions (no padding).
@@ -304,8 +308,9 @@ struct MMapArray
       dims_(dims),
       strides_(make_strides<_T>(dims_))
   {
+    printf("dims offset %lu  Size %lu\n", offset_, Size());
     if (offset_ + Size() > mmap_->Size())
-      throw std::out_of_range("array exceesing memory-mapped range");
+      throw std::out_of_range("array exceeding memory-mapped range");
   }
 
 
@@ -319,8 +324,9 @@ struct MMapArray
       dims_(dims),
       strides_(strides)
   {
+    printf("offset %lu  Size %lu %lu\n", offset_, Size(), mmap_->Size());
     if (offset_ + Size() > mmap_->Size())
-      throw std::out_of_range("array exceesing memory-mapped range");
+      throw std::out_of_range("array exceeding memory-mapped range");
   }
 
   /// Size returns the size of the array in bytes.

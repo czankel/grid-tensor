@@ -167,7 +167,7 @@ struct TensorShard
 struct GgmlModelParams
 {
   uint32_t vocab_size_          = 32000;  // FIXME n_vocab
-  uint32_t hidden_size_         = 4096;   // FIXME n_embd or ?? // isn't this just embedded_?
+  uint32_t hidden_size_         = 4096;   // FIXME n_embd or ?? // isn't this just embedded_? // is this dimension of embeddings or same as vocab?? somehoe?
   uint32_t mult_                = 256;    // FIXME mult is result of find_n_mult(intermediate_size, hidden_size)
   uint32_t num_attention_heads_ = 32;     // n_head
   uint32_t num_hidden_layers_   = 32;     // FIXME n_layer

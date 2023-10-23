@@ -73,8 +73,20 @@ TYPED_TEST_P(AdditionTestSuite, TensorAddAdd)
   EXPECT_EQ(res3, v3);
 }
 
+TYPED_TEST_P(AdditionTestSuite, TensorAddBroadcast)
+{
+  typename TypeParam::Tensor tensor1(4UL, 1.1);
+  typename TypeParam::Tensor tensor2(4UL, 5UL, 4.4);
+  auto broadcast = tensor1. template Broadcast<2>();
+  //auto res = tensor2 + broadcast; // FIXME: shouldn't that call op()?
+  auto&& op = tensor2 + broadcast;
+  auto res = op();
+  std::cout << res << '\n';
+}
+
 
 REGISTER_TYPED_TEST_SUITE_P(AdditionTestSuite,
     TensorAddRank0,
     TensorAdd,
-    TensorAddAdd);
+    TensorAddAdd,
+    TensorAddBroadcast);

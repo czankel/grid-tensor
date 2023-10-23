@@ -21,12 +21,9 @@
 
 namespace grid {
 
-
-// FIXME: merge into generic Load? could even make it static function? Move to karpathy.h?
 template <template <typename, size_t, auto...> typename Tensor, typename T, auto... Args>
 void KarpathyFile::Load(LLaMAModelT<Tensor, T, Args...>& model, const LLaMAFile& file) const
 {
-
   // load the tokenizer
   std::ifstream ifs(tokenizer_path_, std::ios::in | std::ios::binary);
   if (!ifs)
@@ -57,75 +54,43 @@ void KarpathyFile::Load(LLaMAModelT<Tensor, T, Args...>& model, const LLaMAFile&
   if (fd == -1)
     throw std::runtime_error("open failed");
 
-  printf("MAPPING %ld\n", file_size_);
   model.mmap_ = std::make_shared<MMap>(fd, file_size_);
   MMapView view(model.mmap_, sizeof(FileParameters));
-  view.Seek(sizeof(parameters_)); // FIXME: allow extra parameter?
+  view.Seek(sizeof(parameters_));
 
+  auto& param = parameters_;
+  int dim = param.dim;
+  //int n_heads = param.n_heads;
 
-  // dim -- llama: dimension of the input tensor
-  // hidden_dim
-  // kv_dim = n_dims * n_kv_heads / n_heads
-  // kv_mul = n_heads / n_kv_heads
-  // head_size = dim / n_heads
-  //
-  // ggml
-  // n_embd - input embeddings
-  // n_layer
-  // n_ctx
-  // n_head
-  // n_head_kv
-  // n_embd_head
-  // n_embd_gqa = n_embd / n_gqa;  n_gqa = n_head/n_head_kv
-  // n_tokens = batch.n_tokens
-
-  model.embeddings_ = Tensor(view.Array<T>({parameters_->embedsizevocab_size, dim}));
+// FIXME: move to model
 
   // temporary buffers
-  model.input_ = Tensor(dim, seq_len, Uninitialized<float>);
+  model.input_ = Tensor(dim, Uninitialized<T>{});
+  // map weights
+  model.embeddings_ = Tensor(view.Array<T>({param.vocab_size, dim}));
+// FIXME: end move to model
 
+  // Karpathy orders the layer weights by the weights instead of layer
+  model.layers_.resize(param.n_layers);
+  auto& layers = model.layers_;
+
+  for (int i = 0; i < param.n_layers; i++)
+    layers[i].rms_att_weight_ = Tensor(view.Array<T>({dim}));
 #if 0
-  model.tok_embeddings_ = Tensor(view.Array<T>({p->vocab_size, dim}));
-  auto p = &parameters_;
-  int dim = p->dim;
+  for (i: param.n_layers)
+    model.layers_[i].wq_ = Tensor(view.Array<T>({dim, n_kv_heads * head_size}));
+    layer.wq_ = Tensor(view.Array<T>({param.num_attention_heads_,dim}));
+    layer.wk_ = Tensor(view.Array<T>({param.num_kv_heads_,dim}));
+    layer.wv_ = Tensor(view.Array<T>({param.num_kv_heads_,dim}));
 
-  //n_heads = ;
-
-
-  printf("DIM %d\n", dim);
-  model.tok_embeddings_ = Tensor(view.Array<T>({p->vocab_size, dim}));
-  model.norm_ = Tensor(view.Array<T>({p->num_attention_heads_, dim}));
-  //model.output_ = ;
-#endif
-#if 0
-
-  attention_weight_{mmap, ptr,};
-    unsigned long long n_layers = p->n_layers;
-    w->token_embedding_table = ptr;
-
-    ptr += p->vocab_size * p->dim;
-      ///???
-    w->rms_att_weight = ptr;
-    ptr += n_layers * p->dim;
-#endif
-
-#if 0
-    // FIXME num-attention-heads??
-    for (uint32_t i = 0; i < p->num_hidden_layers_; i++)
-    {
-      auto& layer = model.layers_[i];
-
-      layer.wq_ = Tensor(view.Array({p->num_attention_heads_,dim}));
-      layer.wk_ = Tensor(view.Array({p->num_kv_heads_,dim}));
-      layer.wv_ = Tensor(view.Array({p->num_kv_heads_,dim}));
-
-      layer.w0 wo?_ = Tensor(view.Array({p->num_attention_heads_,dim}));
+    layer.w0 wo?_ = Tensor(view.Array({param.num_attention_heads_,dim}));
       
-      layer.ffn_ = Tensor(view.Array({dim})); // 1D??
+    layer.ffn_ = Tensor(view.Array({dim})); // 1D??
       
-      layer.w1_ = Tensor(view.Array({p->num_attention_heads_,dim}));
-      layer.w2_ = Tensor(view.Array({p->num_attention_heads_,dim}));
-      layer.w3_ = Tensor(view.Array({p->num_attention_heads_,dim}));
+    layer.w1_ = Tensor(view.Array({param.num_attention_heads_,dim}));
+    layer.w2_ = Tensor(view.Array({param.num_attention_heads_,dim}));
+    layer.w3_ = Tensor(view.Array({param.num_attention_heads_,dim}));
+#endif
 #if 0
       //w->wq = ptr;
       //ptr += n_layers * p->dim * (p->n_heads * head_size);
@@ -157,8 +122,6 @@ void KarpathyFile::Load(LLaMAModelT<Tensor, T, Args...>& model, const LLaMAFile&
       //w->w3 = ptr;
       //ptr += n_layers * p->dim * p->hidden_dim;
       w3_ = Tensor(view.Array());
-#endif
-    }
 #endif
 #if 0
     w->rms_final_weight = ptr;

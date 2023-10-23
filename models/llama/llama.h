@@ -23,9 +23,14 @@ namespace grid {
 /// LLaMAVocab contains the 'vocabs' (vocabularies).
 struct LLaMAVocab
 {
+  // FIXME: ... rename?  token -> symbol, token_id -> token
+  // FIXME: token name, token id, token symbol, ...
+  //token_id::type = uint32_t
+  //token::type = std::string
   using id = uint32_t;
   using token = std::string;
 
+  // FIXME: rename, it's index -> symbol, score
   struct Score
   {
     token text;
@@ -47,8 +52,11 @@ class LLaMAModelT : public LLaMAModel
 {
   friend class KarpathyFile;
 
-  using Tensor2D = Tensor<T, 2, Args...>;
-  using Tensor3D = Tensor<T, 3, Args...>;
+  /// Using two allocators, default for dynamic tensors, and memory-mapped for file tensors.
+  using Tensor1D = Tensor<T, 1>;
+  using Tensor2D = Tensor<T, 2>;
+  using TensorFile1D = Tensor<T, 1, MemoryMapped{}>;
+  using TensorFile2D = Tensor<T, 2, MemoryMapped{}>;
 
  public:
   LLaMAModelT() = default;
@@ -67,34 +75,73 @@ class LLaMAModelT : public LLaMAModel
 
  protected:
   void EncodeBPE(const std::string& promplt, std::vector<uint32_t>& token_ids);
-  void Forward(const std::vector<uint32_t>& token_ids);
+  std::string Decode(uint32_t token_id);  // FIXME: uint32 to token..
+  uint32_t Forward(const std::vector<uint32_t>& token_ids); // FIXME: uint32 to token_id::type
 
  private:
   std::shared_ptr<MMap> mmap_;
 
+  // Keep weights of the layers in different structs instead of using Tensor3D.
   struct LLaMALayer
   {
-    Tensor3D wq_;
-    Tensor3D wv_;
-    Tensor3D wo_;
-    Tensor3D ffn_norm_;
-    Tensor3D w1_;
-    Tensor3D w2_;
-    Tensor3D w3_;
+    // Weights for matmul (note: dim = n_heads * head_size)
+    TensorFile2D  wq_;              // {dim, n_heads * head_size}
+    TensorFile2D  wk_;              // {dim, n_kv_heads * head_size}
+    TensorFile2D  wv_;              // {dim, n_kv_heads * head_size}
+    TensorFile2D  wo_;              // {n_heads * head_size, dim}
+
+    //??Tensor2D ffn_norm_;         // {n_heads * head_size, embed_size}
+    // Weights for FFN
+    TensorFile2D  w1_;               // {hidden_dim, dim}
+    TensorFile2D  w2_;              // {dim, hidden_dim}
+    TensorFile2D  w3_;              // {hidden_dim, dim}
+
+    TensorFile1D  rms_att_weight_;  // {dim}
+    TensorFile1D  rms_ffn_weight_;  // {dim}
+    TensorFile1D  rms_final_weight_;// {dim}
+
+    // Local tensors
+    Tensor2D      attention_scores_;// {n_heads, max_sequnce_length} // FIXME needed
+    Tensor2D      key_cache_;       // {dim, max_sequence_length} ?? FIXME kv_dim??
+    Tensor2D      value_cache_;     // {dim, max_sequence_length} ?? FIXME
+
+    Tensor1D      logits_;          // {max_sequence_length}  FIXME: needed?
+
+#if 0
+    // weights for rmsnorms
+    float* rms_att_weight; // (layer, dim) rmsnorm weights
+    float* rms_ffn_weight; // (layer, dim)
+    // weights for matmuls. note dim == n_heads * head_size
+    float* wq; // (layer, dim, n_heads * head_size)
+    float* wk; // (layer, dim, n_kv_heads * head_size)
+    float* wv; // (layer, dim, n_kv_heads * head_size)
+    float* wo; // (layer, n_heads * head_size, dim)
+    // weights for ffn
+    float* w1; // (layer, hidden_dim, dim)
+    float* w2; // (layer, dim, hidden_dim)
+    float* w3; // (layer, hidden_dim, dim)
+    // final rmsnorm
+    float* rms_final_weight; // (dim,)
+    // (optional) classifier weights for the logits, on the last layer
+    float* wcls;
+#endif
   };
 
-  LLaMAFile*  file_;
-  LLaMAVocab  vocab_;
-  size_t      max_token_length_; // FIXME move to vocab?
+  LLaMAFile*    file_;
+  LLaMAVocab    vocab_;
+  size_t        max_token_length_; // FIXME move to vocab?
 
-  size_t      num_layers_;
+  size_t        num_layers_;
 
+  TensorFile2D  embeddings_;
 
-  Tensor2D    input_;
-  Tensor2D    embeddings_;
-  Tensor2D    norm_;
+  // pre-allocated tensors for the forward calculations
+  Tensor1D      input_;
+
+  //Tensor2D      norm_;
   //Tensor2D    output_; // is this the same as logits_
-  Tensor2D    logits_;
+  //Tensor2D      logits_;
+
 
   std::vector<LLaMALayer> layers_;
 };
@@ -110,6 +157,9 @@ void LLaMAModelT<Tensor,T,Args...>::Load(const grid::LLaMAFile& file)
     dynamic_cast<const KarpathyFile*>(&file)->Load<Tensor, T, Args...>(*this, file);
   else
     throw std::runtime_error("invalid file type");
+
+  // initialize ...
+  //key_cache_ = Tensor2D(...);
 }
 
 template <template <typename, size_t, auto...> typename Tensor, typename T, auto... Args>
@@ -129,7 +179,7 @@ void LLaMAModelT<Tensor, T, Args...>::EncodeBPE(const std::string& prompt, std::
   token_ids.push_back(kBOS);
 
   // split text into characters; handle utf-8 characters
-  
+
   std::string symbol;
   for (size_t i = 0, utf_idx = 0; i < prompt.size(); i++)
   {
@@ -184,19 +234,124 @@ void LLaMAModelT<Tensor, T, Args...>::EncodeBPE(const std::string& prompt, std::
 
 
 template <template <typename, size_t, auto...> typename Tensor, typename T, auto... Args>
-void LLaMAModelT<Tensor, T, Args...>::Forward(const std::vector<uint32_t>& token_ids)
+std::string LLaMAModelT<Tensor, T, Args...>::Decode(uint32_t token_id)
 {
+  std::string symbol = vocab_.tokens_[token_id].text;
+  // FIXME if first token after <BOS> drop space, add and use prev_token_id?
+  // FIXME: convert raw bytes <0x01> to actual bytes
+
+  return symbol;
+}
+
+
+// Note that this is a "lower-rank" implementation going through the calculation for each
+// token vector instead of combining a sequence into a matrix and using higher-rank tensors.
+template <template <typename, size_t, auto...> typename Tensor, typename T, auto... Args>
+uint32_t LLaMAModelT<Tensor, T, Args...>::Forward(const std::vector<uint32_t>& token_ids) // FIXME: uint32_t to token_id::type
+{
+  // FIXME: need a last position??
+  size_t pos = 0;
+  //for (auto token: token_ids)
+    //input_.View({1}, {0, pos++}) = embeddings_.View({1}, {0, token_ids[token]});
 
   for (auto token: token_ids)
-    input_.View({1}, {token, 0}) = embeddings_.View({token}, {0, token_ids[token]});
+  {
+    // FIXME: input could just be Tensor&& input =??
+    input_ = embeddings_.View({1}, {0, token_ids[token]});  // -> vec(dim)
 
-  std::cout
+    for (auto l: layers_)
+    {
+//      auto test = input_.Broadcast<2>();
+#if 0
+      l.x_ = grid::TensorRmsNorm(input_, l.rms_att_weight_);// vec(dim), vec(dim) -> vec(dim)
+
+      // add (note that key is transposed)
+      l.q_.View({0},{pos,0}) = x_ * l.wq_;                  // vec(dim) x mat(dim,dim) -> vec(dim)
+      l.key_cache_.View({0},{pos,0}) = x_ * l.wk_;          // mat x vec?? FIXME vec(dim) x mat(dim,kv_dim) -> vec(kv_dim)
+      l.val_cache_.View({1},{pos 0}) = x_ * l.wv_;          // vec(dim) x mat(dim,kv_dim) -> vec(kv_dim)
+
+      // RoPE, rotate each 'head'
+      auto q = q_.Data();
+      auto k = key_cache_.Data();
+
+      for (int i = 0; i < dim_; i+=2)
+      {
+        float rot = (float) pos / powf(10000.0f, (float)(i % head_size) / (float)head_size);
+        float fcr = cosf(rot);
+        float fci = sinf(rot);
+
+        float v0 = q[i];
+        float v1 = q[i+1];
+        q[i]   = v0 * fcr - v1 * fci;
+        q[i+1] = v0 * fci + v1 * fcr;
+
+        if (i < kv_dim_)
+        {
+          float v0 = k[i];
+          float v1 = k[i+1];
+          k[i]   = v0 * fcr - v1 * fci;
+          k[i+1] = v0 * fci + v1 * fcr;
+        }
+#endif
+      }
 
 #if 0
+      // multihead attention
+      // mat(pos+1,dim) x vec(dim) -> vec(pos+1)
+      l.attention_ = l.q_ * l.key_cache_.View({0,1},strides,{,pos}) / sqrtf(head_size); // FIXME: sqrtf const?
+      l.attention_ = TensorSoftMax(l.attention_);
+
+      l.x2_ = l.value_cache_ * l.attention_; // mat(dim,..) x vec() -> vec(...);
+      l.x_ += l.x2_ * l.wo_;  // vec(dim) x mat(dim,dim) -> vec(dim) // FIXME mat x vec?
+                              //
+
+      // a * v  = v * a       -> v_i * a
+      // a * M  =? M * a      -> M_ij * a
+      // M * v                -> ...
+      // M * v.Broadcast()    -> M x M
+      // M * a.Broadcast()    -> same as M * a?
+      // T * M                -> ??
+      // T * M.Broadcast()    -> T x T (whatever that means)
+      //
+      // 4 1 5
+      // 1 7 5  -> 4 7 5?
+      //
+      // Options:
+      // Reshape({1, 1, 4}, { 
+      //
+      // What about v x M vs M x v --> v.Broadcast() x M vs M x v.Broadcast()
+      //                                  1, 5          5, 4      4, 1 !!!
+      //
+      //
+
+      // FIXME: how to broadcast?
+      //   a * b
+      //   a * b.Broadcast() --> a might be lower-rank?, maybe that's what needs to be understood?
+      //           rank1 * rank2.Broadcast() ??
+      //   MutBCast(a, b)
+      //   AddBCast(a,b)
+      //   (a * B).Broadcast()
+      //
+
+      // FFN RMS Norm
+      TensorRmsNorm(l.x_, l.rms_ffn_weight_);
+
+      // FFN: (self.w2(F.silu(self.w1(x)) * self.w3(x))
+      x_ += TensorSwiGLU(xb_ * w1 * w2) * w3_; // mat(dim, hidden_dim) -> ...
+    }
+    TensorRmsNorm(x_, rms_final_weight_);   // vec(dim), vec(dim) -> vec(dim);
+    logit = x_ * wcls_; // vec(dim) x vec(dim) -> scalar
+    // FIXME: wcls is optionaL?
+    logits_.append(TensorRmsNorm(x_ * rms_final_weight_) * wcls);
+#endif
+  }
+  return 0; // FIXME logits_;
+
+#if 0
+  // classifier
+  logits_ = x_ * rms_final_weight * wcls_;
   Tensor<int32_t> embedded({ntokens}, tokens)
-
   //memcpy(embd->data, tokens, ntokens x elem_size(embd));
-
   Tensor input = TensorProduct(tok_embeddings_, tokens);
   std::cout << input;
 
@@ -204,11 +359,10 @@ void LLaMAModelT<Tensor, T, Args...>::Forward(const std::vector<uint32_t>& token
   input = token_embeddings_.Row(seq);
   input = token_embeddings_.View({1}, {0, seq});
 
-
   for (int il = 0; il < nlayers; il++)
   {
     Tensor inpSA = inpl;
-    cur = Tensor::RmsNorm(inpl);
+    cur = Tensor::RmsNorm(inpl);  // up to rank-3
 
     // cur = cur*attention_norm(broadcasted)
     cur = mul(cur, model.layers[il].attention_norm);  // Rank X x Rank 2   ??
@@ -304,7 +458,7 @@ void LLaMAModelT<Tensor, T, Args...>::Generate(const std::string& prompt, int st
   Tensor GetTensor1D(const std::string name)
   {
     LLaMAFile::FileTensor* ft = file_->GetFileTensor(name, typeid(T));
-    return Tensor(View.Array<double>(ft_shards_->address_, {ft->dims_[0]}));
+    return Tensor(View.Array<float>(ft_shards_->address_, {ft->dims_[0]}));
     // ft->dims_[0], ft->shards_->address_, mmap_);
   }
 

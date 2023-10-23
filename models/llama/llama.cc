@@ -23,18 +23,12 @@ void LLaMAFile::PrintModelInfo(std::ostream& out) const
   // FIXME: some info about the file? out << "File Format ................ Karpathy Snapshot\n";
   out << "Data Type .................. " << grid::Demangle(DataType().name()) << '\n';
   out << "Vocabulary Size ............ " << params.vocab_size_ << '\n';
-  out << "Hidden Dimensions .......... " << params.hidden_size_ << '\n';
-  out << "Number of Layers ........... " << params.num_hidden_layers_ << '\n';
-  out << "Number of Attention Heads .. " << params.num_attention_heads_ << '\n';
- #if 0
-  out << "Transformer Dimension ...... " << parameters_.dim << '\n';
-  out << "Hidden Dimensions .......... " << parameters_.hidden_dim << '\n';
-  out << "Number of Layers ........... " << parameters_.n_layers << '\n';
-  out << "Number of Query Heads ...... " << parameters_.n_heads << '\n';
-  out << "Number of Key/Value Heads .. " << parameters_.n_kv_heads << '\n';
-  out << "Vocabulary Size ............ " << parameters_.vocab_size << '\n';
-  out << "Max Sequence Length ........ " << parameters_.seq_len << '\n';
-#endif
+  out << "Transformer Dimension ...... " << params.embed_size_ << '\n';
+  out << "Hidden Dimensions .......... " << params.hidden_dim_ << '\n';
+  out << "Number of Layers ........... " << params.num_layers_ << '\n';
+  out << "Number of Query Heads ...... " << params.num_heads_ << '\n';
+  out << "Number of Key/Value Heads... " << params.num_kv_heads_ << '\n';
+  out << "Max Sequence Length ........ " << params.max_seq_len_ << '\n';
 }
 
 template <> //template <typename, size_t, auto...> typename Tensor>
@@ -44,8 +38,8 @@ LLaMAModel* LLaMAModel::Load<TensorSlowCpu>(const LLaMAFile& file, bool mmap)
     throw("only memory-mapped files currently supported");
 
   auto& data_type =  file.DataType();
-  if (data_type == typeid(double))
-    return LLaMAModelT<TensorSlowCpu, double, MemoryMapped{}>::CreateFrom(file);
+  if (data_type == typeid(float))
+    return LLaMAModelT<TensorSlowCpu, float, MemoryMapped{}>::CreateFrom(file);
 
   printf("ERR1\n");
   return nullptr;
@@ -101,7 +95,7 @@ grid::Model* grid::LLaMAModelCPU::LLaMAModelCPU(LLaMAFile& file)
 {
   // Notes
   //  Tensors/Weights/Arrays are defined with the type, i.e. Tensor<f16_t>
-  //  Some might need 'double' precision? maybe TensorDouble<f16_t>?
+  //  Some might need 'float' precision? maybe TensorDouble<f16_t>?
   //  What about quantisized with structures?
   //
   model.norm_ = file_->GetTensor<Type>("norm.weight", {embeddings_});
@@ -109,8 +103,8 @@ grid::Model* grid::LLaMAModelCPU::LLaMAModelCPU(LLaMAFile& file)
 #template <template <typename, size_t, auto...> typename Tensor>
 LLaMAModel* LLaMAModel::Create(const std::type_info& type)
 {
-  if (type == typeid(double))
-    return new LLaMAModelT<Tensor, double>();
+  if (type == typeid(float))
+    return new LLaMAModelT<Tensor, float>();
   return nullptr;
 }
 
@@ -122,16 +116,16 @@ LLaMAModel* LLaMAFile::Create(bool mmap)
 
   if (mmap)
   {
-    if (type == typeid(double))
-      model = new LLaMAModelT<Tensor, double, grid::kMemoryMapped>();
+    if (type == typeid(float))
+      model = new LLaMAModelT<Tensor, float, grid::kMemoryMapped>();
     else if (type == typeid(int32_t))
       model = new LLaMAModelT<Tensor, int32_t, grid::kMemoryMapped>();
   }
 #if 0 // FIXME: needs default constructor
   else
   {
-    if (type == typeid(double))
-      model = new LLaMAModelT<Tensor, double>();
+    if (type == typeid(float))
+      model = new LLaMAModelT<Tensor, float>();
   }
 #endif
 

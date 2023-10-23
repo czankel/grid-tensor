@@ -37,7 +37,7 @@ KarpathyFile::KarpathyFile(const std::string& path, const std::string& tokenizer
 // FIXME what's supported? make this constexr? inline?static?
 const std::type_info& KarpathyFile::DataType() const
 {
-  return typeid(double);
+  return typeid(float);
 }
 
 
@@ -45,16 +45,26 @@ LLaMAModel::Parameters KarpathyFile::GetParameters() const
 {
   return LLaMAModel::Parameters {
     parameters_.vocab_size,
+    parameters_.dim,
     parameters_.hidden_dim,
     parameters_.n_layers,
     parameters_.n_heads,
-    //parameters_.dim,
-    //parameters_.n_kv_heads,
-    //parameters_.seq_len
+    parameters_.n_kv_heads,
+    parameters_.max_seq_len
   };
 }
 
+#if 0
+    int dim; // transformer dimension (embed_size)
+    int hidden_dim; // for ffn layers (??)
+    int n_layers; // number of layers
+    int n_heads; // number of query heads
+    int n_kv_heads; // number of key/value heads (can be < query heads because of multiquery)
+    int vocab_size; // vocabulary size, usually 256 (byte-level)
+    int seq_len; // max sequence length
 
+
+#endif
 #if 0
 template <template <typename, size_t, auto...> typename Tensor, typename T, auto... Args>
 KarpathyModelT::Load(LLaMAModelT<Tensor, T, Args...>& model)
@@ -68,6 +78,18 @@ KarpathyModelT::Load(LLaMAModelT<Tensor, T, Args...>& model)
     ptr += p->vocab_size * p->dim;
 
 ////
+
+  // rms weight: layers * dim
+  // wq          n_layers * dim * n_heads * head_size
+  // wk          n_layers * dim * n_kv_heads * head_size
+  // wv          n_layers * dim * n_kv_heads * head_size
+  // swo         n_layers * n_heads * head_size * dim
+  // ffn         n_layers * dim
+  // w1          n_layers * dim * hidden_dim
+  // w2          n_layers * hidden_dim * dim
+  // w3          n_layers * dim * hidden_dim
+  // rms final   dim
+  // <skip>      seq_len * head_size / 2 (freq_cis_real for RoPE)
 
     w->rms_att_weight = ptr;
     ptr += n_layers * p->dim;

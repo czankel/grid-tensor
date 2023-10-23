@@ -83,8 +83,8 @@ struct TensorRmsNorm<TensorSlowCpu, _T, _Rank, _Tensor>
                                     std::span(tensor_.Strides()));
 
     constexpr _T eps = std::numeric_limits<_T>::epsilon();
-    double scale = 1.0/sqrtf(value / count + eps);
-    return TensorMul(tensor_, TensorSlowCpu<double, 0>{scale});
+    _T scale = 1.0/sqrtf(value / count + eps);
+    return TensorMul(tensor_, TensorSlowCpu<_T, 0>{scale});
   }
 
   _Tensor tensor_;

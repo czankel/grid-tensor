@@ -76,17 +76,19 @@ struct result_of<_TensorOp<_Tensor, _T, _Rank, _Tensors...>>
 };
 
 // helper class for getting the tensor type of the tensor or tensor operation, which returns the default tensor.
-template <typename _Tensor>
-struct to_tensor
+template <typename> struct to_tensor;
+
+template <template <typename, size_t, auto...> typename _Tensor, typename _T, size_t _Rank, auto... _Args>
+struct to_tensor<_Tensor<_T, _Rank, _Args...>>
 {
-  using type = _Tensor;
+  using type = _Tensor<_T, _Rank>;
 };
 
 template <typename _Tensor>
 requires (is_tensor_op_v<_Tensor>)
 struct to_tensor<_Tensor>
 {
-  using type = result_of<_Tensor>::type;
+  using type = typename result_of<_Tensor>::type;
 };
 
 

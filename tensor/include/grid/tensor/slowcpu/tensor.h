@@ -63,6 +63,9 @@ struct TensorSlowCpu<_T, _Rank>
                  init);
   }
 
+  /// Default Constructor
+  TensorSlowCpu() {}
+
 
   /// Constructor for a rank-1 tensor (vector) with a dynamically allocated buffer without padding.
   explicit TensorSlowCpu(size_t dim, value_type init)
@@ -225,14 +228,17 @@ struct TensorSlowCpu<_T, _Rank>
       strides_{other.strides_},
       shared_(other.shared_),
       data_(other.data_)
-  { printf(">> lvalue const\n"); }
+  { }
 
+  // FIXME: copy?
+  /*
   TensorSlowCpu(TensorSlowCpu& other)
     : dims_{other.dims_},
       strides_{other.strides_},
       shared_(other.shared_),
       data_(other.data_)
-  { printf(">> lvalue mutable\n"); }
+  { }
+  */
 
 
   // Move constructor
@@ -242,8 +248,18 @@ struct TensorSlowCpu<_T, _Rank>
       shared_(std::move(other.shared_)),
       data_(shared_.get())
   {
-    printf(">> move\n");
     other.data_ = nullptr;
+  }
+
+  /// Different allocators
+  template <TensorFor<TensorSlowCpu> _Tensor>
+  TensorSlowCpu(const _Tensor& other)
+    : dims_(other.Dims()),
+      strides_(other.Strides()),
+      shared_(new char[strides_[0] * dims_[0]]),
+      data_(shared_.get())
+  {
+    details::copy<_T, _Rank>(data_, other.Data(), dims_, strides_, other.Strides());
   }
 
 
@@ -257,12 +273,24 @@ struct TensorSlowCpu<_T, _Rank>
   /// Destructor
   ~TensorSlowCpu()                                        { }
 
+  // FIXME: see below
   TensorSlowCpu& operator=(TensorSlowCpu&& other)
   {
     dims_ = std::move(other.dims_);
     strides_ = std::move(other.strides_);
     shared_ = std::move(other.shared_);
     data_ = shared_.get();
+    return *this;
+  }
+
+  template<TensorFor<TensorSlowCpu> _Tensor>
+  TensorSlowCpu& operator=(const _Tensor& other)
+  {
+    dims_ = other.Dims();
+    strides_ = make_strides<_T>(dims_);
+    shared_ = std::shared_ptr<char[]>(new char[strides_[0] * dims_[0]]);
+    data_ = shared_.get();
+    details::copy<_T, _Rank>(data_, other.Data(), dims_, strides_, other.Strides());
     return *this;
   }
 
@@ -278,7 +306,13 @@ struct TensorSlowCpu<_T, _Rank>
   template <size_t _Subrank>
   auto View(const size_t(& axes)[_Subrank], const ssize_t(& offsets)[_Rank]) &&
   {
-    printf("create view of temporary!!!\n");
+    printf("ERROR create view of temporary!!!\n"); // FIXME
+  }
+
+  template <size_t _BroadcastRank = kMaxRank>
+  TensorSlowCpu<_T, _BroadcastRank, TensorView{}> Broadcast()
+  {
+    return TensorSlowCpu<_T, _BroadcastRank, TensorView{}>(*this, _BroadcastRank);
   }
 
   /// Rank returns the rank of the tensor.
@@ -299,10 +333,12 @@ struct TensorSlowCpu<_T, _Rank>
 
   std::array<size_t, _Rank>         dims_;
   std::array<ssize_t, _Rank>        strides_;
-  std::shared_ptr<char[]>           shared_;
+  std::shared_ptr<char[]>           shared_; // FIXME: this migth become a special derived tensor?
   char*                             data_;
 };
 
+// FIXME: this might need to become a derived tensor from <_T, _Rank>, and might need to add some additional parameter?
+//
 /// TensorSlowCpu<_T, 0, 1> is a specialization of a rank-0 tensor.
 template <typename _T>
 struct TensorSlowCpu<_T, 0>// : TensorBase
@@ -370,7 +406,7 @@ struct TensorSlowCpu<_T, 1, _N>// : TensorBase
   template <size_t _Subrank>
   auto View(const size_t(& axes)[_Subrank], const ssize_t(& offsets)[1]) const &&
   {
-    printf("create view of temporary!!!\n");
+    printf("ERROR create view of temporary!!!\n"); // FIXME
   }
 
 
@@ -420,7 +456,7 @@ struct TensorSlowCpu<_T, 2, _M, _N>// : TensorBase
   template <size_t _Subrank>
   auto View(const size_t(& axes)[_Subrank], const ssize_t(& offsets)[2]) &&
   {
-    printf("create view of temporary!!!\n");
+    printf("ERROR create view of temporary!!!\n"); // FIXME
   }
 
 
@@ -469,8 +505,7 @@ struct TensorSlowCpu<_T, 3, _C, _M, _N>// : TensorBase
   template <size_t _Subrank>
   auto View(const size_t(& axes)[_Subrank], const ssize_t(& offsets)[3]) &&
   {
-    // FIXME:
-    printf("create view of temporary!!!\n");
+    printf("ERROR create view of temporary!!!\n"); // FIXME:
   }
 
 
@@ -527,8 +562,7 @@ struct TensorSlowCpu<_T, _Rank, MemoryMapped{}>// : TensorBase
   template <size_t _Subrank>
   auto View(const size_t(& axes)[_Subrank], const ssize_t(& offsets)[_Rank]) &&
   {
-    printf("create view of temporary!!!\n");
-    return *this;
+    printf("ERROR create view of temporary!!!\n");  // FIXME
   }
 
 
@@ -582,10 +616,10 @@ struct TensorSlowCpu<_T, _Rank, TensorView{}>
 {
   using value_type = std::decay_t<_T>;
 
-  template <typename _Tensor, size_t _Subrank, size_t _TensorRank>
-  explicit TensorSlowCpu(const _Tensor& tensor, const size_t(& axes)[_Subrank], const ssize_t(& offsets)[_TensorRank])
+  template <typename _Tensor, size_t _TensorRank>
+  explicit TensorSlowCpu(const _Tensor& tensor, const size_t(& axes)[_Rank], const ssize_t(& offsets)[_TensorRank])
   {
-    for (size_t i = 0; i < _Subrank; i++)
+    for (size_t i = 0; i < _Rank; i++)
     {
       dims_[i] = tensor.dims_[axes[i]];
       strides_[i] = tensor.strides_[axes[i]];
@@ -599,6 +633,41 @@ struct TensorSlowCpu<_T, _Rank, TensorView{}>
     data_ = const_cast<char*>(tensor.Data()) + offset;
   }
 
+  // Broadcast
+  template <typename _Tensor>
+  explicit TensorSlowCpu(const _Tensor& tensor, size_t rank = kMaxRank)
+  {
+    auto& dims = tensor.Dims();
+    auto& strides = tensor.Strides();
+
+    for (size_t i = 0, j = 0; i < rank; i++)
+    {
+      dims_[i] = i >= tensor.Rank() ? 1 : dims[j];
+      strides_[i] = i >= tensor.Rank() ? 0 : strides[j++];
+    }
+    data_ = const_cast<char*>(tensor.Data());
+  }
+
+
+#if 0
+  template<TensorFor<TensorSlowCpu> _View> // requires TensorRank<_View, _Rank>
+  explicit TensorSlowCpu(const _View& view)
+  {
+    printf("O\n");
+  }
+  template<TensorFor<TensorSlowCpu> _View> // requires TensorRank<_View, _Rank>
+  explicit TensorSlowCpu(_View&& view)
+  {
+    printf("O\n");
+  }
+
+  template<TensorViewFor<TensorSlowCpu> _View> // requires TensorRank<_View, _Rank>
+  explicit TensorSlowCpu(_View&& view)
+  {
+    printf("O\n");
+  }
+#endif
+
   // TODO: views, check boundaries
   template<TensorViewFor<TensorSlowCpu> _View> requires TensorRank<_View, _Rank>
   auto operator=(const _View& view)
@@ -607,17 +676,18 @@ struct TensorSlowCpu<_T, _Rank, TensorView{}>
     return *this;
   }
 
-  // FIXME: needed?
+  template<TensorFor<TensorSlowCpu> _View> requires TensorRank<_View, _Rank>
+  auto operator=(_View&& view)
+  {
+    details::copy<_T, _Rank>(data_, view.Data(), dims_, strides_, view.Strides());
+    return *this;
+  }
+
   template<TensorViewFor<TensorSlowCpu> _View> requires TensorRank<_View, _Rank>
   auto operator=(const _View& view) const = delete;
 
-#if 0
   template<TensorViewFor<TensorSlowCpu> _View> requires TensorRank<_View, _Rank>
-  void operator=(const _View& view) const
-  {
-    static_assert("const\n");
-  }
-#endif
+  auto operator=(_View&&) const = delete;
 
 
   /// Rank returns the rank of the tensor.
