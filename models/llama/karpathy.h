@@ -21,8 +21,8 @@
 
 namespace grid {
 
-template <template <typename, size_t, auto...> typename Tensor, typename T, auto... Args>
-void KarpathyFile::Load(LLaMAModelT<Tensor, T, Args...>& model, const LLaMAFile& file) const
+template <template <typename, size_t, typename...> typename Tensor, typename T>
+void KarpathyFile::Load(LLaMAModelT<Tensor, T>& model, const LLaMAFile& file) const
 {
   // load the tokenizer
   std::ifstream ifs(tokenizer_path_, std::ios::in | std::ios::binary);
@@ -67,6 +67,8 @@ void KarpathyFile::Load(LLaMAModelT<Tensor, T, Args...>& model, const LLaMAFile&
   // temporary buffers
   model.input_ = Tensor(dim, Uninitialized<T>{});
   // map weights
+  // Tensor(view, {param.vocab_size, dim});
+  // Seek view.Size()??
   model.embeddings_ = Tensor(view.Array<T>({param.vocab_size, dim}));
 // FIXME: end move to model
 

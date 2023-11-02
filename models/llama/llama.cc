@@ -39,7 +39,7 @@ LLaMAModel* LLaMAModel::Load<TensorSlowCpu>(const LLaMAFile& file, bool mmap)
 
   auto& data_type =  file.DataType();
   if (data_type == typeid(float))
-    return LLaMAModelT<TensorSlowCpu, float, MemoryMapped{}>::CreateFrom(file);
+    return LLaMAModelT<TensorSlowCpu, float>::CreateFrom(file);
 
   printf("ERR1\n");
   return nullptr;

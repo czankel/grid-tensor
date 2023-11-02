@@ -79,7 +79,7 @@ struct TensorRmsNorm<TensorSlowCpu, _T, _Rank, _Tensor>
   auto operator()() const
   {
     auto [value, count] = SumSquare(reinterpret_cast<const char*>(tensor_.Data()),
-                                    std::span(tensor_.Dims()),
+                                    std::span(tensor_.Dimensions()),
                                     std::span(tensor_.Strides()));
 
     constexpr _T eps = std::numeric_limits<_T>::epsilon();

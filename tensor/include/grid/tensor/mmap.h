@@ -114,6 +114,38 @@ class MMap
   size_t  file_size_;
 };
 
+// FIXME: rename to MMapAllocator or MemoryMapAllocator
+// FIXME: move to mmap.h??
+/// MemoryMapped is used as a non-type template parameter declaring a memory-mapped tensor type.
+/// Defining a memory-mapped tensor ... TensorImplementation<double, 2, grid::MemoryMapped{})
+template <typename T> class MemoryMapped
+{
+ public:
+  using value_type = T;
+  using size_type = size_t;
+  using difference_type = std::ptrdiff_t;
+
+  MemoryMapped(std::shared_ptr<MMap> mmap, size_t offset = 0UL)
+    : mmap_(mmap),
+      base_(static_cast<char*>(mmap->Address()) + offset),
+      addr_(static_cast<char*>(mmap->Address()) + offset),
+      end_(static_cast<char*>(mmap->End()) - offset)
+  {}
+
+  [[nodiscard]] constexpr T* allocate(std::size_t n)
+  {
+  }
+
+  constexpr void deallocate(T* p, std::size_t n);
+
+ private:
+  std::shared_ptr<MMap> mmap_;
+  char* base_;
+  char* addr_;
+  char* end_;
+};
+
+
 
 /// MMapView provides a "view" into a memory-mmaped file and includes a current position for
 /// sequential "read" operations.
@@ -122,8 +154,8 @@ class MMapView
  public:
   MMapView(std::shared_ptr<MMap> mmap, size_t offset = 0UL)
     : mmap_(mmap),
+      base_(static_cast<char*>(mmap->Address()) + offset),
       addr_(static_cast<char*>(mmap->Address()) + offset),
-      pos_(static_cast<char*>(mmap->Address()) + offset),
       end_(static_cast<char*>(mmap->End()) - offset)
   {}
 
@@ -132,13 +164,13 @@ class MMapView
   template<typename T>
   T Read()
   {
-    char* next = pos_ + sizeof(T);
+    char* next = addr_ + sizeof(T);
     if (next > end_)
       throw std::out_of_range("mmap read: exceeding memory-mapped area");
 
     T temp;
-    memcpy(&temp, pos_, sizeof(T));
-    pos_ = next;
+    memcpy(&temp, addr_, sizeof(T));
+    addr_ = next;
     return temp;
   }
 
@@ -147,43 +179,42 @@ class MMapView
   template<typename T>
   void Read(T& temp)
   {
-    char* next = pos_ + sizeof(T);
+    char* next = addr_ + sizeof(T);
     if (next > end_)
       throw std::out_of_range("mmap read: exceeding memory-mapped area");
 
-    memcpy(&temp, pos_, sizeof(T));
-    pos_ = next;
+    memcpy(&temp, addr_, sizeof(T));
+    addr_ = next;
   }
 
   /// Read copies data from the current position to the provided destination with the provided lenght.
   template<typename T>
   void Read(T* dest, size_t len)
   {
-    char* next = pos_ + len;
+    char* next = addr_ + len;
     if (next > end_)
       throw std::out_of_range("mmap read: exceeding memory-mapped area");
 
-    memcpy(reinterpret_cast<char*>(dest), pos_, len);
-    pos_ = next;
+    memcpy(reinterpret_cast<char*>(dest), addr_, len);
+    addr_ = next;
   }
 
   /// ReadString returns a std::string at the current position encoded as lenght, string and
   /// advances the position.
   std::string ReadString()
   {
-    char* next = pos_ + 1;
+    char* next = addr_ + 1;
     if (next >  end_)
       throw std::out_of_range("mmap readstring: exceeding memory-mapped area");
 
     uint32_t len;
-    memcpy(&len, pos_, sizeof(uint32_t));
-printf("len %u\n", len);
+    memcpy(&len, addr_, sizeof(uint32_t));
     char* str = next;
     next += len;
     if (next > end_)
       throw std::out_of_range("mmap readstring: exceeding memory-mapped area");
 
-    pos_ = next;
+    addr_ = next;
     return std::string(str, len);
   }
 
@@ -191,14 +222,17 @@ printf("len %u\n", len);
   /// the position.
   std::string ReadString(size_t len)
   {
-    if (pos_ + len > end_)
+    if (addr_ + len > end_)
       throw std::out_of_range("mmap readstring: exceeding memory-mapped area");
 
-    char* str = pos_;
-    pos_ += len;
+    char* str = addr_;
+    addr_ += len;
     return std::string(str, len);
   }
 
+
+  // FIXME: drop MMapArray, use Address and Seek
+#if 1
   /// Array returns a MMapArray of the specified primitive for a memory mapped reagion.
   template <typename _T, size_t _Rank>  MMapArray<_T, _Rank>
   Array(const size_t(&)[_Rank], const ssize_t(&)[_Rank], size_t offset = 0UL);
@@ -213,56 +247,52 @@ printf("len %u\n", len);
 
   template <typename _T, size_t _Rank>  MMapArray<_T, _Rank>
   Array(const std::array<size_t, _Rank>&, size_t offset = 0UL);
-
+#endif
 
   /// Align aligns the position to the next aligned position.
   void Align(int alignment)
   {
-    uintptr_t p = reinterpret_cast<uintptr_t>(pos_);
+    uintptr_t p = reinterpret_cast<uintptr_t>(addr_);
     char* next = reinterpret_cast<char*>((p + alignment - 1) & ~(alignment - 1));
 
     if (next > end_)
       throw std::out_of_range("mmap align: exceeding memory-mapped area");
 
-    pos_ = next;
+    addr_ = next;
   }
 
-  // Address returns the base address of the view
-  void* Address() const                                   { return addr_; }
+  /// Address returns the current position in the mmaped file -- FIXME is address of position?
+  void* Address()                                        { return addr_; }
 
-  /// Position returns the current position in the mmaped file
-  void* Position()                                        { return pos_; }
-
-  /// Offset returns the offset of the mmaped region.
+  /// Offset returns the offset of the mmaped region. --- FIXME??
   size_t Offset()
   {
-    return reinterpret_cast<uintptr_t>(pos_) - reinterpret_cast<uintptr_t>(mmap_->Address());
+    return reinterpret_cast<uintptr_t>(addr_) - reinterpret_cast<uintptr_t>(mmap_->Address());
   }
 
   /// Remaining returns the remaining size of the mmaped file from the current position.
   size_t Remaining()
   {
-    return static_cast<size_t>(end_ - pos_);
+    return static_cast<size_t>(end_ - addr_);
   }
 
   /// Size returns the size of the view.
-  size_t Size()                                           { return end_ - addr_; }
+  size_t Size()                                           { return end_ - base_; }
 
 
   /// Seek advances the current position by len bytes.
   void Seek(ssize_t len)
   {
-    printf("pos %p len %ld end %p\n", pos_, len, end_);
-    if (pos_ + len > end_ || pos_ + len < addr_)
+    if (addr_ + len > end_ || addr_ + len < base_)
       throw std::out_of_range("mmap seek: exceeding memory-mapped area");
 
-    pos_ += len;
+    addr_ += len;
   }
 
  private:
   std::shared_ptr<MMap> mmap_;
+  char* base_;
   char* addr_;
-  char* pos_;
   char* end_;
 };
 
@@ -279,7 +309,6 @@ struct MMapArray
       dims_(get_array<size_t, _Rank>(dims)),
       strides_(get_array<ssize_t, _Rank>(strides))
   {
-    printf("Axs offset %lu  Size %lu\n", offset_, Size());
     if (offset_ + Size() > mmap_->Size())
       throw std::out_of_range("array exceeding memory-mapped range");
   }
@@ -293,8 +322,6 @@ struct MMapArray
       dims_(get_array<size_t, _Rank>(dims)),
       strides_(make_strides<_T>(dims_))
   {
-    printf("xxs offset %lu  Size %lu %lu\n", offset_, Size(), mmap_->Size());
-    printf("dims %lu %lu strides %lu\n", dims_[0], dims_[1], strides_[0]);
     if (offset_ + Size() > mmap_->Size())
       throw std::out_of_range("array exceeding memory-mapped range");
   }
@@ -308,7 +335,6 @@ struct MMapArray
       dims_(dims),
       strides_(make_strides<_T>(dims_))
   {
-    printf("dims offset %lu  Size %lu\n", offset_, Size());
     if (offset_ + Size() > mmap_->Size())
       throw std::out_of_range("array exceeding memory-mapped range");
   }
@@ -324,7 +350,6 @@ struct MMapArray
       dims_(dims),
       strides_(strides)
   {
-    printf("offset %lu  Size %lu %lu\n", offset_, Size(), mmap_->Size());
     if (offset_ + Size() > mmap_->Size())
       throw std::out_of_range("array exceeding memory-mapped range");
   }
@@ -339,14 +364,14 @@ struct MMapArray
   std::array<ssize_t, _Rank>  strides_;
 };
 
-
+#if 1
 template <typename _T, size_t _Rank>  MMapArray<_T, _Rank>
 inline MMapView::Array(const size_t(&dims)[_Rank],
                        const ssize_t(&strides)[_Rank],
                        size_t offset)
 {
-  auto arr = MMapArray<_T, _Rank>(mmap_, pos_ - static_cast<char*>(mmap_->Address()), dims, strides);
-  pos_ += arr.Size();
+  auto arr = MMapArray<_T, _Rank>(mmap_, addr_ - static_cast<char*>(mmap_->Address()), dims, strides);
+  addr_ += arr.Size();
   return arr;
 }
 
@@ -356,18 +381,22 @@ inline MMapView::Array(const std::array<size_t, _Rank>& dims,
                        const std::array<ssize_t, _Rank>& strides,
                        size_t offset)
 {
-  auto arr = MMapArray<_T, _Rank>(mmap_, dims, strides, pos_ - static_cast<char*>(mmap_->Address()));
-  pos_ += arr.Size();
+  auto arr = MMapArray<_T, _Rank>(mmap_, dims, strides, addr_ - static_cast<char*>(mmap_->Address()));
+  addr_ += arr.Size();
   return arr;
 }
 
 template <typename _T, size_t _Rank>  MMapArray<_T, _Rank>
 inline MMapView::Array(const size_t(&dims)[_Rank], size_t offset)
 {
-  auto arr = MMapArray<_T, _Rank>(mmap_, dims, pos_ - static_cast<char*>(mmap_->Address()));
-  pos_ += arr.Size();
+  auto arr = MMapArray<_T, _Rank>(mmap_, dims, addr_ - static_cast<char*>(mmap_->Address()));
+  addr_ += arr.Size();
   return arr;
 }
+#endif
+
+template< class T1, class T2 >
+constexpr bool operator==(const MemoryMapped<T1>& lhs, const MemoryMapped<T2>& rhs) noexcept;
 
 
 } // namespace grid

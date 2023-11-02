@@ -47,7 +47,7 @@ struct LLaMAVocab
 ///
 /// The base implementation .... for a specific data type  FIXME
 /// and "backend". Each backend should provide a specific class, for example: LLaMAModelCPU.
-template <template <typename, size_t, auto...> typename Tensor, typename T, auto... Args>
+template <template <typename, size_t, typename...> typename Tensor, typename T>
 class LLaMAModelT : public LLaMAModel
 {
   friend class KarpathyFile;
@@ -55,8 +55,8 @@ class LLaMAModelT : public LLaMAModel
   /// Using two allocators, default for dynamic tensors, and memory-mapped for file tensors.
   using Tensor1D = Tensor<T, 1>;
   using Tensor2D = Tensor<T, 2>;
-  using TensorFile1D = Tensor<T, 1, MemoryMapped{}>;
-  using TensorFile2D = Tensor<T, 2, MemoryMapped{}>;
+  using TensorFile1D = Tensor<T, 1, MemoryMapped<T>>;
+  using TensorFile2D = Tensor<T, 2, MemoryMapped<T>>;
 
  public:
   LLaMAModelT() = default;
@@ -69,9 +69,9 @@ class LLaMAModelT : public LLaMAModel
   virtual void Generate(const std::string& prompt, int steps);
 
   /// CreateFrom creates the LLaMA model from the provided file.
-  //template <template <typename, size_t, auto...> typename, typename, auto...>
+  //template <template <typename, size_t, typename...> typename, typename, typename...>
   //template<>
-  static LLaMAModelT<Tensor, T, Args...>* CreateFrom(const LLaMAFile& file);
+  static LLaMAModelT<Tensor, T>* CreateFrom(const LLaMAFile& file);
 
  protected:
   void EncodeBPE(const std::string& promplt, std::vector<uint32_t>& token_ids);
@@ -147,14 +147,14 @@ class LLaMAModelT : public LLaMAModel
 };
 
 
-template <template <typename, size_t, auto...> typename Tensor, typename T, auto... Args>
-void LLaMAModelT<Tensor,T,Args...>::Load(const grid::LLaMAFile& file)
+template <template <typename, size_t, typename...> typename Tensor, typename T>
+void LLaMAModelT<Tensor,T>::Load(const grid::LLaMAFile& file)
 {
   if (file.DataType() != typeid(T))
     throw ("mismatching type");
 
   if (dynamic_cast<const KarpathyFile*>(&file) != nullptr)
-    dynamic_cast<const KarpathyFile*>(&file)->Load<Tensor, T, Args...>(*this, file);
+    dynamic_cast<const KarpathyFile*>(&file)->Load<Tensor, T>(*this, file);
   else
     throw std::runtime_error("invalid file type");
 
@@ -162,18 +162,18 @@ void LLaMAModelT<Tensor,T,Args...>::Load(const grid::LLaMAFile& file)
   //key_cache_ = Tensor2D(...);
 }
 
-template <template <typename, size_t, auto...> typename Tensor, typename T, auto... Args>
-LLaMAModelT<Tensor, T, Args...>* LLaMAModelT<Tensor, T, Args...>::CreateFrom(const LLaMAFile& file)
+template <template <typename, size_t, typename...> typename Tensor, typename T>
+LLaMAModelT<Tensor, T>* LLaMAModelT<Tensor, T>::CreateFrom(const LLaMAFile& file)
 {
-  auto* model = new LLaMAModelT<Tensor, T, Args...>();
+  auto* model = new LLaMAModelT<Tensor, T>();
   model->Load(file);
   return model;
 }
 
 
 // Byte-Pair Encoding
-template <template <typename, size_t, auto...> typename Tensor, typename T, auto... Args>
-void LLaMAModelT<Tensor, T, Args...>::EncodeBPE(const std::string& prompt, std::vector<uint32_t>& token_ids)
+template <template <typename, size_t, typename...> typename Tensor, typename T>
+void LLaMAModelT<Tensor, T>::EncodeBPE(const std::string& prompt, std::vector<uint32_t>& token_ids)
 {
 
   token_ids.push_back(kBOS);
@@ -233,8 +233,8 @@ void LLaMAModelT<Tensor, T, Args...>::EncodeBPE(const std::string& prompt, std::
 }
 
 
-template <template <typename, size_t, auto...> typename Tensor, typename T, auto... Args>
-std::string LLaMAModelT<Tensor, T, Args...>::Decode(uint32_t token_id)
+template <template <typename, size_t, typename...> typename Tensor, typename T>
+std::string LLaMAModelT<Tensor, T>::Decode(uint32_t token_id)
 {
   std::string symbol = vocab_.tokens_[token_id].text;
   // FIXME if first token after <BOS> drop space, add and use prev_token_id?
@@ -246,11 +246,11 @@ std::string LLaMAModelT<Tensor, T, Args...>::Decode(uint32_t token_id)
 
 // Note that this is a "lower-rank" implementation going through the calculation for each
 // token vector instead of combining a sequence into a matrix and using higher-rank tensors.
-template <template <typename, size_t, auto...> typename Tensor, typename T, auto... Args>
-uint32_t LLaMAModelT<Tensor, T, Args...>::Forward(const std::vector<uint32_t>& token_ids) // FIXME: uint32_t to token_id::type
+template <template <typename, size_t, typename...> typename Tensor, typename T>
+uint32_t LLaMAModelT<Tensor, T>::Forward(const std::vector<uint32_t>& token_ids) // FIXME: uint32_t to token_id::type
 {
   // FIXME: need a last position??
-  size_t pos = 0;
+  //size_t pos = 0;
   //for (auto token: token_ids)
     //input_.View({1}, {0, pos++}) = embeddings_.View({1}, {0, token_ids[token]});
 
@@ -259,16 +259,18 @@ uint32_t LLaMAModelT<Tensor, T, Args...>::Forward(const std::vector<uint32_t>& t
     // FIXME: input could just be Tensor&& input =??
     input_ = embeddings_.View({1}, {0, token_ids[token]});  // -> vec(dim)
 
+#if 0
     for (auto l: layers_)
     {
-//      auto test = input_.Broadcast<2>();
-#if 0
-      l.x_ = grid::TensorRmsNorm(input_, l.rms_att_weight_);// vec(dim), vec(dim) -> vec(dim)
+      using Broadcast = grid::Broadcast;
+      // vec o vec ('hardamard' multiplication by broadcasting both vectors to (N, 1))
+      l.x_ = grid::TensorRmsNorm(input_.View({0, Broadcast}) * l.rms_att_weight_.View({0, Broadcast}));
+      l.x_ = grid::TensorRmsNorm(input_.View({0,-1}) * l.rms_att_weight_.View({0,-1}));
 
       // add (note that key is transposed)
-      l.q_.View({0},{pos,0}) = x_ * l.wq_;                  // vec(dim) x mat(dim,dim) -> vec(dim)
-      l.key_cache_.View({0},{pos,0}) = x_ * l.wk_;          // mat x vec?? FIXME vec(dim) x mat(dim,kv_dim) -> vec(kv_dim)
-      l.val_cache_.View({1},{pos 0}) = x_ * l.wv_;          // vec(dim) x mat(dim,kv_dim) -> vec(kv_dim)
+      l.q_.View({0},{pos, 0}) = x_ * l.wq_;                  // vec(dim) x mat(dim,dim) -> vec(dim)
+      l.key_cache_.View({0},{pos, 0}) = x_ * l.wk_;          // mat x vec?? FIXME vec(dim) x mat(dim,kv_dim) -> vec(kv_dim)
+      l.val_cache_.View({1},{pos, 0}) = x_ * l.wv_;          // vec(dim) x mat(dim,kv_dim) -> vec(kv_dim)
 
       // RoPE, rotate each 'head'
       auto q = q_.Data();
@@ -292,8 +294,8 @@ uint32_t LLaMAModelT<Tensor, T, Args...>::Forward(const std::vector<uint32_t>& t
           k[i]   = v0 * fcr - v1 * fci;
           k[i+1] = v0 * fci + v1 * fcr;
         }
-#endif
       }
+#endif
 
 #if 0
       // multihead attention
@@ -304,37 +306,8 @@ uint32_t LLaMAModelT<Tensor, T, Args...>::Forward(const std::vector<uint32_t>& t
       l.x2_ = l.value_cache_ * l.attention_; // mat(dim,..) x vec() -> vec(...);
       l.x_ += l.x2_ * l.wo_;  // vec(dim) x mat(dim,dim) -> vec(dim) // FIXME mat x vec?
                               //
-
-      // a * v  = v * a       -> v_i * a
-      // a * M  =? M * a      -> M_ij * a
-      // M * v                -> ...
-      // M * v.Broadcast()    -> M x M
-      // M * a.Broadcast()    -> same as M * a?
-      // T * M                -> ??
-      // T * M.Broadcast()    -> T x T (whatever that means)
-      //
-      // 4 1 5
-      // 1 7 5  -> 4 7 5?
-      //
-      // Options:
-      // Reshape({1, 1, 4}, { 
-      //
-      // What about v x M vs M x v --> v.Broadcast() x M vs M x v.Broadcast()
-      //                                  1, 5          5, 4      4, 1 !!!
-      //
-      //
-
-      // FIXME: how to broadcast?
-      //   a * b
-      //   a * b.Broadcast() --> a might be lower-rank?, maybe that's what needs to be understood?
-      //           rank1 * rank2.Broadcast() ??
-      //   MutBCast(a, b)
-      //   AddBCast(a,b)
-      //   (a * B).Broadcast()
-      //
-
       // FFN RMS Norm
-      TensorRmsNorm(l.x_, l.rms_ffn_weight_);
+      xxx = TensorRmsNorm(l.x_.View({0, grid::Broadcast}) * l.rms_ffn_weight_.View({0, grid::Broadcast});
 
       // FFN: (self.w2(F.silu(self.w1(x)) * self.w3(x))
       x_ += TensorSwiGLU(xb_ * w1 * w2) * w3_; // mat(dim, hidden_dim) -> ...
@@ -410,8 +383,8 @@ uint32_t LLaMAModelT<Tensor, T, Args...>::Forward(const std::vector<uint32_t>& t
 }
 
 
-template <template <typename, size_t, auto...> typename Tensor, typename T, auto... Args>
-void LLaMAModelT<Tensor, T, Args...>::Generate(const std::string& prompt, int steps)
+template <template <typename, size_t, typename...> typename Tensor, typename T>
+void LLaMAModelT<Tensor, T>::Generate(const std::string& prompt, int steps)
 {
   std::vector<uint32_t> token_ids;
   EncodeBPE(prompt, token_ids);

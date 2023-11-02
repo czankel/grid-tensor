@@ -97,7 +97,7 @@ struct TensorMul<TensorSlowCpu, _T, _Rank, _Tensor1, _Tensor2>
   template <TensorRank<1> = _Tensor1, TensorRank<1> = _Tensor2>
   auto operator()() const
   {
-    auto& dims = tensor1_.Dims();
+    auto& dims = tensor1_.Dimensions();
     auto result = TensorSlowCpu(Uninitialized<value_type>{});
 
     VecDot(reinterpret_cast<char*>(result.Data()),
@@ -113,7 +113,7 @@ struct TensorMul<TensorSlowCpu, _T, _Rank, _Tensor1, _Tensor2>
   template <TensorRank<2> = _Tensor1, TensorRank<2> = _Tensor2>
   auto operator()() const
   {
-    auto& dims = tensor1_.Dims();
+    auto& dims = tensor1_.Dimensions();
     auto result = TensorSlowCpu({dims[0], dims[0]}, Uninitialized<value_type>{});
 
     // transpose second matrix
@@ -133,7 +133,7 @@ struct TensorMul<TensorSlowCpu, _T, _Rank, _Tensor1, _Tensor2>
   template <TensorRank<0> = _Tensor2>
   auto operator()() const
   {
-    auto& dims = tensor1_.Dims();
+    auto& dims = tensor1_.Dimensions();
     auto result = TensorSlowCpu(dims, Uninitialized<value_type>{});
     Scale(reinterpret_cast<char*>(result.Data()),
           reinterpret_cast<const char*>(tensor1_.Data()),
@@ -147,7 +147,7 @@ struct TensorMul<TensorSlowCpu, _T, _Rank, _Tensor1, _Tensor2>
   template <TensorRank<0> = _Tensor1, TensorNotRank<0> = _Tensor2>
   auto operator()() const
   {
-    auto& dims = tensor2_.Dims();
+    auto& dims = tensor2_.Dimensions();
     auto result = TensorSlowCpu(dims, Uninitialized<value_type>{});
     Scale(reinterpret_cast<char*>(result.Data()),
           reinterpret_cast<const char*>(tensor2_.Data()),

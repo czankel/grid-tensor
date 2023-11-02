@@ -14,18 +14,19 @@
 
 struct TensorSlowCpuSuite
 {
-  template <typename _T, size_t _Rank, auto... _Args>
-  using Tensor = grid::TensorSlowCpu<_T, _Rank, _Args...>;
+  template <typename _T, size_t _Rank, typename _Allocator>
+  using Tensor = grid::TensorSlowCpu<_T, _Rank, _Allocator>;
 };
 
 #else
 
 struct TensorSlowCpuSuite
 {
-  template <typename _T, size_t _Rank, auto... _Args>
-  struct Tensor : grid::TensorSlowCpu<_T, _Rank, _Args...>
+  template <typename _T, size_t _Rank, typename _Allocator = grid::StandardAllocator<_T>>
+  class Tensor : public grid::TensorSlowCpu<_T, _Rank, _Allocator>
   {
-    using grid::TensorSlowCpu<_T, _Rank, _Args...>::TensorSlowCpu;
+   public:
+    using grid::TensorSlowCpu<_T, _Rank, _Allocator>::TensorSlowCpu;
   };
 
   template <typename _T>
@@ -33,11 +34,11 @@ struct TensorSlowCpuSuite
   template <typename _T>
   explicit Tensor(grid::Uninitialized<_T>) -> Tensor<_T, 0>;
   template <typename _T, typename... _Ts>
-  explicit Tensor(_T, _Ts...) -> Tensor<std::common_type_t<_T, _Ts...>, 1, sizeof...(_Ts)+1>;
+  explicit Tensor(_T, _Ts...) -> Tensor<std::common_type_t<_T, _Ts...>, 1, grid::StaticMemory<_T, sizeof...(_Ts)+1>>;
   template <typename _T, size_t... _N>
-  explicit Tensor(_T(&&... l)[_N]) -> Tensor<_T, 2, sizeof...(_N), std::max({_N...})>;
+  explicit Tensor(_T(&&... l)[_N]) -> Tensor<_T, 2, grid::StaticMemory<_T, sizeof...(_N), std::max({_N...})>>;
   template <typename _T, size_t... _M, size_t... _N>
-  explicit Tensor(_T(&&... l)[_M][_N]) -> Tensor<_T, 3, sizeof...(_M), std::max({_M...}), std::max({_N...})>;
+  explicit Tensor(_T(&&... l)[_M][_N]) -> Tensor<_T, 3, grid::StaticMemory<_T, sizeof...(_M), std::max({_M...}), std::max({_N...})>>;
   template <typename _T>
   explicit Tensor(size_t, _T) -> Tensor<_T, 1>;
   template <typename _T>
@@ -71,12 +72,26 @@ struct TensorSlowCpuSuite
   template <typename _T, size_t _N>
   explicit Tensor(std::array<size_t, _N>, std::array<ssize_t, _N>, grid::Uninitialized<_T>) -> Tensor<_T, _N>;
   template <typename _T, size_t _N>
-  explicit Tensor(grid::MMapArray<_T, _N>) -> Tensor<_T, _N, grid::MemoryMapped{}>;
-  template <template <template <typename, size_t, auto...> typename, typename, size_t, typename...> typename _TensorOp,
-  template <typename, size_t, auto...> typename _TensorRT, typename _T, size_t _Rank, typename... _Tensors>
+  explicit Tensor(grid::MMapArray<_T, _N>) -> Tensor<_T, _N, grid::MemoryMapped<_T>>;
+  // copy & move constructors FIXME: cannot get it wo rork
+  template <typename _T, size_t _N, typename _Allocator>
+  Tensor(const grid::TensorSlowCpu<_T, _N, _Allocator>&) -> Tensor<_T, _N>;
+  //template <typename _T, size_t _N>
+  //explicit Tensor(grid::Tensor<_T, _N>&&) -> Tensor<_T, _N>;
+
+  // FIXME: what are these? 
+  template <typename _T, size_t _N>
+  explicit Tensor(Tensor<_T, 1, grid::StaticMemory<_T, _N>>&) -> Tensor<_T, _N>;
+  template <typename _T, size_t _N, size_t _M>
+  explicit Tensor(Tensor<_T, 2, grid::StaticMemory<_T, _N, _M>>&) -> Tensor<_T, _N * _M>;
+  template <typename _T, size_t _C, size_t _N, size_t _M>
+  explicit Tensor(Tensor<_T, 3, grid::StaticMemory<_T, _C, _N, _M>>&) -> Tensor<_T, _C * _N * _M>;
+  // tensor-op
+  template <template <template <typename, size_t, typename...> typename, typename, size_t, typename...> typename _TensorOp,
+  template <typename, size_t, typename...> typename _TensorRT, typename _T, size_t _Rank, typename... _Tensors>
   Tensor(_TensorOp<_TensorRT, _T, _Rank, _Tensors...>&&) -> Tensor<_T, _Rank>;
-  template <template <template <typename, size_t, auto...> typename, typename, size_t, typename...> typename _TensorOp,
-  template <typename, size_t, auto...> typename _TensorRT, typename _T, size_t _Rank, typename... _Tensors>
+  template <template <template <typename, size_t, typename...> typename, typename, size_t, typename...> typename _TensorOp,
+  template <typename, size_t, typename...> typename _TensorRT, typename _T, size_t _Rank, typename... _Tensors>
   Tensor(const _TensorOp<_TensorRT,_T,  _Rank, _Tensors...>&) -> Tensor<_T, _Rank>;
 };
 

@@ -13,6 +13,7 @@
 
 #include <algorithm>
 #include <array>
+#include <bitset>
 #include <cstring>
 #include <initializer_list>
 #include <memory>
@@ -26,17 +27,19 @@
 namespace grid {
 
 /// TensorSlowCpu is an unoptimized tensor implementatoin for the CPU.
-template <typename, size_t, auto...> struct TensorSlowCpu;
+template <typename T, size_t, typename = StandardAllocator<T>> class TensorSlowCpu;
 
-/// TensorSlowCpu<_T, _Rank> is a specialization of TensorSlowCpu for a dynamically allocated buffer.
+/// TensorSlowCpu<T, _Rank> is a specialization of TensorSlowCpu for a dynamically allocated buffer.
 ///
 /// Note that this is also the Tensor used for any TensorOp result.
 /// TODO: see if constructors can be combined using implicit conversion
-template <typename _T, size_t _Rank>
-struct TensorSlowCpu<_T, _Rank>
+template <typename T, size_t _Rank>
+class TensorSlowCpu<T, _Rank, StandardAllocator<T>>
 {
-  using value_type = std::decay_t<_T>;
-
+ public:
+  using value_type = T;
+  using memory_type = StandardAllocator<T>;
+  using pointer_type = T*;
   constexpr static size_t rank = _Rank;
 
   inline void
@@ -64,15 +67,22 @@ struct TensorSlowCpu<_T, _Rank>
   }
 
   /// Default Constructor
-  TensorSlowCpu() {}
+  TensorSlowCpu() = default;
+
+  /// Destructor
+  ~TensorSlowCpu()
+  {
+    if (data_ != nullptr)
+      delete[] data_;
+  }
 
 
   /// Constructor for a rank-1 tensor (vector) with a dynamically allocated buffer without padding.
   explicit TensorSlowCpu(size_t dim, value_type init)
     : dims_{dim},
-      strides_{make_strides<_T>(dims_)},
-      shared_(new char[dims_[0] * strides_[0]]),
-      data_(shared_.get())
+      strides_{make_strides<T>(dims_)},
+      size_(dims_[0] * strides_[0]),
+      data_(new  char[size_])
   {
     initialize(data_, std::span{dims_}, std::span{strides_}, init);
   }
@@ -80,17 +90,17 @@ struct TensorSlowCpu<_T, _Rank>
   /// Constructor for a rank-1 tensor (vector) with a dynamically allocated uninitialized buffer.
   explicit TensorSlowCpu(size_t dim, Uninitialized<value_type>)
     : dims_{dim},
-      strides_{make_strides<_T>(dims_)},
-      shared_(new char[dims_[0] * strides_[0]]),
-      data_(shared_.get())
+      strides_{make_strides<T>(dims_)},
+      size_(dims_[0] * strides_[0]),
+      data_(new  char[size_])
   {}
 
   /// Constructor for a rank-2 tensor (matrix) with a dynamically allocated buffer and no padding.
   explicit TensorSlowCpu(size_t dim_m, int dim_n, value_type init)
     : dims_{dim_m, dim_n},
-      strides_{make_strides<_T>(dims_)},
-      shared_(new char[dims_[0] * strides_[0]]),
-      data_(shared_.get())
+      strides_{make_strides<T>(dims_)},
+      size_(dims_[0] * strides_[0]),
+      data_(new  char[size_])
   {
     initialize(data_, std::span{dims_}, std::span{strides_}, init);
   }
@@ -98,17 +108,17 @@ struct TensorSlowCpu<_T, _Rank>
   /// Constructor for a rank-2 tensor (matrix) with a dynamically allocated uninitialized buffer.
   explicit TensorSlowCpu(size_t dim_m, int dim_n, Uninitialized<value_type>)
     : dims_{dim_m, dim_n},
-      strides_{make_strides<_T>(dims_)},
-      shared_(new char[dims_[0] * strides_[0]]),
-      data_(shared_.get())
+      strides_{make_strides<T>(dims_)},
+      size_(dims_[0] * strides_[0]),
+      data_(new  char[size_])
   {}
 
   /// Constructor for any rank tensor with a dynamically allocated initialized buffer
   explicit TensorSlowCpu(std::initializer_list<size_t>&& dims, value_type init)
     : dims_(get_array<size_t, _Rank>(std::move(dims))),
-      strides_{make_strides<_T>(dims_)},
-      shared_(new char[dims_[0] * strides_[0]]),
-      data_(shared_.get())
+      strides_{make_strides<T>(dims_)},
+      size_(dims_[0] * strides_[0]),
+      data_(new  char[size_])
   {
     initialize(data_, std::span{dims_}, std::span{strides_}, init);
   }
@@ -117,9 +127,9 @@ struct TensorSlowCpu<_T, _Rank>
   /// Constructor for any rank tensor with a dynamically allocated initialized buffer
   explicit TensorSlowCpu(std::initializer_list<size_t>&& dims, Uninitialized<value_type>)
     : dims_(get_array<size_t, _Rank>(std::move(dims))),
-      strides_{make_strides<_T>(dims_)},
-      shared_(new char[dims_[0] * strides_[0]]),
-      data_(shared_.get())
+      strides_{make_strides<T>(dims_)},
+      size_(dims_[0] * strides_[0]),
+      data_(new  char[size_])
   {}
 
   /// Constructor for any rank tensor with a dynamically allocated initialized buffer with strides.
@@ -128,8 +138,8 @@ struct TensorSlowCpu<_T, _Rank>
                          value_type init)
     : dims_(get_array<size_t, _Rank>(std::move(dims))),
       strides_(get_array<ssize_t, _Rank>(std::move(strides))),
-      shared_(new char[dims_[0] * strides_[0]]),
-      data_(shared_.get())
+      size_(dims_[0] * strides_[0]),
+      data_(new  char[size_])
   {
     initialize(data_, std::span{dims_}, std::span{strides_}, init);
   }
@@ -140,8 +150,8 @@ struct TensorSlowCpu<_T, _Rank>
                          Uninitialized<value_type>)
     : dims_(get_array<size_t, _Rank>(std::move(dims))),
       strides_(get_array<ssize_t, _Rank>(std::move(strides))),
-      shared_(new char[dims_[0] * strides_[0]]),
-      data_(shared_.get())
+      size_(dims_[0] * strides_[0]),
+      data_(new  char[size_])
   {}
 
   // FIXME: can this be combined with initializer-list?
@@ -149,18 +159,18 @@ struct TensorSlowCpu<_T, _Rank>
   explicit TensorSlowCpu(const size_t(&dim)[_Rank], const ssize_t(&stride)[_Rank], value_type init)
     : dims_(get_array<size_t, _Rank>(dim)),
       strides_(get_array<ssize_t, _Rank>(stride)),
-      shared_(new char[dims_[0] * strides_[0]]),
-      data_(shared_.get())
+      size_(dims_[0] * strides_[0]),
+      data_(new  char[size_])
   {
     initialize(data_, std::span{dims_}, std::span{strides_}, init);
   }
 
   /// Constructor for any rank tensor with a dynamically allocated uninitialized buffer
-  explicit TensorSlowCpu(const size_t(&dim)[_Rank], const ssize_t(&stride)[_Rank], Uninitialized<_T>)
+  explicit TensorSlowCpu(const size_t(&dim)[_Rank], const ssize_t(&stride)[_Rank], Uninitialized<T>)
     : dims_(get_array<size_t, _Rank>(dim)),
       strides_(get_array<ssize_t, _Rank>(stride)),
-      shared_(new char[dims_[0] * strides_[0]]),
-      data_(shared_.get())
+      size_(dims_[0] * strides_[0]),
+      data_(new  char[size_])
   {}
 
 
@@ -168,9 +178,9 @@ struct TensorSlowCpu<_T, _Rank>
   explicit TensorSlowCpu(std::array<size_t, _Rank> dims,
                          value_type init)
     : dims_(dims),
-      strides_(make_strides<_T>(dims)),
-      shared_(new char[strides_[0] * dims_[0]]),
-      data_(shared_.get())
+      strides_(make_strides<T>(dims)),
+      size_(dims_[0] * strides_[0]),
+      data_(new  char[size_])
   {
     initialize<_Rank>(data_, dims_, strides_, init);
   }
@@ -181,8 +191,8 @@ struct TensorSlowCpu<_T, _Rank>
                          value_type init)
     : dims_{dims},
       strides_{strides},
-      shared_(new char[strides_[0] * dims_[0]]),
-      data_(shared_.get())
+      size_(dims_[0] * strides_[0]),
+      data_(new  char[size_])
   {
     initialize<_Rank>(data_, dims_, strides_, init);
   }
@@ -191,9 +201,9 @@ struct TensorSlowCpu<_T, _Rank>
   explicit TensorSlowCpu(std::array<size_t, _Rank> dims,
                          Uninitialized<value_type>)
     : dims_{dims},
-      strides_{make_strides<_T>(dims)},
-      shared_(new char[strides_[0] * dims_[0]]),
-      data_(shared_.get())
+      strides_{make_strides<T>(dims)},
+      size_(dims_[0] * strides_[0]),
+      data_(new  char[size_])
   {}
 
   /// Constructor for any rank tensor with a dynamically allocated uninitialized buffer with padding.
@@ -202,127 +212,110 @@ struct TensorSlowCpu<_T, _Rank>
                          Uninitialized<value_type>)
     : dims_{dims},
       strides_{strides},
-      shared_(new char[strides_[0] * dims_[0]]),
-      data_(shared_.get())
+      size_(dims_[0] * strides_[0]),
+      data_(new  char[size_])
   {}
 
 
-  /// Constructor ... FIXME
-  explicit TensorSlowCpu(std::array<size_t, _Rank> dims,
-                         std::array<ssize_t, _Rank> strides,
-                         std::shared_ptr<char[]>shared,
-                         size_t offset = 0UL)
-    : dims_{dims},
-      strides_{strides},
-      shared_(std::move(shared)),
-      data_(shared_.get() + offset)
-  {
-    // FIXME: assert offset with dims and strides
-  }
-
-
   // Copy constructor
-  // TODO: simple copy; implement reference counted buffers
   TensorSlowCpu(const TensorSlowCpu& other)
-    : dims_{other.dims_},
-      strides_{other.strides_},
-      shared_(other.shared_),
-      data_(other.data_)
-  { }
-
-  // FIXME: copy?
-  /*
-  TensorSlowCpu(TensorSlowCpu& other)
-    : dims_{other.dims_},
-      strides_{other.strides_},
-      shared_(other.shared_),
-      data_(other.data_)
-  { }
-  */
-
+    : dims_{other.Dimensions()},
+      strides_{other.Strides()},
+      size_(other.Size()),
+      data_(new  char[size_])
+  {
+    details::copy<T, _Rank>(data_, other.Data(), dims_, strides_, other.Strides());
+  }
 
   // Move constructor
   TensorSlowCpu(TensorSlowCpu&& other)
     : dims_{other.dims_},
       strides_{other.strides_},
-      shared_(std::move(other.shared_)),
-      data_(shared_.get())
+      size_(other.size_),
+      data_(std::move(other.data_))
   {
     other.data_ = nullptr;
   }
 
-  /// Different allocators
-  template <TensorFor<TensorSlowCpu> _Tensor>
-  TensorSlowCpu(const _Tensor& other)
-    : dims_(other.Dims()),
+
+  /// Different allocators FIXME what's this?
+  template <TensorFor<TensorSlowCpu> Tensor>
+  TensorSlowCpu(const Tensor& other)
+    : dims_(other.Dimensions()),
       strides_(other.Strides()),
-      shared_(new char[strides_[0] * dims_[0]]),
-      data_(shared_.get())
+      size_(dims_[0] * strides_[0]),
+      data_(new  char[size_])
   {
-    details::copy<_T, _Rank>(data_, other.Data(), dims_, strides_, other.Strides());
+    details::copy<T, _Rank>(data_, other.Data(), dims_, strides_, other.Strides());
   }
 
 
   // Constructors for converting from a tensor operator.
   template <TensorOpFor<TensorSlowCpu> Operator>
-  TensorSlowCpu(Operator&& op) : TensorSlowCpu{std::move(op())} {}
+  TensorSlowCpu(Operator&& functor) : TensorSlowCpu{std::move(functor())} {}
 
   template <TensorOpFor<TensorSlowCpu> Operator>
-  TensorSlowCpu(const Operator& op) : TensorSlowCpu{op()} {}
+  TensorSlowCpu(const Operator& functor) : TensorSlowCpu{functor()} {}
 
-  /// Destructor
-  ~TensorSlowCpu()                                        { }
-
+#if 0
   // FIXME: see below
   TensorSlowCpu& operator=(TensorSlowCpu&& other)
   {
     dims_ = std::move(other.dims_);
     strides_ = std::move(other.strides_);
-    shared_ = std::move(other.shared_);
-    data_ = shared_.get();
+    size_ = other.size_;
+
+    if (data_ != nullptr)
+      delete[] data_;
+    data_ = std::move(other.data_);
+    other.data_ = nullptr;
+
+    return *this;
+  }
+#endif
+  // FIXME: like this, but must treat anything else than bare-bone tensor as "Copy"
+#if 0
+  template<TensorFor<TensorSlowCpu> Tensor>
+  TensorSlowCpu& operator=(Tensor&& other)
+#endif
+
+  template<TensorFor<TensorSlowCpu> Tensor>
+  TensorSlowCpu& operator=(const Tensor& other)
+  {
+    dims_ = other.Dimensions();
+    strides_ = make_strides<T>(dims_);
+    size_ = strides_[0] * dims_[0];
+    if (data_ != nullptr)
+      delete[] data_;
+    data_ = new char[size_];
+    details::copy<T, _Rank>(data_, other.Data(), dims_, strides_, other.Strides());
     return *this;
   }
 
-  template<TensorFor<TensorSlowCpu> _Tensor>
-  TensorSlowCpu& operator=(const _Tensor& other)
+
+  /// View returns a "view" of the tensor, which can be a "sub-tensor" or add "broadcastable" axes.
+  /// It requires that the underlying tensor's lifetime is ...
+  template <size_t _ViewRank>
+  auto View(const ssize_t(& axes)[_ViewRank], const ssize_t(& offsets)[_Rank] = {0}) const &
   {
-    dims_ = other.Dims();
-    strides_ = make_strides<_T>(dims_);
-    shared_ = std::shared_ptr<char[]>(new char[strides_[0] * dims_[0]]);
-    data_ = shared_.get();
-    details::copy<_T, _Rank>(data_, other.Data(), dims_, strides_, other.Strides());
-    return *this;
+    return TensorSlowCpu<T, _ViewRank, TensorView<T>>(*this, axes, offsets);
   }
 
+  template <size_t _ViewRank>
+  auto View(const ssize_t(& axes)[_ViewRank], const ssize_t(& offsets)[_Rank]) const && = delete;
 
-  /// View returns a ... FIXME
-  template <size_t _Subrank>
-    // FIXME: can make auto again?
-  TensorSlowCpu<_T, _Subrank, TensorView{}> View(const size_t(& axes)[_Subrank], const ssize_t(& offsets)[_Rank]) &
-  {
-    return TensorSlowCpu<_T, _Subrank, TensorView{}>(*this, axes, offsets);
-  }
-
-  template <size_t _Subrank>
-  auto View(const size_t(& axes)[_Subrank], const ssize_t(& offsets)[_Rank]) &&
-  {
-    printf("ERROR create view of temporary!!!\n"); // FIXME
-  }
-
-  template <size_t _BroadcastRank = kMaxRank>
-  TensorSlowCpu<_T, _BroadcastRank, TensorView{}> Broadcast()
-  {
-    return TensorSlowCpu<_T, _BroadcastRank, TensorView{}>(*this, _BroadcastRank);
-  }
 
   /// Rank returns the rank of the tensor.
-  constexpr static size_t Rank()                          { return _Rank; }
+  //constexpr static size_t Rank()                          { return _Rank; }
 
-  /// Dims returns the dimensions for the axis.
-  const std::array<size_t, _Rank>& Dims() const           { return dims_; }
+  /// Dimensions returns the dimensions for the axis.
+  const std::array<size_t, _Rank>& Dimensions() const     { return dims_; }
 
   /// Strides returns the strides for the axis.
   const std::array<ssize_t, _Rank>& Strides() const       { return strides_; }
+
+  /// Size returns the size of the entire buffer.
+  size_t Size() const                                     { return size_; }
 
   /// Data returns a pointer to the data buffer.
   const char* Data() const                                { return data_; }
@@ -333,36 +326,42 @@ struct TensorSlowCpu<_T, _Rank>
 
   std::array<size_t, _Rank>         dims_;
   std::array<ssize_t, _Rank>        strides_;
-  std::shared_ptr<char[]>           shared_; // FIXME: this migth become a special derived tensor?
+  size_t                            size_;
   char*                             data_;
 };
 
-// FIXME: this might need to become a derived tensor from <_T, _Rank>, and might need to add some additional parameter?
+
+// FIXME: this might need to become a derived tensor from <T, _Rank>, and might need to add some additional parameter?
 //
-/// TensorSlowCpu<_T, 0, 1> is a specialization of a rank-0 tensor.
-template <typename _T>
-struct TensorSlowCpu<_T, 0>// : TensorBase
+/// TensorSlowCpu<T, 0, 1> is a specialization of a rank-0 tensor.
+template <typename T>
+class TensorSlowCpu<T, 0>
 {
-  using value_type = std::decay_t<_T>;
+ public:
+  using value_type = std::decay_t<T>;
+  constexpr static size_t rank = 0UL;;
 
   /// Constructor for a rank-1 tensor (vector) with brace initialization.
-  explicit TensorSlowCpu(_T init) : array_{init} {}
+  explicit TensorSlowCpu(T init) : array_{init} {}
 
-  explicit TensorSlowCpu(Uninitialized<_T>) {}
+  explicit TensorSlowCpu(Uninitialized<T>) {}
 
-  explicit TensorSlowCpu(const std::array<size_t, 0>&, _T init) : array_{init} {}
+  explicit TensorSlowCpu(const std::array<size_t, 0>&, T init) : array_{init} {}
 
-  explicit TensorSlowCpu(const std::array<size_t, 0>&, Uninitialized<_T>) {}
+  explicit TensorSlowCpu(const std::array<size_t, 0>&, Uninitialized<T>) {}
 
 
   /// Rank returns the rank of the tensor.
-  constexpr static size_t Rank()                          { return 0UL; }
+  //constexpr static size_t Rank()                          { return 0UL; }
 
-  /// Dims returns the dimensions for the axis.
-  const std::array<size_t, 0>& Dims() const               { return dims_; }
+  /// Dimensions returns the dimensions for the axis.
+  const std::array<size_t, 0>& Dimensions() const         { return dims_; }
 
   /// Strides returns the strides for the axis.
   const std::array<ssize_t, 0>& Strides() const           { return {strides_}; }
+
+  /// Size returns the size of the entire buffer.
+  size_t Size() const                                     { return sizeof(value_type); }
 
   /// Data returns a pointer to the data buffer.
   char* Data()                                            { return reinterpret_cast<char*>(array_.data()); }
@@ -374,50 +373,46 @@ struct TensorSlowCpu<_T, 0>// : TensorBase
 };
 
 
-/// TensorSlowCpu<_T, 1, _N> is a specialization of a rank-1 tensor (vector) for a 'static' array.
+/// TensorSlowCpu<T, 1, _N> is a specialization of a rank-1 tensor (vector) for a 'static' array.
 /// Note that the brace-initializer form of Tensors don't support padding.
-template <typename _T, size_t _N>
-struct TensorSlowCpu<_T, 1, _N>// : TensorBase
+template <typename T, size_t _N>
+class TensorSlowCpu<T, 1, StaticAllocator<T, _N>>
 {
-  using value_type = std::decay_t<_T>;
+ public:
+  using value_type = std::decay_t<T>;
+  constexpr static size_t rank = 1UL;
 
   /// Constructor for a rank-1 tensor (vector) with brace initialization.
-  explicit TensorSlowCpu(std::initializer_list<_T>&& init)
+  explicit TensorSlowCpu(std::initializer_list<T>&& init)
     : dims_{_N},
-      strides_{sizeof(_T)},
-      array_(get_array<_T, _N>(std::move(init)))
+      strides_{sizeof(T)},
+      array_(get_array<T, _N>(std::move(init)))
   {}
 
-
-  // FIXME: subrank could only be 0 or 1 here?
-  // FIXME: return type cannot be const or non-const!??
-  template <size_t _Subrank>
-  auto View(const size_t(& axes)[_Subrank], const ssize_t(& offsets)[1]) const &
+// FIXME: can this be const always or need two options?
+  /// View returns a "view" of the tensor, which can be a "sub-tensor" or add "broadcastable" axes.
+  /// It requires that the underlying tensor's lifetime is ...
+  template <size_t _ViewRank>
+  auto View(const ssize_t(& axes)[_ViewRank], const ssize_t(& offsets)[1]) const &
   {
-    return TensorSlowCpu<_T, 1, TensorView{}>(*this, axes, offsets);
+    return TensorSlowCpu<T, _ViewRank, TensorView<T>>(*this, axes, offsets);
   }
 
-  template <size_t _Subrank>
-  auto View(const size_t(& axes)[_Subrank], const ssize_t(& offsets)[1]) &
-  {
-    return TensorSlowCpu<_T, 1, TensorView{}>(*this, axes, offsets);
-  }
-
-  template <size_t _Subrank>
-  auto View(const size_t(& axes)[_Subrank], const ssize_t(& offsets)[1]) const &&
-  {
-    printf("ERROR create view of temporary!!!\n"); // FIXME
-  }
+  template <size_t _ViewRank>
+  auto View(const ssize_t(& axes)[_ViewRank], const ssize_t(& offsets)[1]) && = delete;
 
 
   /// Rank returns the rank of the tensor.
-  constexpr static size_t Rank()                          { return 1UL; }
+  //constexpr static size_t Rank()                          { return 1UL; }
 
-  /// Dims returns the dimensions for the axis.
-  const std::array<size_t, 1>& Dims() const               { return dims_; }
+  /// Dimensions returns the dimensions for the axis.
+  const std::array<size_t, 1>& Dimensions() const         { return dims_; }
 
   /// Strides returns the strides for the axis.
   const std::array<ssize_t, 1>& Strides() const           { return strides_; }
+
+  /// Size returns the size of the entire buffer.
+  size_t Size() const                                     { return sizeof(value_type) * _N; }
 
   /// Data returns a pointer to the data buffer.
   const char* Data() const                                { return reinterpret_cast<const char*>(array_.data()); }
@@ -429,45 +424,45 @@ struct TensorSlowCpu<_T, 1, _N>// : TensorBase
 };
 
 
-/// TensorSlowCpu<_T, _M, _N> is a specialization of a rank-2 tensor (matrix) for a 'static' array.
+/// TensorSlowCpu<T, _M, _N> is a specialization of a rank-2 tensor (matrix) for a 'static' array.
 /// Note that the brace-initializer form of Tensors don't support padding.
-template <typename _T, size_t _M, size_t _N>
-struct TensorSlowCpu<_T, 2, _M, _N>// : TensorBase
+template <typename T, size_t _M, size_t _N>
+class TensorSlowCpu<T, 2, StaticAllocator<T, _M, _N>>
 {
-  using value_type = std::decay_t<_T>;
+ public:
+  using value_type = std::decay_t<T>;
+  constexpr static size_t rank = 2UL;
 
   /// Constructor for a rank-2 (matrix) brace initialization.
-  explicit TensorSlowCpu(std::initializer_list<std::initializer_list<_T>>&& init)
+  explicit TensorSlowCpu(std::initializer_list<std::initializer_list<T>>&& init)
     : dims_{_M, _N},
-      strides_{ sizeof(_T) * _N, sizeof(_T)},
-      array_(get_array<_T, _M, _N>(std::move(init)))
+      strides_{ sizeof(T) * _N, sizeof(T)},
+      array_(get_array<T, _M, _N>(std::move(init)))
   {}
 
-
-  // FIXME: subrank could be 0, 1, 2?
-  template <size_t _Subrank>
-    // FIXME: cannot return const TensorSlow??
-  /* const */ auto View(const size_t(& axes)[_Subrank], const ssize_t(& offsets)[2]) &
+  /// View returns a "view" of the tensor, which can be a "sub-tensor" or add "broadcastable" axes.
+  /// It requires that the underlying tensor's lifetime is ...
+  template <size_t _ViewRank>
+  auto View(const ssize_t(& axes)[_ViewRank], const ssize_t(& offsets)[2]) const &
   {
-    return TensorSlowCpu<_T, _Subrank, TensorView{}>(*this, axes, offsets);
+    return TensorSlowCpu<T, _ViewRank, TensorView<T>>(*this, axes, offsets);
   }
 
-
-  template <size_t _Subrank>
-  auto View(const size_t(& axes)[_Subrank], const ssize_t(& offsets)[2]) &&
-  {
-    printf("ERROR create view of temporary!!!\n"); // FIXME
-  }
+  template <size_t _ViewRank>
+  auto View(const ssize_t(& axes)[_ViewRank], const ssize_t(& offsets)[2]) && = delete;
 
 
   /// Rank returns the rank of the tensor.
-  constexpr static size_t Rank()                          { return 2UL; }
+  //constexpr static size_t Rank()                          { return 2UL; }
 
-  /// Dims returns the dimensions for the axis.
-  const std::array<size_t, 2>& Dims() const               { return dims_; }
+  /// Dimensions returns the dimensions for the axis.
+  const std::array<size_t, 2>& Dimensions() const         { return dims_; }
 
   /// Strides returns the strides for the axis.
   const std::array<ssize_t, 2>& Strides() const           { return strides_; }
+
+  /// Size returns the size of the entire buffer.
+  size_t Size() const                                     { return sizeof(value_type) * _M * _N; }
 
   /// Data returns a pointer to the data buffer.
   const char* Data() const                                { return reinterpret_cast<const char*>(array_.data()); }
@@ -475,48 +470,49 @@ struct TensorSlowCpu<_T, 2, _M, _N>// : TensorBase
 
   std::array<size_t, 2>     dims_;
   std::array<ssize_t, 2>    strides_;
-  std::array<_T, _M * _N>   array_;
+  std::array<T, _M * _N>   array_;
 };
 
-// FIXME: must be const _T
 
-/// TensorSlowCpu<_T, _C, _M, _N> is a specialization of a rank-3 tensor for a 'static' array.
+/// TensorSlowCpu<T, _C, _M, _N> is a specialization of a rank-3 tensor for a 'static' array.
 /// Note that the brace-initializer form of Tensors don't support padding.
-template <typename _T, size_t _C, size_t _M, size_t _N>
-struct TensorSlowCpu<_T, 3, _C, _M, _N>// : TensorBase
+template <typename T, size_t _C, size_t _M, size_t _N>
+class TensorSlowCpu<T, 3, StaticAllocator<T, _C, _M, _N>>
 {
-  using value_type = std::decay_t<_T>;
+ public:
+  using value_type = std::decay_t<T>;
+  constexpr static size_t rank = 3UL;
 
   /// Constructor for a rank-2 (matrix) brace initialization.
-  explicit TensorSlowCpu(std::initializer_list<std::initializer_list<std::initializer_list<_T>>>&& init)
+  explicit TensorSlowCpu(std::initializer_list<std::initializer_list<std::initializer_list<T>>>&& init)
     : dims_{_C, _M, _N},
-      strides_{ sizeof(_T) * _M * _N, sizeof(_T) * _N, sizeof(_T)},
-      array_(get_array<_T, _C, _M, _N>(std::move(init)))
+      strides_{ sizeof(T) * _M * _N, sizeof(T) * _N, sizeof(T)},
+      array_(get_array<T, _C, _M, _N>(std::move(init)))
   {}
 
-
-  // FIXME: Subrank
-  template <size_t _Subrank>
-  auto View(const size_t(& axes)[_Subrank], const ssize_t(& offsets)[3]) &
+  /// View returns a "view" of the tensor, which can be a "sub-tensor" or add "broadcastable" axes.
+  /// It requires that the underlying tensor's lifetime is ...
+  template <size_t _ViewRank>
+  auto View(const ssize_t(& axes)[_ViewRank], const ssize_t(& offsets)[3]) const &
   {
-    return TensorSlowCpu<_T, _Subrank, TensorView{}>(*this, axes, offsets);
+    return TensorSlowCpu<T, _ViewRank, TensorView<T>>(*this, axes, offsets);
   }
 
-  template <size_t _Subrank>
-  auto View(const size_t(& axes)[_Subrank], const ssize_t(& offsets)[3]) &&
-  {
-    printf("ERROR create view of temporary!!!\n"); // FIXME:
-  }
+  template <size_t _ViewRank>
+  auto View(const ssize_t(& axes)[_ViewRank], const ssize_t(& offsets)[3]) && = delete;
 
 
   /// Rank returns the rank of the tensor.
-  constexpr static size_t Rank()                          { return 3UL; }
+  //constexpr static size_t Rank()                          { return 3UL; }
 
-  /// Dims returns the dimensions for the axis.
-  const std::array<size_t, 3>& Dims() const               { return dims_; }
+  /// Dimensions returns the dimensions for the axis.
+  const std::array<size_t, 3>& Dimensions() const         { return dims_; }
 
   /// Strides returns the strides for the axis.
   const std::array<ssize_t, 3>& Strides() const           { return strides_; }
+
+  /// Size returns the size of the entire buffer.
+  size_t Size() const                                     { return sizeof(value_type) * _C * _M * _N; }
 
   /// Data returns a pointer to the data buffer.
   const char* Data() const                                { return reinterpret_cast<const char*>(array_.data()); }
@@ -524,49 +520,51 @@ struct TensorSlowCpu<_T, 3, _C, _M, _N>// : TensorBase
 
   std::array<size_t, 3>           dims_;
   std::array<ssize_t, 3>          strides_;
-  std::array<_T, _C * _M * _N>    array_;
+  std::array<T, _C * _M * _N>    array_; // FIXME: C, M, N not really needed....
 };
 
 
-/// TensorSLowCpu<_T, _Rank, MemoryMapped{}> is a tensor for memory-mapped data
-template <typename _T, size_t _Rank>
-struct TensorSlowCpu<_T, _Rank, MemoryMapped{}>// : TensorBase
+/// TensorSLowCpu<T, _Rank, MemoryMapped{}> is a tensor for memory-mapped data
+template <typename T, size_t _Rank>
+class TensorSlowCpu<T, _Rank, MemoryMapped<T>>
 {
-  using value_type = std::decay_t<_T>;
+ public:
+  using value_type = std::decay_t<T>;
+  constexpr static size_t rank = _Rank;
 
   explicit TensorSlowCpu() {}
 
   /// Constructor for a memory-mapped buffer.
-  explicit TensorSlowCpu(const MMapArray<_T, _Rank>& arr)
-    : dims_(arr.dims_),
+  explicit TensorSlowCpu(const MMapArray<T, _Rank>& arr)
+    : //size_(strides_[0] * dims_[0]),
+      dims_(arr.dims_),
       strides_(arr.strides_),
       mmap_(arr.mmap_),
       data_(static_cast<char*>(mmap_->Address()) + arr.offset_)
   {}
 
   // Constructor for a memory-mapped buffer.
-  explicit TensorSlowCpu(MMapArray<_T, _Rank>&& arr)
+  explicit TensorSlowCpu(MMapArray<T, _Rank>&& arr)
     : dims_(std::move(arr.dims_)),
       strides_(std::move(arr.strides_)),
       mmap_(std::move(arr.mmap_)),
       data_(static_cast<char*>(mmap_->Address()) + arr.offset_)
   {}
 
-
-  template <size_t _Subrank>
-  auto View(const size_t(& axes)[_Subrank], const ssize_t(& offsets)[_Rank]) &
+  /// View returns a "view" of the tensor, which can be a "sub-tensor" or add "broadcastable" axes.
+  /// It requires that the underlying tensor's lifetime is ...
+  template <size_t _ViewRank>
+  auto View(const ssize_t(& axes)[_ViewRank], const ssize_t(& offsets)[_Rank]) const &
   {
-    return TensorSlowCpu<_T, _Subrank, TensorView{}>(*this, axes, offsets);
+    return TensorSlowCpu<T, _ViewRank, TensorView<T>>(*this, axes, offsets);
   }
 
-  template <size_t _Subrank>
-  auto View(const size_t(& axes)[_Subrank], const ssize_t(& offsets)[_Rank]) &&
-  {
-    printf("ERROR create view of temporary!!!\n");  // FIXME
-  }
+  template <size_t _ViewRank>
+  auto View(const ssize_t(& axes)[_ViewRank], const ssize_t(& offsets)[_Rank]) && = delete;
 
 
 #if 0
+  // FIXME: support operator= on memorymapped? need two versions, RO and RW?
   TensorSlowCpu& operator=(TensorSlowCpu&& other)
   {
     dims_ = std::move(other.dims_);
@@ -588,21 +586,22 @@ struct TensorSlowCpu<_T, _Rank, MemoryMapped{}>// : TensorBase
 
 
   /// Rank returns the rank of the tensor.
-  constexpr static size_t Rank()                          { return _Rank; }
+  //constexpr static size_t Rank()                          { return _Rank; }
 
-  /// Dims returns the dimensions of the tensor.
-  const std::array<size_t, _Rank>& Dims() const           { return dims_; }
+  /// Dimensions returns the dimensions of the tensor.
+  const std::array<size_t, _Rank>& Dimensions() const     { return dims_; }
 
   /// Strides returns the strides of the tensor.
   const std::array<ssize_t, _Rank>& Strides() const       { return strides_; }
 
   /// Size returns the data buffer size.
-  size_t Size()                                           { return strides_[0] * dims_[0]; }
+  size_t Size() const                                     { return mmap_->Size(); }
 
   /// Data returns a pointer to the data buffer.
   char* Data() const                                      { return data_; }
 
 
+  size_t                      size_;
   std::array<size_t, _Rank>   dims_;
   std::array<ssize_t, _Rank>  strides_;
   std::shared_ptr<MMap>       mmap_;
@@ -610,76 +609,74 @@ struct TensorSlowCpu<_T, _Rank, MemoryMapped{}>// : TensorBase
 };
 
 
-/// TensorSLowCpu<_T, _Rank, TensorView> is a tensor view
-template <typename _T, size_t _Rank>
-struct TensorSlowCpu<_T, _Rank, TensorView{}>
+/// TensorSLowCpu<T, _Rank, TensorView> is a tensor view
+///
+/// A view cannot be created from a temporary rval; it will return a tensor
+template <typename T, size_t _Rank>
+class TensorSlowCpu<T, _Rank, TensorView<T>>
 {
-  using value_type = std::decay_t<_T>;
+ public:
+  using value_type = std::decay_t<T>;
+  constexpr static size_t rank = _Rank;
 
-  template <typename _Tensor, size_t _TensorRank>
-  explicit TensorSlowCpu(const _Tensor& tensor, const size_t(& axes)[_Rank], const ssize_t(& offsets)[_TensorRank])
+  template <typename Tensor, size_t TensorRank>
+  explicit TensorSlowCpu(const Tensor& tensor, const ssize_t(& axes)[_Rank])
+    : TensorSlowCpu(tensor, axes, { 0 })
+  {}
+
+  template <typename Tensor, size_t TensorRank>
+  explicit TensorSlowCpu(const Tensor& tensor, const ssize_t(& axes)[_Rank], const ssize_t(& offsets)[TensorRank])
   {
-    for (size_t i = 0; i < _Rank; i++)
+    std::bitset<_Rank> handled = false;
+    auto strides = tensor.Strides();
+    auto dims    = tensor.Dimensions();
+
+    // FIXME: strides is wrong:   4,1 (1x, 1x) -> 1,4,1 (4x,1x,1x)!! the multiplication is not encoded..
+    for (ssize_t i = static_cast<ssize_t>(_Rank) - 1; i >= 0; i--)
     {
-      dims_[i] = tensor.dims_[axes[i]];
-      strides_[i] = tensor.strides_[axes[i]];
+      // FIXME: dims[axes[i]] could already be one? doesn't really matter...
+      if (axes[i] >= 0)
+      {
+        if (handled[axes[i]])
+          throw std::runtime_error("axis can only be used once");
+
+        handled[axes[i]] = true;// FIXNE: handled.set(...);
+        dims_[i] = dims[axes[i]];
+        strides_[i] = strides[axes[i]];
+      }
+      else if (axes[i] == Broadcast)
+      {
+        dims_[i] = 1;
+        strides_[i] = 0; // i < static_cast<ssize_t>(_Rank)-1 ? strides_[i+1] : sizeof(T);
+        //if (i == 0)
+         // strides_[0] = tensor.Size();
+      }
+      else
+        throw std::runtime_error("Invalid axis");
     }
 
-    size_t offset = 0;
-    for (size_t i = 0; i < _TensorRank; i++)
-      offset += offsets[i] * tensor.strides_[i];
 
-    // FIXME handle const, cannot copy into this view!
+    size_t offset = 0;
+    for (size_t i = 0; i < TensorRank; i++)
+      offset += offsets[i] * tensor.strides_[i];
+    // FIXME: check that offset is less than dims?
+
     data_ = const_cast<char*>(tensor.Data()) + offset;
   }
 
-  // Broadcast
-  template <typename _Tensor>
-  explicit TensorSlowCpu(const _Tensor& tensor, size_t rank = kMaxRank)
-  {
-    auto& dims = tensor.Dims();
-    auto& strides = tensor.Strides();
-
-    for (size_t i = 0, j = 0; i < rank; i++)
-    {
-      dims_[i] = i >= tensor.Rank() ? 1 : dims[j];
-      strides_[i] = i >= tensor.Rank() ? 0 : strides[j++];
-    }
-    data_ = const_cast<char*>(tensor.Data());
-  }
-
-
-#if 0
-  template<TensorFor<TensorSlowCpu> _View> // requires TensorRank<_View, _Rank>
-  explicit TensorSlowCpu(const _View& view)
-  {
-    printf("O\n");
-  }
-  template<TensorFor<TensorSlowCpu> _View> // requires TensorRank<_View, _Rank>
-  explicit TensorSlowCpu(_View&& view)
-  {
-    printf("O\n");
-  }
-
-  template<TensorViewFor<TensorSlowCpu> _View> // requires TensorRank<_View, _Rank>
-  explicit TensorSlowCpu(_View&& view)
-  {
-    printf("O\n");
-  }
-#endif
 
   // TODO: views, check boundaries
   template<TensorViewFor<TensorSlowCpu> _View> requires TensorRank<_View, _Rank>
   auto operator=(const _View& view)
   {
-    details::copy<_T, _Rank>(data_, view.Data(), dims_, strides_, view.Strides());
+    details::copy<T, _Rank>(data_, view.Data(), dims_, strides_, view.Strides());
     return *this;
   }
 
   template<TensorFor<TensorSlowCpu> _View> requires TensorRank<_View, _Rank>
   auto operator=(_View&& view)
   {
-    details::copy<_T, _Rank>(data_, view.Data(), dims_, strides_, view.Strides());
+    details::copy<T, _Rank>(data_, view.Data(), dims_, strides_, view.Strides());
     return *this;
   }
 
@@ -691,16 +688,16 @@ struct TensorSlowCpu<_T, _Rank, TensorView{}>
 
 
   /// Rank returns the rank of the tensor.
-  constexpr static size_t Rank()                          { return _Rank; }
+  //constexpr static size_t Rank()                          { return _Rank; }
 
-  /// Dims returns the dimensions of the tensor.
-  const std::array<size_t, _Rank>& Dims() const           { return dims_; }
+  /// Dimensions returns the dimensions of the tensor.
+  const std::array<size_t, _Rank>& Dimensions() const     { return dims_; }
 
   /// Strides returns the strides of the tensor.
   const std::array<ssize_t, _Rank>& Strides() const       { return strides_; }
 
   /// Size returns the data buffer size.
-  size_t Size()                                           { return strides_[0] * dims_[0]; }
+  size_t Size()                                           { return strides_[0] * dims_[0]; } // FIXME: wrong
 
   /// Data returns a pointer to the data buffer.
   char* Data() const                                      { return data_; }
@@ -712,171 +709,127 @@ struct TensorSlowCpu<_T, _Rank, TensorView{}>
 };
 
 #if 0
-  /// View creates Tensor with a "view" of the data.
-  /// This version copies the data to a buffer to create the non-const Tensor
-  template <size_t _Subrank>
-  auto View(size_t(&& axes)[_Subrank], size_t(&& offsets)[3])
-  {
-    std::array<size_t, _Subrank> dims;
-    std::array<ssize_t, _Subrank> strides;
-    for (size_t i = 0; i < _Subrank; i++)
-    {
-      if (offsets[axes[i]] > dims_[axes[i]])
-        throw std::out_of_range("view offset exceeds dimension of tensor");
-
-      dims[i] = dims_[axes[i]] - offsets[axes[i]];
-      strides[i] = strides_[axes[i]] + dims_[axes[i]] - dims[axes[i]];
-    }
-
-    size_t offset = 0;
-    for (size_t i = 0; i < 3; i++)
-      offset += offsets[i] * strides_[i];
-
-    return TensorSlowCpu<_T, _Subrank>(dims, strides, Uninitialized<_T>{});
-   // reinterpret_cast<const char*>(array_.data()) + offset);
-  }
-
-  template <size_t _Subrank>
-  auto View(size_t(&& axes)[_Subrank], size_t(&& offsets)[3], size_t(&& dims)[_Subrank])
-  {
-    std::array<ssize_t, _Subrank> strides;
-    for (size_t i = 0; i < _Subrank; i++)
-    {
-      if (dims[i] > dims_[axes[i]])
-        throw std::out_of_range("view dimension exceeds dimension of tensor");
-
-      strides[i] = strides_[axes[i]] + dims_[axes[i]] - dims[i];
-    }
-
-    size_t offset = 0;
-    for (size_t i = 0; i < 3; i++)
-      offset += offsets[i] * strides_[i];
-
-    return TensorViewSlowCpu<const _T, _Subrank>(
-        dims, strides, reinterpret_cast<const char*>(array_.data()) + offset);
-  }
-#endif
-#if 0
-  auto Row(size_t index)                                  { return View({2}, {index, 0, 0}); }
-  auto Col(size_t index)                                  { return View({1}, {0, index, 0}); }
+// FIXME: need to 'amend' with rank-2 0s...
+  auto Row(size_t index)                                  { return View({1}, {index, ....}); }
+  auto Col(size_t index)                                  { return View({0}, {0, index, 0}); }
 #endif
 
 
 // CTAD rules
 
 // Tensor{T} -> Rank-0 tensor with a static/local array
-template <typename _T>
-explicit TensorSlowCpu(_T) -> TensorSlowCpu<_T, 0>;
+template <typename T>
+explicit TensorSlowCpu(T) -> TensorSlowCpu<T, 0>;
 
 // Tensor{Uninitailzied<T>} -> Rank-0 tensor with a static/local array
-template <typename _T>
-explicit TensorSlowCpu(Uninitialized<_T>) -> TensorSlowCpu<_T, 0>;
+template <typename T>
+explicit TensorSlowCpu(Uninitialized<T>) -> TensorSlowCpu<T, 0>;
 
 // Tensor{Ts...} -> Rank-1 tensor with a static/local array (brace-initializer).
-template <typename _T, typename... _Ts>
-explicit TensorSlowCpu(_T, _Ts...) -> TensorSlowCpu<std::common_type_t<_T, _Ts...>, 1, sizeof...(_Ts)+1>;
+template <typename T, typename... Ts>
+explicit TensorSlowCpu(T, Ts...) -> TensorSlowCpu<std::common_type_t<T, Ts...>, 1, StaticAllocator<T, sizeof...(Ts)+1>>;
 
 // Tensor{{...},...} -> Rank-2 tensor with a static/local array (brace-initializer).
-template <typename _T, size_t... _N>
-TensorSlowCpu(_T(&&... l)[_N]) -> TensorSlowCpu<_T, 2, sizeof...(_N), std::max({_N...})>;
+template <typename T, size_t... _N>
+TensorSlowCpu(T(&&... l)[_N]) -> TensorSlowCpu<T, 2, StaticAllocator<T, sizeof...(_N), std::max({_N...})>>;
 
 // Tensor{{{...},...},...} -> Rank-3 tensor with a static/local array (brace-initializer).
-template <typename _T, size_t... _M, size_t... _N>
-explicit TensorSlowCpu(_T(&&... l)[_M][_N]) -> TensorSlowCpu<_T, 3, sizeof...(_M), std::max({_M...}), std::max({_N...})>;
+template <typename T, size_t... _M, size_t... _N>
+explicit TensorSlowCpu(T(&&... l)[_M][_N]) -> TensorSlowCpu<T, 3, StaticAllocator<T, sizeof...(_M), std::max({_M...}), std::max({_N...})>>;
 
 
-// Tensor(uint, _T) -> Rank-1 tensor with a dynamically allocated buffer.
-template <typename _T>
-explicit TensorSlowCpu(size_t, _T) -> TensorSlowCpu<_T, 1>;
+// Tensor(uint, T) -> Rank-1 tensor with a dynamically allocated buffer.
+template <typename T>
+explicit TensorSlowCpu(size_t, T) -> TensorSlowCpu<T, 1>;
 
 // Tensor(uint, Uninitialized<T>) -> Rank-1 tensor with a dynamically allocated uninitialized buffer.
-template <typename _T>
-explicit TensorSlowCpu(size_t, Uninitialized<_T>) -> TensorSlowCpu<_T, 1>;
+template <typename T>
+explicit TensorSlowCpu(size_t, Uninitialized<T>) -> TensorSlowCpu<T, 1>;
 
-// Tensor(uint, uint, _T) -> Rank-2 tensor with a dynamically allocated buffer.
-template <typename _T>
-explicit TensorSlowCpu(size_t, size_t, _T) -> TensorSlowCpu<_T, 2>;
+// Tensor(uint, uint, T) -> Rank-2 tensor with a dynamically allocated buffer.
+template <typename T>
+explicit TensorSlowCpu(size_t, size_t, T) -> TensorSlowCpu<T, 2>;
 
 // Tensor(uint, Uninitialized<T>) -> Rank-2 tensor with a dynamically allocated uninitialized buffer.
-template <typename _T>
-explicit TensorSlowCpu(size_t, size_t, Uninitialized<_T>) -> TensorSlowCpu<_T, 2>;
+template <typename T>
+explicit TensorSlowCpu(size_t, size_t, Uninitialized<T>) -> TensorSlowCpu<T, 2>;
 
 
 // Tensor(&[], &[], T) -> Rank-N tensor with a dynamically allocated initialized buffer.
-template <typename _T, size_t _N>
-explicit TensorSlowCpu(const size_t(&)[_N], const ssize_t(&)[_N], _T) -> TensorSlowCpu<_T, _N>;
+template <typename T, size_t _N>
+explicit TensorSlowCpu(const size_t(&)[_N], const ssize_t(&)[_N], T) -> TensorSlowCpu<T, _N>;
 
 // Tensor(&[], &[], Uninitialized<T>) -> Rank-N tensor with a dynamically allocated uninitialized buffer.
-template <typename _T, size_t _N>
-explicit TensorSlowCpu(const size_t(&)[_N], const ssize_t(&)[_N], Uninitialized<_T>) -> TensorSlowCpu<_T, _N>;
+template <typename T, size_t _N>
+explicit TensorSlowCpu(const size_t(&)[_N], const ssize_t(&)[_N], Uninitialized<T>) -> TensorSlowCpu<T, _N>;
 
-// Tensor(&&[], &&[], _T) -> Rank-N tensor with a dynamically allocated initialized buffer.
-template <typename _T, size_t _N>
-explicit TensorSlowCpu(size_t(&&)[_N], ssize_t(&&)[_N], _T) -> TensorSlowCpu<_T, _N>;
+// Tensor(&&[], &&[], T) -> Rank-N tensor with a dynamically allocated initialized buffer.
+template <typename T, size_t _N>
+explicit TensorSlowCpu(size_t(&&)[_N], ssize_t(&&)[_N], T) -> TensorSlowCpu<T, _N>;
 
 // Tensor(&&[], &&[], Uninitialized<T>) -> Rank-N tensor with a dynamically allocated uninitialized buffer.
-template <typename _T, size_t _N>
-explicit TensorSlowCpu(size_t(&&)[_N], ssize_t(&&)[_N], Uninitialized<_T>) -> TensorSlowCpu<_T, _N>;
+template <typename T, size_t _N>
+explicit TensorSlowCpu(size_t(&&)[_N], ssize_t(&&)[_N], Uninitialized<T>) -> TensorSlowCpu<T, _N>;
 
 
 // Tensor(&[], T) -> Rank-N tensor with a dynamically allocated initialized buffer.
-template <typename _T, size_t _N>
-explicit TensorSlowCpu(const size_t(&)[_N], _T) -> TensorSlowCpu<_T, _N>;
+template <typename T, size_t _N>
+explicit TensorSlowCpu(const size_t(&)[_N], T) -> TensorSlowCpu<T, _N>;
 
 // Tensor(&[], Uninitialized<T>) -> Rank-N tensor with a dynamically allocated uninitialized buffer.
-template <typename _T, size_t _N>
-explicit TensorSlowCpu(const size_t(&)[_N], Uninitialized<_T>) -> TensorSlowCpu<_T, _N>;
+template <typename T, size_t _N>
+explicit TensorSlowCpu(const size_t(&)[_N], Uninitialized<T>) -> TensorSlowCpu<T, _N>;
 
 // Tensor(&&[], T) -> Rank-N tensor with a dynamically allocated initialized buffer.
-template <typename _T, size_t _N>
-explicit TensorSlowCpu(const size_t(&&)[_N], _T) -> TensorSlowCpu<_T, _N>;
+template <typename T, size_t _N>
+explicit TensorSlowCpu(const size_t(&&)[_N], T) -> TensorSlowCpu<T, _N>;
 
 // Tensor(&&[], Uninitialized<T>) -> Rank-N tensor with a dynamically allocated uninitialized buffer.
-template <typename _T, size_t _N>
-explicit TensorSlowCpu(const size_t(&&)[_N], Uninitialized<_T>) -> TensorSlowCpu<_T, _N>;
+template <typename T, size_t _N>
+explicit TensorSlowCpu(const size_t(&&)[_N], Uninitialized<T>) -> TensorSlowCpu<T, _N>;
 
 
 // Tensor(array, T)
-template <typename _T, size_t _N>
-TensorSlowCpu(std::array<size_t, _N>, _T) -> TensorSlowCpu<_T, _N>;
+template <typename T, size_t _N>
+TensorSlowCpu(std::array<size_t, _N>, T) -> TensorSlowCpu<T, _N>;
 
 // Tensor(array, array, T)
-template <typename _T, size_t _N>
-explicit TensorSlowCpu(std::array<size_t, _N>, std::array<ssize_t, _N>, _T) -> TensorSlowCpu<_T, _N>;
+template <typename T, size_t _N>
+explicit TensorSlowCpu(std::array<size_t, _N>, std::array<ssize_t, _N>, T) -> TensorSlowCpu<T, _N>;
 
 // Tensor(array, Uninitialized<T>)
-template <typename _T, size_t _N>
-explicit TensorSlowCpu(std::array<size_t, _N>, Uninitialized<_T>) -> TensorSlowCpu<_T, _N>;
+template <typename T, size_t _N>
+explicit TensorSlowCpu(std::array<size_t, _N>, Uninitialized<T>) -> TensorSlowCpu<T, _N>;
 
 // Tensor(array, array, Uninitialized<T>)
-template <typename _T, size_t _N>
-explicit TensorSlowCpu(std::array<size_t, _N>, std::array<ssize_t, _N>, Uninitialized<_T>) -> TensorSlowCpu<_T, _N>;
+template <typename T, size_t _N>
+explicit TensorSlowCpu(std::array<size_t, _N>, std::array<ssize_t, _N>, Uninitialized<T>) -> TensorSlowCpu<T, _N>;
 
 
 // Tensor<mmap, dim, strides> -> Rank-N tensor for a memory mapped buffer
-template <typename _T, size_t _N>
-explicit TensorSlowCpu(MMapArray<_T, _N>) -> TensorSlowCpu<_T, _N, MemoryMapped{}>;
+template <typename T, size_t _N>
+explicit TensorSlowCpu(MMapArray<T, _N>) -> TensorSlowCpu<T, _N, MemoryMapped<T>>;
 
 // Tensor(Tensor...) FIXME: needed? will it work??
-template <typename _T, size_t _N>
-explicit TensorSlowCpu(TensorSlowCpu<_T, 1, _N>&) -> TensorSlowCpu<_T, _N>;
+template <typename T, size_t _N>
+explicit TensorSlowCpu(TensorSlowCpu<T, 1, StaticAllocator<T, _N>>&) -> TensorSlowCpu<T, _N>;
 
-template <typename _T, size_t _N, size_t _M>
-explicit TensorSlowCpu(TensorSlowCpu<_T, 2, _N, _M>&) -> TensorSlowCpu<_T, _N * _M>;
+template <typename T, size_t _N, size_t _M>
+explicit TensorSlowCpu(TensorSlowCpu<T, 2, StaticAllocator<T, _N, _M>>&) -> TensorSlowCpu<T, _N * _M>;
 
-template <typename _T, size_t _C, size_t _N, size_t _M>
-explicit TensorSlowCpu(TensorSlowCpu<_T, 3, _C, _N, _M>&) -> TensorSlowCpu<_T, _C * _N * _M>;
+template <typename T, size_t _C, size_t _N, size_t _M>
+explicit TensorSlowCpu(TensorSlowCpu<T, 3, StaticAllocator<T, _C, _N, _M>>&) -> TensorSlowCpu<T, _C * _N * _M>;
 
 
 // TensorOp -> Tensor (move)
-template <template <template <typename, size_t, auto...> typename, typename, size_t, typename...> typename _TensorOp,
-          template <typename, size_t, auto...> typename _TensorRT, typename _T, size_t _Rank, typename... _Tensors>
-TensorSlowCpu(_TensorOp<_TensorRT, _T, _Rank, _Tensors...>&&) -> TensorSlowCpu<_T, _Rank>;
+template <template <template <typename, size_t, typename> typename, typename, size_t, typename...> typename TensorOp,
+          template <typename, size_t, typename> typename TensorRT, typename T, size_t _Rank, typename... Tensors>
+TensorSlowCpu(TensorOp<TensorRT, T, _Rank, Tensors...>&&) -> TensorSlowCpu<T, _Rank>;
 
 // TensorOp -> Tensor (copy)
-template <template <template <typename, size_t, auto...> typename, typename, size_t, typename...> typename _TensorOp,
-          template <typename, size_t, auto...> typename _TensorRT, typename _T, size_t _Rank, typename... _Tensors>
-TensorSlowCpu(const _TensorOp<_TensorRT,_T,  _Rank, _Tensors...>&) -> TensorSlowCpu<_T, _Rank>;
+template <template <template <typename, size_t, typename> typename, typename, size_t, typename...> typename TensorOp,
+          template <typename, size_t, typename> typename TensorRT, typename T, size_t _Rank, typename... Tensors>
+TensorSlowCpu(const TensorOp<TensorRT,T,  _Rank, Tensors...>&) -> TensorSlowCpu<T, _Rank>;
 
 
 } // end of namespace grid
@@ -898,11 +851,4 @@ TensorSlowCpu(const _TensorOp<_TensorRT,_T,  _Rank, _Tensors...>&) -> TensorSlow
     details::copy<_T, _Subrank>(reinterpret_cast<char*>(other.Data(), shared.get()),
         reinterpret_cast<const char*>(array_.data()) + offset, dims, strides, strides_src);
     return TensorSlowCpu<_T, _Subrank>(std::move(dims), std::move(strides), Uninitialized<_T>{});
-#if 0
-    dims_ = other.dims_;
-    strides_ = other.strides_;
-    shared_ = other.shared_;
-    data_ = shared_.get();
-    return *this;
-#endif
  #endif

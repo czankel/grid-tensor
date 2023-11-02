@@ -34,7 +34,6 @@ copy(char* dst, const char* src,
      std::span<const ssize_t, 1> strides1,
      std::span<const ssize_t, 1> strides2)
 {
-  printf("copy strides %lu %lu, dims %lu\n", strides1[0], strides2[0], dims[0]);
   for (size_t i = 0; i < dims[0]; i++, dst += strides1[0], src += strides2[0])
     *reinterpret_cast<_T*>(dst) = *reinterpret_cast<const _T*>(src);
 }

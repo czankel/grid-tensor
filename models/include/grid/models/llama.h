@@ -18,7 +18,7 @@ namespace grid {
 const size_t kMaxTensorRank = 3;
 const size_t kMaxTensorShards = 1;
 
-template <template <typename, size_t, auto...> typename, typename, auto...> class LLaMAModelT;
+template <template <typename, size_t, typename...> typename, typename> class LLaMAModelT;
 class LLaMAFile;
 
 /// LLaMAModel is an interface for providing a LLaMA base class without any templated paramters.
@@ -70,15 +70,15 @@ class LLaMAModel
   virtual void Generate(const std::string&, int steps) = 0;
 
   /// Load creates a new model and loads the specified file or memory-maps the file.
-  template <template <typename, size_t, auto...> typename Tensor>
+  template <template <typename, size_t, typename...> typename Tensor>
   static LLaMAModel* Load(const LLaMAFile&, bool mmap = true);
 
   /// Create creates a new model in memory.
-  template <template <typename, size_t, auto...> typename Tensor, typename T>
+  template <template <typename, size_t, typename...> typename Tensor, typename T>
   static LLaMAModel* Create(Parameters&);
 
   /// Create creates a new model for a memory mapped file.
-  template <template <typename, size_t, auto...> typename Tensor, typename T>
+  template <template <typename, size_t, typename...> typename Tensor, typename T>
   static LLaMAModel* Create(LLaMAFile&, Parameters&);
 };
 
@@ -131,8 +131,8 @@ class KarpathyFile : public LLaMAFile
 
   // FIXME: shouldn't output be last in arg list?
   /// Load loads the model data (memory-mapped).
-  template <template <typename, size_t, auto...> typename Tensor, typename T, auto... Args>
-  void Load(LLaMAModelT<Tensor, T, Args...>&, const LLaMAFile&) const;
+  template <template <typename, size_t, typename...> typename Tensor, typename T>
+  void Load(LLaMAModelT<Tensor, T>&, const LLaMAFile&) const;
 
  private:
   std::string     tokenizer_path_;

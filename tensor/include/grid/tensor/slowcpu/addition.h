@@ -75,22 +75,56 @@ struct TensorAdd<TensorSlowCpu, _T, _Rank, _Tensor1, _Tensor2>
           std::span<const ssize_t, _N - 1>(strides2.begin() + 1, _N - 1));
   }
 
+  // Matrix + column-vector --> Matrix is split into column blocks, eac added with the vector
+  // Matrix + row-vector    --> Matrix is split into row blocks, each added with the vector
+  // Tensor ranks must match, but if a dimension is '1', it is ... FIXME
+
+  // FIXME: for multiplication, would it work with tensor2 transposed?
+  // FIXME: coudl this be a constexpr?
+  std::array<size_t, _Rank> MaxDimensions(const _Tensor1& tensor1, const _Tensor2& tensor2) const
+  {
+    const auto& dims1 = tensor1.Dimensions();
+    const auto& dims2 = tensor2.Dimensions();
+
+    std::array<size_t, _Rank> dims;
+    for (size_t i = 0; i < _Rank; i++)
+    {
+      if (dims1[i] != dims2[i] && dims1[i] != 1 && dims2[i] != 1)
+        throw std::runtime_error("Invalid dimensions");
+      dims[i] = dims1[i] == 1 ? dims2[i] : dims1[i];
+    }
+
+    return dims;
+  }
+
+  template <typename _Tensor>
+  std::array<ssize_t, _Rank> Strides(const _Tensor& tensor) const
+  {
+    const auto& dims1 = tensor.Dimensions();
+    const auto& strides1 = tensor.Strides();
+
+    std::array<ssize_t, _Rank> strides;
+    for (size_t i = 0; i < _Rank; i++)
+      strides[i] = dims1[i] != 1 ? strides1[i] : 0;
+
+    return strides;
+  }
+
+
   // Functor
   // FIXME: must be same rank? static_assert?
   auto operator()() const
   {
-    auto& dims = tensor1_.Dims();
+    auto dims = MaxDimensions(tensor1_, tensor2_);
     auto result = TensorSlowCpu(dims, Uninitialized<value_type>{});
-
-    // FIXME ?? strides1 = concatenate({0,0...}, tensor1_.Strides());
 
     add(reinterpret_cast<char*>(result.Data()),
         reinterpret_cast<const char*>(tensor1_.Data()),
         reinterpret_cast<const char*>(tensor2_.Data()),
-        std::span(dims),
-        std::span(result.Strides()),
-        std::span(tensor1_.Strides()),  // FIXME: "broadcase" expand strides one example: Strides(size_t offset = 0), and e.g. use: tensor1_.Strides(-2) or create new stride
-        std::span(tensor2_.Strides()));
+        std::span<const size_t, _Rank>(dims),
+        std::span<const ssize_t, _Rank>(result.Strides()),
+        std::span<const ssize_t, _Rank>(Strides(tensor1_)),
+        std::span<const ssize_t, _Rank>(Strides(tensor2_)));
     return result;
   }
 
