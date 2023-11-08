@@ -23,7 +23,7 @@ TYPED_TEST_SUITE_P(TensorTestSuite);
 TYPED_TEST_P(TensorTestSuite, TensorBraceInitializationRank0Integer)
 {
   typename TypeParam::Tensor tensor{ 4 };
-  EXPECT_EQ(tensor.Rank(), 0);
+  EXPECT_EQ(tensor.rank, 0);
 }
 
 TYPED_TEST_P(TensorTestSuite, TensorBraceInitializationRank1Integer)
@@ -230,17 +230,19 @@ TYPED_TEST_P(TensorTestSuite, TensorViewAllocInitializationTensor)
 
 TYPED_TEST_P(TensorTestSuite, TensorBroadcast1to2)
 {
-#if 0
-  typename TypeParam::Tensor row = tensor1.View({grid::Broadcast, 0});
-  EXPECT_EQ(row.Rank() = 1);
-#endif
+  // FIXME what's this?
+  //typename TypeParam::Tensor row = tensor1.View({grid::Broadcast, 0});
+  //EXPECT_EQ(row.Rank() = 1);
+
   typename TypeParam::Tensor tensor(4UL, 1.1);
   auto broadcast1 = tensor.View({0, grid::Broadcast});
   EXPECT_EQ(broadcast1.Rank(), 2);
   EXPECT_THAT(broadcast1.Dimensions(), ElementsAre(4, 1));
   EXPECT_THAT(broadcast1.Strides(), ElementsAre(size<double>(1), size<double>(0)));
 
+  printf("tensor2()\n");
   typename TypeParam::Tensor tensor2 = broadcast1;
+  printf("broadcast2()\n");
   auto broadcast2 = tensor2.View({grid::Broadcast, 1, 0, grid::Broadcast});
   EXPECT_EQ(broadcast2.Rank(), 4);
   EXPECT_THAT(broadcast2.Dimensions(), ElementsAre(1, 1, 4, 1));
@@ -249,7 +251,6 @@ TYPED_TEST_P(TensorTestSuite, TensorBroadcast1to2)
         size<double>(0),
         size<double>(1),
         size<double>(0)));
-
 }
 
 REGISTER_TYPED_TEST_SUITE_P(TensorTestSuite,

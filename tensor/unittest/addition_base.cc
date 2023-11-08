@@ -7,14 +7,14 @@
 //
 
 #include <grid/tensor/tensor.h>
-#include <grid/tensor/slowcpu/tensor.h>
-#include <grid/tensor/slowcpu/comparison.h>
-#include <grid/tensor/slowcpu/rms_norm.h>
+#include <grid/tensor/base/tensor.h>
+#include <grid/tensor/base/comparison.h>
+#include <grid/tensor/base/addition.h>
 
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
 
-#include "rms_norm.h"
-#include "tensor_slowcpu.h"
+#include "addition.h"
+#include "tensor_base.h"
 
-INSTANTIATE_TYPED_TEST_SUITE_P(RmsNormTestSlowCpu, RmsNormTestSuite, TensorSlowCpuSuite);
+INSTANTIATE_TYPED_TEST_SUITE_P(AdditionBaseTest, AdditionTestSuite, TensorBaseType);

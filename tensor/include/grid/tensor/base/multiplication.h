@@ -8,23 +8,23 @@
 
 // DO NOT INCLUDE THIS FILE DIRECTLY
 
-#ifndef GRID_TENSOR_SLOWCPU_MULTIPLY_H
-#define GRID_TENSOR_SLOWCPU_MULTIPLY_H
+#ifndef GRID_TENSOR_BASE_MULTIPLY_H
+#define GRID_TENSOR_BASE_MULTIPLY_H
 
 #include <algorithm>
 
 namespace grid {
 
 
-/// TensorMul<TensorSlowCpu> implements tensor multiplication operation for tensors of the same rank.
+/// TensorMul<Tensor> implements tensor multiplication operation for tensors of the same rank.
 /// Including matrix multiplication (MatMul) and vector dot-product (VecDot).
-template <typename _T, size_t _Rank, TensorFor<TensorSlowCpu> _Tensor1, TensorFor<TensorSlowCpu> _Tensor2>
-struct TensorMul<TensorSlowCpu, _T, _Rank, _Tensor1, _Tensor2>
+template <typename _T, size_t _Rank, TriviallyCopyableTensor _Tensor1, TriviallyCopyableTensor _Tensor2>
+struct TensorMul<Tensor, _T, _Rank, _Tensor1, _Tensor2>
 {
-  constexpr static size_t Rank()                          { return _Rank; }
+//  constexpr static size_t Rank()                          { return _Rank; }
   using value_type = _T;
 
-  template <ConvertibleTensorFor<TensorSlowCpu> T1, ConvertibleTensorFor<TensorSlowCpu> T2>
+  template <ConvertibleTo<Tensor> T1, ConvertibleTo<Tensor> T2>
   TensorMul(T1&& tensor1, T2&& tensor2)
    : tensor1_(std::forward<T1>(tensor1)),
      tensor2_(std::forward<T2>(tensor2))
@@ -98,7 +98,7 @@ struct TensorMul<TensorSlowCpu, _T, _Rank, _Tensor1, _Tensor2>
   auto operator()() const
   {
     auto& dims = tensor1_.Dimensions();
-    auto result = TensorSlowCpu(Uninitialized<value_type>{});
+    auto result = Tensor(Uninitialized<value_type>{});
 
     VecDot(reinterpret_cast<char*>(result.Data()),
         reinterpret_cast<const char*>(tensor1_.Data()),
@@ -114,7 +114,7 @@ struct TensorMul<TensorSlowCpu, _T, _Rank, _Tensor1, _Tensor2>
   auto operator()() const
   {
     auto& dims = tensor1_.Dimensions();
-    auto result = TensorSlowCpu({dims[0], dims[0]}, Uninitialized<value_type>{});
+    auto result = Tensor({dims[0], dims[0]}, Uninitialized<value_type>{});
 
     // transpose second matrix
     auto strides = tensor2_.Strides();
@@ -134,7 +134,7 @@ struct TensorMul<TensorSlowCpu, _T, _Rank, _Tensor1, _Tensor2>
   auto operator()() const
   {
     auto& dims = tensor1_.Dimensions();
-    auto result = TensorSlowCpu(dims, Uninitialized<value_type>{});
+    auto result = Tensor(dims, Uninitialized<value_type>{});
     Scale(reinterpret_cast<char*>(result.Data()),
           reinterpret_cast<const char*>(tensor1_.Data()),
           *reinterpret_cast<const value_type*>(tensor2_.Data()),
@@ -148,7 +148,7 @@ struct TensorMul<TensorSlowCpu, _T, _Rank, _Tensor1, _Tensor2>
   auto operator()() const
   {
     auto& dims = tensor2_.Dimensions();
-    auto result = TensorSlowCpu(dims, Uninitialized<value_type>{});
+    auto result = Tensor(dims, Uninitialized<value_type>{});
     Scale(reinterpret_cast<char*>(result.Data()),
           reinterpret_cast<const char*>(tensor2_.Data()),
           *reinterpret_cast<const value_type*>(tensor1_.Data()),
@@ -166,12 +166,12 @@ struct TensorMul<TensorSlowCpu, _T, _Rank, _Tensor1, _Tensor2>
 
 // CTAD
 
-template <ConvertibleTensorFor<TensorSlowCpu> _Tensor1, ConvertibleTensorFor<TensorSlowCpu> _Tensor2>
+template <ConvertibleTo<Tensor> _Tensor1, ConvertibleTo<Tensor> _Tensor2>
 TensorMul(_Tensor1, _Tensor2)
-  -> TensorMul<TensorSlowCpu, typename _Tensor2::value_type, std::max(_Tensor1::Rank(), _Tensor2::Rank()),
+  -> TensorMul<Tensor, typename _Tensor2::value_type, std::max(_Tensor1::rank, _Tensor2::rank),
                typename to_tensor<_Tensor1>::type, typename to_tensor<_Tensor2>::type>;
 
 
 } // end of namespace grid
 
-#endif  // GRID_TENSOR_SLOWCPU_MULTIPLY_H
+#endif  // GRID_TENSOR_BASE_MULTIPLY_H

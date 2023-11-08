@@ -256,9 +256,8 @@ uint32_t LLaMAModelT<Tensor, T>::Forward(const std::vector<uint32_t>& token_ids)
 
   for (auto token: token_ids)
   {
-    // FIXME: input could just be Tensor&& input =??
-    input_ = embeddings_.View({1}, {0, token_ids[token]});  // -> vec(dim)
-
+    input_ = embeddings_.View({1}, {0, token_ids[token]});
+  }
 #if 0
     for (auto l: layers_)
     {
@@ -316,8 +315,8 @@ uint32_t LLaMAModelT<Tensor, T>::Forward(const std::vector<uint32_t>& token_ids)
     logit = x_ * wcls_; // vec(dim) x vec(dim) -> scalar
     // FIXME: wcls is optionaL?
     logits_.append(TensorRmsNorm(x_ * rms_final_weight_) * wcls);
-#endif
   }
+#endif
   return 0; // FIXME logits_;
 
 #if 0

@@ -11,7 +11,7 @@
 
 #include "llama.h"
 
-#include <grid/tensor/tensor_slowcpu.h>
+#include <grid/tensor/tensor_base.h>
 #include <grid/util/demangle.h>
 
 
@@ -32,14 +32,14 @@ void LLaMAFile::PrintModelInfo(std::ostream& out) const
 }
 
 template <> //template <typename, size_t, auto...> typename Tensor>
-LLaMAModel* LLaMAModel::Load<TensorSlowCpu>(const LLaMAFile& file, bool mmap)
+LLaMAModel* LLaMAModel::Load<Tensor>(const LLaMAFile& file, bool mmap)
 {
   if (!mmap)
     throw("only memory-mapped files currently supported");
 
   auto& data_type =  file.DataType();
   if (data_type == typeid(float))
-    return LLaMAModelT<TensorSlowCpu, float>::CreateFrom(file);
+    return LLaMAModelT<Tensor, float>::CreateFrom(file);
 
   printf("ERR1\n");
   return nullptr;

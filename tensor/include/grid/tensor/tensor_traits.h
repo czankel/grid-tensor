@@ -10,7 +10,6 @@
 #define GRID_TENSOR_TENSOR_TRAITS_H
 
 namespace grid {
-struct TensorBaseOp {};
 
 // FIXME add more rquirements
 /// is_tensor_op_v<_TensorOp> returns true if the template is derived from TensorOp
@@ -18,13 +17,12 @@ template <typename _TensorOp>
 inline constexpr bool is_tensor_op_v = requires (const _TensorOp& t) { t.operator()(); };
 
 
-//std::is_base_of_v<TensorBaseOp, std::remove_cvref_t<_TensorOp>>;
-
 template <typename _Tensor>
 inline constexpr bool is_tensor_v =
   std::is_class_v<typename std::remove_cvref_t<_Tensor>> &&
   requires (const _Tensor& t) { t.Rank(), t.Dimensions(); t.Strides(); };
 
+#if 0
 // helper functions to identify if a Tensor or TensorOp is for a specific device
 namespace details
 {
@@ -55,10 +53,10 @@ struct is_same_device :
 template <template <template <typename, size_t, typename...> typename, typename, size_t, typename...> typename _TensorOp,
           template <typename, size_t, typename...> typename _Tensor, size_t _Rank, typename _T, typename... _Tensors>
 struct is_same_device<_TensorOp<_Tensor, _T, _Rank, _Tensors...>, _Tensor> : std::true_type {};
-
+#endif
 
 template <typename _Tensor, template <typename, size_t, typename...> typename _DeviceTensor>
-inline constexpr bool is_same_device_v = is_same_device<std::remove_cvref_t<_Tensor>, _DeviceTensor>::value;
+inline constexpr bool is_same_device_v = true; //is_same_device<std::remove_cvref_t<_Tensor>, _DeviceTensor>::value;
 
 
 // helper class to check if the variadic tensor parameter arguments include a specific non-type

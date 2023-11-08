@@ -8,8 +8,8 @@
 
 // DO NOT INCLUDE THIS FILE DIRECTLY
 
-#ifndef GRID_TENSOR_SLOWCPU_RMS_NORN_H
-#define GRID_TENSOR_SLOWCPU_RMS_NORN_H
+#ifndef GRID_TENSOR_BASE_RMS_NORN_H
+#define GRID_TENSOR_BASE_RMS_NORN_H
 
 #include <math.h>
 #include <tuple>
@@ -18,13 +18,13 @@
 
 namespace grid {
 
-/// TensorRmsNorm<TensorSlowCpu> implements RMS norm.
-template <typename _T, size_t _Rank, TensorFor<TensorSlowCpu> _Tensor>
-struct TensorRmsNorm<TensorSlowCpu, _T, _Rank, _Tensor>
+/// TensorRmsNorm<Tensor> implements RMS norm.
+template <typename _T, size_t _Rank, TriviallyCopyableTensor _Tensor>
+struct TensorRmsNorm<Tensor, _T, _Rank, _Tensor>
 {
   using value_type = _T;
 
-  template <ConvertibleTensorFor<TensorSlowCpu> T1>
+  template <ConvertibleTo<Tensor> T1>
   TensorRmsNorm(T1&& tensor) : tensor_(std::forward<T1>(tensor)) {}
 
   ~TensorRmsNorm() {}
@@ -84,7 +84,7 @@ struct TensorRmsNorm<TensorSlowCpu, _T, _Rank, _Tensor>
 
     constexpr _T eps = std::numeric_limits<_T>::epsilon();
     _T scale = 1.0/sqrtf(value / count + eps);
-    return TensorMul(tensor_, TensorSlowCpu<_T, 0>{scale});
+    return TensorMul(tensor_, Tensor<_T, 0>{scale});
   }
 
   _Tensor tensor_;
@@ -93,10 +93,10 @@ struct TensorRmsNorm<TensorSlowCpu, _T, _Rank, _Tensor>
 
 // CTAD
 
-template <ConvertibleTensorFor<TensorSlowCpu> _Tensor>
+template <ConvertibleTo<Tensor> _Tensor>
 TensorRmsNorm(_Tensor)
-  -> TensorRmsNorm<TensorSlowCpu, typename _Tensor::value_type, _Tensor::Rank(), typename to_tensor<_Tensor>::type>;
+  -> TensorRmsNorm<Tensor, typename _Tensor::value_type, _Tensor::rank, typename to_tensor<_Tensor>::type>;
 
 } // end of namespace grid
 
-#endif // GRID_TENSOR_SLOWCPU_RMS_NORN_H
+#endif // GRID_TENSOR_BASE_RMS_NORN_H

@@ -8,8 +8,8 @@
 
 // DO NOT INCLUDE THIS FILE DIRECTLY
 
-#ifndef GRID_TENSOR_SLOWCPU_COPY_H
-#define GRID_TENSOR_SLOWCPU_COPY_H
+#ifndef GRID_TENSOR_BASE_COPY_H
+#define GRID_TENSOR_BASE_COPY_H
 
 #include <type_traits>
 
@@ -55,4 +55,4 @@ copy(const char* src1, const char* src2,
 
 } // end of namespace details
 
-#ifndef GRID_TENSOR_SLOWCPU_COPY_H
+#ifndef GRID_TENSOR_BASE_COPY_H

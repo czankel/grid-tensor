@@ -6,8 +6,8 @@
 // The contents of this file are confidential and proprietary to Chris Zankel.
 //
 
-#ifndef GRID_TENSOR_TENSOR_SLOWCPU_H
-#define GRID_TENSOR_TENSOR_SLOWCPU_H
+#ifndef GRID_TENSOR_TENSOR_BASE_N
+#define GRID_TENSOR_TENSOR_BASE_N
 
 #include <initializer_list>
 #include <type_traits>
@@ -16,10 +16,10 @@
 
 #include "tensor.h"
 
-#include "slowcpu/tensor.h"
-#include "slowcpu/comparison.h"
-#include "slowcpu/addition.h"
-#include "slowcpu/multiplication.h"
-#include "slowcpu/rms_norm.h"
+#include "base/tensor.h"
+#include "base/comparison.h"
+#include "base/addition.h"
+#include "base/multiplication.h"
+#include "base/rms_norm.h"
 
-#endif  // GRID_TENSOR_TENSOR_SLOWCPU_H
+#endif  // GRID_TENSOR_TENSOR_BASE_N

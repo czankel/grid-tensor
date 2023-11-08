@@ -13,7 +13,7 @@
 #include <unistd.h>
 
 #include <grid/models/llama.h>
-#include <grid/tensor/tensor_slowcpu.h>
+#include <grid/tensor/tensor_base.h>
 #include <grid/util/demangle.h>
 
 int main(int argc, char** argv)
@@ -82,7 +82,7 @@ int main(int argc, char** argv)
 
   // if file info, print info FIXME: crashes when invalid -t tokenfile?????? no file??
   file->PrintModelInfo(std::cout);
-  std::unique_ptr<grid::LLaMAModel> model(grid::LLaMAModel::Load<grid::TensorSlowCpu>(*file));
+  std::unique_ptr<grid::LLaMAModel> model(grid::LLaMAModel::Load<grid::Tensor>(*file));
 
   // take extra arguments as text input; concatenate with a space.
   std::string prompt;
