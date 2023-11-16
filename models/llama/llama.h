@@ -256,7 +256,7 @@ uint32_t LLaMAModelT<Tensor, T>::Forward(const std::vector<uint32_t>& token_ids)
 
   for (auto token: token_ids)
   {
-    input_ = embeddings_.View({1}, {0, token_ids[token]});
+    //input_ = embeddings_.View({1}, {0, token_ids[token]});
   }
 #if 0
     for (auto l: layers_)

@@ -17,4 +17,4 @@
 #include "addition.h"
 #include "tensor_base.h"
 
-INSTANTIATE_TYPED_TEST_SUITE_P(AdditionBaseTest, AdditionTestSuite, TensorBaseType);
+INSTANTIATE_TYPED_TEST_SUITE_P(AdditionBaseTest, AdditionTestSuite, grid::TensorBaseType);

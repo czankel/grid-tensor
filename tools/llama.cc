@@ -82,7 +82,7 @@ int main(int argc, char** argv)
 
   // if file info, print info FIXME: crashes when invalid -t tokenfile?????? no file??
   file->PrintModelInfo(std::cout);
-  std::unique_ptr<grid::LLaMAModel> model(grid::LLaMAModel::Load<grid::Tensor>(*file));
+  std::unique_ptr<grid::LLaMAModel> model(grid::LLaMAModel::Load<grid::base::Tensor>(*file));
 
   // take extra arguments as text input; concatenate with a space.
   std::string prompt;

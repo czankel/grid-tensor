@@ -19,12 +19,12 @@
 namespace grid {
 
 /// TensorRmsNorm<Tensor> implements RMS norm.
-template <typename _T, size_t _Rank, TriviallyCopyableTensor _Tensor>
-struct TensorRmsNorm<Tensor, _T, _Rank, _Tensor>
+template <typename _T, size_t _Rank, PrimitiveTensor _Tensor>
+struct TensorRmsNorm<base::Tensor, _T, _Rank, _Tensor>
 {
   using value_type = _T;
 
-  template <ConvertibleTo<Tensor> T1>
+  template <ConvertibleTo<base::Tensor> T1>
   TensorRmsNorm(T1&& tensor) : tensor_(std::forward<T1>(tensor)) {}
 
   ~TensorRmsNorm() {}
@@ -84,7 +84,7 @@ struct TensorRmsNorm<Tensor, _T, _Rank, _Tensor>
 
     constexpr _T eps = std::numeric_limits<_T>::epsilon();
     _T scale = 1.0/sqrtf(value / count + eps);
-    return TensorMul(tensor_, Tensor<_T, 0>{scale});
+    return TensorMul(tensor_, base::Tensor<_T, 0>{scale});
   }
 
   _Tensor tensor_;
@@ -93,9 +93,9 @@ struct TensorRmsNorm<Tensor, _T, _Rank, _Tensor>
 
 // CTAD
 
-template <ConvertibleTo<Tensor> _Tensor>
+template <ConvertibleTo<base::Tensor> _Tensor>
 TensorRmsNorm(_Tensor)
-  -> TensorRmsNorm<Tensor, typename _Tensor::value_type, _Tensor::rank, typename to_tensor<_Tensor>::type>;
+  -> TensorRmsNorm<base::Tensor, typename _Tensor::value_type, _Tensor::rank, typename to_tensor<_Tensor>::type>;
 
 } // end of namespace grid
 

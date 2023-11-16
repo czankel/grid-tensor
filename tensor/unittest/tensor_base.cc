@@ -16,4 +16,4 @@
 #include "tensor.h"
 #include "tensor_base.h"
 
-INSTANTIATE_TYPED_TEST_SUITE_P(TensorBaseTest, TensorTestSuite, TensorBaseType);
+INSTANTIATE_TYPED_TEST_SUITE_P(TensorBaseTest, TensorTestSuite, grid::TensorBaseType);

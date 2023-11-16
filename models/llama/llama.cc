@@ -32,14 +32,14 @@ void LLaMAFile::PrintModelInfo(std::ostream& out) const
 }
 
 template <> //template <typename, size_t, auto...> typename Tensor>
-LLaMAModel* LLaMAModel::Load<Tensor>(const LLaMAFile& file, bool mmap)
+LLaMAModel* LLaMAModel::Load<base::Tensor>(const LLaMAFile& file, bool mmap) // FIXME: base::Tensor
 {
   if (!mmap)
     throw("only memory-mapped files currently supported");
 
   auto& data_type =  file.DataType();
   if (data_type == typeid(float))
-    return LLaMAModelT<Tensor, float>::CreateFrom(file);
+    return LLaMAModelT<base::Tensor, float>::CreateFrom(file);
 
   printf("ERR1\n");
   return nullptr;

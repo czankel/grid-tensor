@@ -15,18 +15,20 @@
 struct TensorBaseType
 {
   template <typename T, size_t _Rank, typename _Allocator>
-  using Tensor = grid::Tensor<T, _Rank, _Allocator>;
+  using Tensor = grid::base::Tensor<T, _Rank, _Allocator>;
 };
 
 #else
 
+namespace grid {
+
 struct TensorBaseType
 {
   template <typename T, size_t _Rank, typename _Allocator = std::allocator<T>>
-  class Tensor : public grid::Tensor<T, _Rank, _Allocator>
+  class Tensor : public grid::base::Tensor<T, _Rank, _Allocator>
   {
    public:
-    using grid::Tensor<T, _Rank, _Allocator>::Tensor;
+    using grid::base::Tensor<T, _Rank, _Allocator>::Tensor;
   };
 
   template <typename T>
@@ -75,7 +77,7 @@ struct TensorBaseType
   explicit Tensor(grid::MMapArray<T, _N>) -> Tensor<T, _N, grid::MemoryMapped<T>>;
   // copy & move constructors FIXME: cannot get it wo rork
   template <typename T, size_t _N, typename _Allocator>
-  Tensor(const grid::Tensor<T, _N, _Allocator>&) -> Tensor<T, _N>;
+  Tensor(const grid::base::Tensor<T, _N, _Allocator>&) -> Tensor<T, _N>;
   //template <typename T, size_t _N>
   //explicit Tensor(grid::Tensor<T, _N>&&) -> Tensor<T, _N>;
 
@@ -100,5 +102,7 @@ struct TensorBaseType
   template <typename, size_t, typename...> typename TensorRT, typename T, size_t _Rank, typename... Tensors>
   Tensor(const TensorOp<TensorRT,T,  _Rank, Tensors...>&) -> Tensor<T, _Rank>;
 };
+
+} // end of namespace grid
 
 #endif
