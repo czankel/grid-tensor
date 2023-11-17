@@ -6,20 +6,14 @@
 // The contents of this file are confidential and proprietary to Chris Zankel.
 //
 
-#ifndef GRID_TENSOR_TENSOR_BASE_N
-#define GRID_TENSOR_TENSOR_BASE_N
-
-#include <initializer_list>
-#include <type_traits>
-#include <array>
-#include <algorithm>
-
-#include "tensor.h"
+#ifndef GRID_TENSOR_TENSOR_BASE_H
+#define GRID_TENSOR_TENSOR_BASE_H
 
 #include "base/tensor.h"
-#include "base/comparison.h"
+
 #include "base/addition.h"
+#include "base/comparison.h"
 #include "base/multiplication.h"
 #include "base/rms_norm.h"
 
-#endif  // GRID_TENSOR_TENSOR_BASE_N
+#endif  // GRID_TENSOR_TENSOR_BASE_H

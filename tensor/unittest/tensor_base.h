@@ -75,26 +75,20 @@ struct TensorBaseType
   explicit Tensor(std::array<size_t, _N>, std::array<ssize_t, _N>, grid::Uninitialized<T>) -> Tensor<T, _N>;
   template <typename T, size_t _N>
   explicit Tensor(grid::MMapArray<T, _N>) -> Tensor<T, _N, grid::MemoryMapped<T>>;
-  // copy & move constructors FIXME: cannot get it wo rork
+  
+  // copy & move constructors
   template <typename T, size_t _N, typename _Allocator>
   Tensor(const grid::base::Tensor<T, _N, _Allocator>&) -> Tensor<T, _N>;
-  //template <typename T, size_t _N>
-  //explicit Tensor(grid::Tensor<T, _N>&&) -> Tensor<T, _N>;
-
-  // FIXME: what are these?
   template <typename T, size_t _N>
-  explicit Tensor(Tensor<T, 1, grid::StaticAllocator<_N>>&) -> Tensor<T, _N>;
-  template <typename T, size_t _N, size_t _M>
-  explicit Tensor(Tensor<T, 2, grid::StaticAllocator<_N, _M>>&) -> Tensor<T, _N * _M>;
-  template <typename T, size_t _C, size_t _N, size_t _M>
-  explicit Tensor(Tensor<T, 3, grid::StaticAllocator<_C, _N, _M>>&) -> Tensor<T, _C * _N * _M>;
+  Tensor(grid::base::Tensor<T, _N>&&) -> Tensor<T, _N>;
 
-  // tensorview FIXME: would this be better as a concept? template <ViewType...>
-  template <template <typename, size_t> typename TensorView, typename _Tensor, size_t _Rank> // FIXME: use concept
+  // tensor view
+  template <template <typename, size_t> typename TensorView, typename _Tensor, size_t _Rank>
   Tensor(TensorView<_Tensor, _Rank>&&) -> Tensor<typename _Tensor::value_type, _Rank>;
-  template <template <typename, size_t> typename TensorView, typename _Tensor, size_t _Rank> // FIXME: use concept
+  template <template <typename, size_t> typename TensorView, typename _Tensor, size_t _Rank>
   Tensor(const TensorView<_Tensor, _Rank>&) -> Tensor<typename _Tensor::value_type, _Rank>;
-  // tensor-op
+
+  // tensor operator
   template <template <template <typename, size_t, typename...> typename, typename, size_t, typename...> typename TensorOp,
   template <typename, size_t, typename...> typename TensorRT, typename T, size_t _Rank, typename... Tensors>
   Tensor(TensorOp<TensorRT, T, _Rank, Tensors...>&&) -> Tensor<T, _Rank>;

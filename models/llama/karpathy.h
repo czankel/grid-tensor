@@ -69,7 +69,8 @@ void KarpathyFile::Load(LLaMAModelT<Tensor, T>& model, const LLaMAFile& file) co
   // map weights
   // Tensor(view, {param.vocab_size, dim});
   // Seek view.Size()??
-  model.embeddings_ = Tensor(view.Array<T>({param.vocab_size, dim}));
+  // FIXME model.embeddings_ = Tensor(view.Array<T>({param.vocab_size, dim}));
+  model.embeddings_ = Tensor(model.mmap, {param.vocab_size, dim}, MemoryMap<T>);
 // FIXME: end move to model
 
   // Karpathy orders the layer weights by the weights instead of layer

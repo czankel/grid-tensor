@@ -13,15 +13,23 @@
 
 namespace grid {
 
-// FIXME: add note that this is unoptimized and works only on aligned data...
-
 /// TensorAdd<Tensor> implements tensor addition operation for tensors of the same rank.
+///
+/// "Broadcasting" supports specfic additions, such as:
+///
+///   Matrix + column-vector --> Matrix is split into column blocks, each added with the vector
+///   Matrix + row-vector    --> Matrix is split into row blocks, each added with the vector
+///
+/// Note that tensor ranks must always match. In the case of broadcasting, the dimension is simply set to 1.
 template <typename _T, size_t _Rank, PrimitiveTensor _Tensor1, PrimitiveTensor _Tensor2>
-struct TensorAdd<base::Tensor, _T, _Rank, _Tensor1, _Tensor2>
+requires (_Tensor1::Rank() == _Tensor2::Rank())
+class TensorAdd<base::Tensor, _T, _Rank, _Tensor1, _Tensor2>
 {
+ public:
   using value_type = _T;
   using pointer = _T*;
   using const_pointer = const _T*;
+  constexpr static size_t rank = _Rank;
 
   template <ConvertibleTo<base::Tensor> T1, ConvertibleTo<base::Tensor> T2>
   TensorAdd(T1&& tensor1, T2&& tensor2)
@@ -38,7 +46,7 @@ struct TensorAdd<base::Tensor, _T, _Rank, _Tensor1, _Tensor2>
   TensorAdd& operator=(const TensorAdd& other) = delete;
   TensorAdd& operator=(TensorAdd&& other) = delete;
 
-  // strides are unused..
+
   inline void add(pointer dest, const_pointer src1, const_pointer src2,
                   std::span<const size_t,  0> dims,
                   std::span<const ssize_t, 0>,
@@ -48,8 +56,6 @@ struct TensorAdd<base::Tensor, _T, _Rank, _Tensor1, _Tensor2>
     *dest = *src1 + *src2;
   }
 
-
-  // TODO: move conditional up the call chain (create addslow and addfast call-chains)
   inline void add(pointer dest, const_pointer src1, const_pointer src2,
                   std::span<const size_t,  1> dims,
                   std::span<const ssize_t, 1>,
@@ -86,12 +92,7 @@ struct TensorAdd<base::Tensor, _T, _Rank, _Tensor1, _Tensor2>
     }
   }
 
-  // Matrix + column-vector --> Matrix is split into column blocks, eac added with the vector
-  // Matrix + row-vector    --> Matrix is split into row blocks, each added with the vector
-  // Tensor ranks must match, but if a dimension is '1', it is ... FIXME
-
-  // FIXME: for multiplication, would it work with tensor2 transposed?
-  // FIXME: coudl this be a constexpr?
+  // MaxDimensions expands "broadcast" dimension (dim = 1) to the dimension of the other tensor.
   std::array<size_t, _Rank> MaxDimensions(const _Tensor1& tensor1, const _Tensor2& tensor2) const
   {
     const auto& dims1 = tensor1.Dimensions();
@@ -108,26 +109,9 @@ struct TensorAdd<base::Tensor, _T, _Rank, _Tensor1, _Tensor2>
     return dims;
   }
 
-  template <typename _Tensor>
-  std::array<ssize_t, _Rank> Strides(const _Tensor& tensor) const
-  {
-    const auto& dims1 = tensor.Dimensions();
-    const auto& strides1 = tensor.Strides();
-
-    // FIXME: still necessary?
-    std::array<ssize_t, _Rank> strides;
-    for (size_t i = 0; i < _Rank; i++)
-      strides[i] = dims1[i] != 1 ? strides1[i] : 0;
-
-    return strides;
-  }
-
-
   // Functor
-  // FIXME: must be same rank? static_assert?
   auto operator()() const
   {
-    // FIXME: why strides for dest?
     auto dims = MaxDimensions(tensor1_, tensor2_);
     auto result = base::Tensor(dims, Uninitialized<value_type>{});
 
@@ -136,15 +120,15 @@ struct TensorAdd<base::Tensor, _T, _Rank, _Tensor1, _Tensor2>
         tensor2_.Data(),
         std::span<const size_t, _Rank>(dims),
         std::span<const ssize_t, _Rank>(result.Strides()),
-        std::span<const ssize_t, _Rank>(Strides(tensor1_)),
-        std::span<const ssize_t, _Rank>(Strides(tensor2_)));
+        std::span<const ssize_t, _Rank>(tensor1_.Strides()),
+        std::span<const ssize_t, _Rank>(tensor2_.Strides()));
     return result;
   }
 
+ private:
   _Tensor1 tensor1_;
   _Tensor2 tensor2_;
 };
-
 
 // CTAD
 

@@ -30,10 +30,7 @@ TYPED_TEST_P(TensorTestSuite, TensorBraceInitializationRank1Integer)
 {
   typename TypeParam::Tensor tensor1{ 11, 22, 33, 44, 55, 66 };
 
-  std::cout << tensor1 << std::endl;
-
   EXPECT_TRUE(grid::is_tensor_v<decltype(tensor1)>);
-  printf("%s\n", typeid(typename std::remove_reference_t<decltype(tensor1)>::value_type).name());
   EXPECT_EQ(tensor1.Rank(), 1);
   EXPECT_THAT(tensor1.Dimensions(), ElementsAre(6));
   EXPECT_THAT(tensor1.Strides(), ElementsAre(size<int>(1)));
@@ -94,7 +91,6 @@ TYPED_TEST_P(TensorTestSuite, TensorAllocInitializedRank1Double)
   EXPECT_THAT(tensor1.Strides(), ElementsAre(size<double>(1)));
 
   double verify[] = { 1.2, 1.2, 1.2, 1.2 };
-  std::cout << tensor1 << std::endl;
   EXPECT_EQ(memcmp(tensor1.Data(), verify, sizeof(verify)), 0);
 }
 
@@ -206,19 +202,16 @@ TYPED_TEST_P(TensorTestSuite, TensorViewBraceInitializationTensor)
                                         { 331, 332, 333, 334, 335 },
                                         { 341, 342, 343, 344, 345 } } };
 
-  // FIXME: why does this work?
   auto view_row = tensor1.View({ 2 }, {1, 2, 0});
-
   EXPECT_EQ(view_row.Rank(), 1);
   EXPECT_THAT(view_row.Dimensions(), ElementsAre(5));
   EXPECT_THAT(view_row.Strides(), ElementsAre(size<int>(1)));
   typename TypeParam::Tensor expected{231, 232, 233, 234, 235};
-  //EXPECT_EQ(view_row, expected);
+  EXPECT_EQ(view_row, expected);
 }
 
 TYPED_TEST_P(TensorTestSuite, TensorViewAllocInitializationTensor)
 {
-#if 0
   typename TypeParam::Tensor tensor(4UL, 5UL, 1.1);
   tensor.View({0}, {0, 1}) = typename TypeParam::Tensor{2.1, 3.2, 4.3, 5.4, 6.5};
   typename TypeParam::Tensor expected{ { 1.1, 2.1, 1.1, 1.1, 1.1},
@@ -229,12 +222,10 @@ TYPED_TEST_P(TensorTestSuite, TensorViewAllocInitializationTensor)
   EXPECT_THAT(tensor.Dimensions(), ElementsAre(4, 5));
   EXPECT_THAT(tensor.Strides(), ElementsAre(size<double>(5 * 1), size<double>(1)));
   EXPECT_EQ(tensor, expected);
-#endif
 }
 
 TYPED_TEST_P(TensorTestSuite, TensorBroadcast1to2)
 {
-#if 0
   // FIXME what's this?
   //typename TypeParam::Tensor row = tensor1.View({grid::Broadcast, 0});
   //EXPECT_EQ(row.Rank() = 1);
@@ -245,9 +236,7 @@ TYPED_TEST_P(TensorTestSuite, TensorBroadcast1to2)
   EXPECT_THAT(broadcast1.Dimensions(), ElementsAre(4, 1));
   EXPECT_THAT(broadcast1.Strides(), ElementsAre(size<double>(1), size<double>(0)));
 
-  printf("tensor2()\n");
   typename TypeParam::Tensor tensor2 = broadcast1;
-  printf("broadcast2()\n");
   auto broadcast2 = tensor2.View({grid::Broadcast, 1, 0, grid::Broadcast});
   EXPECT_EQ(broadcast2.Rank(), 4);
   EXPECT_THAT(broadcast2.Dimensions(), ElementsAre(1, 1, 4, 1));
@@ -256,7 +245,6 @@ TYPED_TEST_P(TensorTestSuite, TensorBroadcast1to2)
         size<double>(0),
         size<double>(1),
         size<double>(0)));
-#endif
 }
 
 REGISTER_TYPED_TEST_SUITE_P(TensorTestSuite,

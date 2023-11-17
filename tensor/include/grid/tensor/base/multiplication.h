@@ -11,15 +11,14 @@
 #ifndef GRID_TENSOR_BASE_MULTIPLY_H
 #define GRID_TENSOR_BASE_MULTIPLY_H
 
-#include <algorithm>
-
 namespace grid {
 
-/// TensorMul<Tensor> implements tensor multiplication operation for tensors of the same rank.
-/// Including matrix multiplication (MatMul) and vector dot-product (VecDot).
+/// TensorMul<Tensor> implements tensor multiplication operation for tensors of the same and
+/// different ranks, such as matrix multiplication (MatMul) and vector dot-product (VecDot).
 template <typename _Tp, size_t _Rank, PrimitiveTensor _Tensor1, PrimitiveTensor _Tensor2>
-struct TensorMul<base::Tensor, _Tp, _Rank, _Tensor1, _Tensor2>
+class TensorMul<base::Tensor, _Tp, _Rank, _Tensor1, _Tensor2>
 {
+ public:
   using value_type = _Tp;
   using pointer = _Tp*;
   using const_pointer = const _Tp*;
@@ -110,9 +109,6 @@ struct TensorMul<base::Tensor, _Tp, _Rank, _Tensor1, _Tensor2>
   }
 
 
-  // Functors
-
-  //template <TensorRank<1> = _Tensor1, TensorRank<1> = _Tensor2>
   auto operator()() const requires (_Tensor1::rank == 1 && _Tensor2::rank == 1)
   {
     auto& dims = tensor1_.Dimensions();
@@ -126,15 +122,14 @@ struct TensorMul<base::Tensor, _Tp, _Rank, _Tensor1, _Tensor2>
            std::span(tensor2_.Strides()));
 
     return result;
-   }
+  }
 
-  //template <TensorRank<2> = _Tensor1, TensorRank<2> = _Tensor2>
   auto operator()() const requires (_Tensor1::rank == 2 && _Tensor2::rank == 2)
   {
     auto& dims = tensor1_.Dimensions();
     auto result = base::Tensor({dims[0], dims[0]}, Uninitialized<value_type>{});
 
-    // transpose second matrix
+    // transpose right matrix
     auto strides = tensor2_.Strides();
     std::swap(strides[0], strides[1]);
 
@@ -149,7 +144,6 @@ struct TensorMul<base::Tensor, _Tp, _Rank, _Tensor1, _Tensor2>
     return result;
   }
 
-  //template <TensorRank<0> = _Tensor2>
   auto operator()() const requires (_Tensor2::rank == 0)
   {
     auto& dims = tensor1_.Dimensions();
@@ -163,7 +157,6 @@ struct TensorMul<base::Tensor, _Tp, _Rank, _Tensor1, _Tensor2>
     return result;
   }
 
-  //template <TensorRank<0> = _Tensor1, TensorNotRank<0> = _Tensor2>
   auto operator()() const requires (_Tensor1::rank == 0 && _Tensor2::rank != 0)
   {
     auto& dims = tensor2_.Dimensions();
@@ -178,10 +171,10 @@ struct TensorMul<base::Tensor, _Tp, _Rank, _Tensor1, _Tensor2>
     return result;
   }
 
+ private:
   _Tensor1 tensor1_;
   _Tensor2 tensor2_;
 };
-
 
 // CTAD
 

@@ -22,10 +22,14 @@
 #include <stdexcept>
 #include <string>
 
+#include "tensor_parameters.h"
+
 namespace grid {
 
+#if 0
 class MMapView;
 template <typename, size_t> struct MMapArray;
+#endif
 
 /// MMap represents a memory-maped file.
 class MMap
@@ -232,7 +236,7 @@ class MMapView
 
 
   // FIXME: drop MMapArray, use Address and Seek
-#if 1
+#if 0
   /// Array returns a MMapArray of the specified primitive for a memory mapped reagion.
   template <typename _T, size_t _Rank>  MMapArray<_T, _Rank>
   Array(const size_t(&)[_Rank], const ssize_t(&)[_Rank], size_t offset = 0UL);
@@ -296,6 +300,9 @@ class MMapView
   char* end_;
 };
 
+
+// FIXME: remove
+#if 0
 template <typename _T, size_t _Rank>
 struct MMapArray
 {
@@ -363,8 +370,8 @@ struct MMapArray
   std::array<size_t, _Rank>   dims_;
   std::array<ssize_t, _Rank>  strides_;
 };
-
-#if 1
+#endif
+#if 0
 template <typename _T, size_t _Rank>  MMapArray<_T, _Rank>
 inline MMapView::Array(const size_t(&dims)[_Rank],
                        const ssize_t(&strides)[_Rank],
