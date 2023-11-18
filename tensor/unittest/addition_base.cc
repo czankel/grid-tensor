@@ -17,4 +17,4 @@
 #include "addition.h"
 #include "tensor_base.h"
 
-INSTANTIATE_TYPED_TEST_SUITE_P(AdditionTestSlowCpu, AdditionTestSuite, TensorSlowCpuSuite);
+INSTANTIATE_TYPED_TEST_SUITE_P(AdditionTestBase, AdditionTestSuite, TensorBaseType);

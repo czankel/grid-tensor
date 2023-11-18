@@ -17,4 +17,4 @@
 #include "multiplication.h"
 #include "tensor_base.h"
 
-INSTANTIATE_TYPED_TEST_SUITE_P(MultiplicationTestSlowCpu, MultiplicationTestSuite, TensorSlowCpuSuite);
+INSTANTIATE_TYPED_TEST_SUITE_P(MultiplicationTestBase, MultiplicationTestSuite, TensorBaseType);

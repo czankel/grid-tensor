@@ -12,20 +12,20 @@
 
 #if __cpp_deduction_guides >= 201907L
 
-struct TensorSlowCpuSuite
+struct TensorBaseType
 {
   template <typename _T, size_t _Rank, auto... _Args>
-  using Tensor = grid::base::TensorSlowCpu<_T, _Rank, _Args...>;
+  using Tensor = grid::base::Tensor<_T, _Rank, _Args...>;
 };
 
 #else
 
-struct TensorSlowCpuSuite
+struct TensorBaseType
 {
   template <typename _T, size_t _Rank, auto... _Args>
-  struct Tensor : grid::base::TensorSlowCpu<_T, _Rank, _Args...>
+  struct Tensor : grid::base::Tensor<_T, _Rank, _Args...>
   {
-    using grid::base::TensorSlowCpu<_T, _Rank, _Args...>::TensorSlowCpu;
+    using grid::base::Tensor<_T, _Rank, _Args...>::Tensor;
   };
 
   template <typename _T>

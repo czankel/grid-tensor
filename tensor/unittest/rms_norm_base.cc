@@ -17,4 +17,4 @@
 #include "rms_norm.h"
 #include "tensor_base.h"
 
-INSTANTIATE_TYPED_TEST_SUITE_P(RmsNormTestSlowCpu, RmsNormTestSuite, TensorSlowCpuSuite);
+INSTANTIATE_TYPED_TEST_SUITE_P(RmsNormTestBase, RmsNormTestSuite, TensorBaseType);

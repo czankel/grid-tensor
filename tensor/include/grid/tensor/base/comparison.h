@@ -95,7 +95,7 @@ equals(const char* src1, const char* src2,
 
 
 // TODO: will https://open-std.org/JTC1/SC22/WG21/docs/papers/2019/p1045r1.html help for using tensor.Rank() as constexpr?
-template <TensorFor<base::TensorSlowCpu> _Tensor1, TensorFor<base::TensorSlowCpu> _Tensor2>
+template <TensorFor<base::Tensor> _Tensor1, TensorFor<base::Tensor> _Tensor2>
 bool operator==(_Tensor1&& tensor1, _Tensor2&& tensor2)
 {
   constexpr size_t _Rank = std::decay_t<decltype(tensor1)>::Rank();
