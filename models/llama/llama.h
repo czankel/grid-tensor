@@ -55,8 +55,12 @@ class LLaMAModelT : public LLaMAModel
   /// Using two allocators, default for dynamic tensors, and memory-mapped for file tensors.
   using Tensor1D = Tensor<T, 1>;
   using Tensor2D = Tensor<T, 2>;
+#if 0
   using TensorFile1D = Tensor<T, 1, MemoryMapped<T>>;
   using TensorFile2D = Tensor<T, 2, MemoryMapped<T>>;
+#endif
+  using TensorFile1D = Tensor<T, 1, NoAllocator>;
+  using TensorFile2D = Tensor<T, 2, NoAllocator>;
 
  public:
   LLaMAModelT() = default;

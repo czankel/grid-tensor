@@ -9,6 +9,9 @@
 #ifndef GRID_TENSOR_TENSOR_BASE_H
 #define GRID_TENSOR_TENSOR_BASE_H
 
+#include "tensor.h"
+#include "mmap.h"
+
 #include "base/tensor.h"
 
 #include "base/addition.h"

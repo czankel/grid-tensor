@@ -22,14 +22,9 @@
 #include <stdexcept>
 #include <string>
 
-#include "tensor_parameters.h"
+#include "array.h"
 
 namespace grid {
-
-#if 0
-class MMapView;
-template <typename, size_t> struct MMapArray;
-#endif
 
 /// MMap represents a memory-maped file.
 class MMap
@@ -118,38 +113,6 @@ class MMap
   size_t  file_size_;
 };
 
-// FIXME: rename to MMapAllocator or MemoryMapAllocator
-// FIXME: move to mmap.h??
-/// MemoryMapped is used as a non-type template parameter declaring a memory-mapped tensor type.
-/// Defining a memory-mapped tensor ... TensorImplementation<double, 2, grid::MemoryMapped{})
-template <typename T> class MemoryMapped
-{
- public:
-  using value_type = T;
-  using size_type = size_t;
-  using difference_type = std::ptrdiff_t;
-
-  MemoryMapped(std::shared_ptr<MMap> mmap, size_t offset = 0UL)
-    : mmap_(mmap),
-      base_(static_cast<char*>(mmap->Address()) + offset),
-      addr_(static_cast<char*>(mmap->Address()) + offset),
-      end_(static_cast<char*>(mmap->End()) - offset)
-  {}
-
-  [[nodiscard]] constexpr T* allocate(std::size_t n)
-  {
-  }
-
-  constexpr void deallocate(T* p, std::size_t n);
-
- private:
-  std::shared_ptr<MMap> mmap_;
-  char* base_;
-  char* addr_;
-  char* end_;
-};
-
-
 
 /// MMapView provides a "view" into a memory-mmaped file and includes a current position for
 /// sequential "read" operations.
@@ -234,24 +197,43 @@ class MMapView
     return std::string(str, len);
   }
 
+  /// Array returns an ArrayView of the specified primitive for a memory mapped reagion.
+  template <typename T, size_t _Rank>
+  ArrayView<T, _Rank> Array(const size_t(&dims)[_Rank], const ssize_t(&strides)[_Rank])
+  {
+    auto arr = ArrayView<T, _Rank>(reinterpret_cast<T>(addr_), dims, strides);
+    addr_ += arr.Size();
+    return arr;
+  }
 
-  // FIXME: drop MMapArray, use Address and Seek
-#if 0
-  /// Array returns a MMapArray of the specified primitive for a memory mapped reagion.
-  template <typename _T, size_t _Rank>  MMapArray<_T, _Rank>
-  Array(const size_t(&)[_Rank], const ssize_t(&)[_Rank], size_t offset = 0UL);
+  template <typename T, size_t _Rank>
+  ArrayView<T, _Rank>
+  Array(const std::array<size_t, _Rank>& dims, const std::array<ssize_t, _Rank>& strides)
+  {
+    auto arr = ArrayView<T, _Rank>(reinterpret_cast<T*>(addr_), dims, strides);
+    addr_ += arr.Size();
+    return arr;
+  }
 
-  template <typename _T, size_t _Rank>  MMapArray<_T, _Rank>
-  Array(const std::array<size_t, _Rank>&, const std::array<ssize_t, _Rank>&, size_t offset = 0UL);
+  /// Array returns an ArrayView of the specified primitive for a memory mapped reagion.
+  template <typename T, size_t _Rank>
+  ArrayView<T, _Rank>
+  Array(const size_t(&dims)[_Rank])
+  {
+    auto arr = ArrayView<T, _Rank>(reinterpret_cast<T*>(addr_), dims);
+    addr_ += arr.Size();
+    return arr;
+  }
 
+  template <typename T, size_t _Rank>
+  ArrayView<T, _Rank>
+  Array(const std::array<size_t, _Rank>& dims)
+  {
+    auto arr = ArrayView<T, _Rank>(reinterpret_cast<T>(addr_), dims);
+    addr_ += arr.Size();
+    return arr;
+  }
 
-  /// Array returns a MMapArray of the specified primitive for a memory mapped reagion.
-  template <typename _T, size_t _Rank>  MMapArray<_T, _Rank>
-  Array(const size_t(&)[_Rank], size_t offset = 0UL);
-
-  template <typename _T, size_t _Rank>  MMapArray<_T, _Rank>
-  Array(const std::array<size_t, _Rank>&, size_t offset = 0UL);
-#endif
 
   /// Align aligns the position to the next aligned position.
   void Align(int alignment)
@@ -265,10 +247,10 @@ class MMapView
     addr_ = next;
   }
 
-  /// Address returns the current position in the mmaped file -- FIXME is address of position?
+  /// Address returns the current position in the mmaped file
   void* Address()                                        { return addr_; }
 
-  /// Offset returns the offset of the mmaped region. --- FIXME??
+  /// Offset returns the offset of the mmaped region.
   size_t Offset()
   {
     return reinterpret_cast<uintptr_t>(addr_) - reinterpret_cast<uintptr_t>(mmap_->Address());
@@ -281,10 +263,10 @@ class MMapView
   }
 
   /// Size returns the size of the view.
-  size_t Size()                                           { return end_ - base_; }
+  size_t Size() const                                     { return end_ - base_; }
 
 
-  /// Seek advances the current position by len bytes.
+  /// Seek advances the current position by len bytes and returns the current position.
   void Seek(ssize_t len)
   {
     if (addr_ + len > end_ || addr_ + len < base_)
@@ -300,111 +282,10 @@ class MMapView
   char* end_;
 };
 
-
-// FIXME: remove
 #if 0
-template <typename _T, size_t _Rank>
-struct MMapArray
-{
-  /// Constructor for an array of a memory-mapped file for the given dimentions and strides.
-  MMapArray(std::shared_ptr<MMap> mmap,
-            const size_t(&dims)[_Rank],
-            const ssize_t(&strides)[_Rank],
-            size_t offset = 0UL)
-    : mmap_(std::move(mmap)),
-      offset_(offset),
-      dims_(get_array<size_t, _Rank>(dims)),
-      strides_(get_array<ssize_t, _Rank>(strides))
-  {
-    if (offset_ + Size() > mmap_->Size())
-      throw std::out_of_range("array exceeding memory-mapped range");
-  }
-
-  /// Constructor for an array of a memory-mapped file for the given dimentions and strides.
-  MMapArray(std::shared_ptr<MMap> mmap,
-            const size_t(&dims)[_Rank],
-            size_t offset = 0UL)
-    : mmap_(std::move(mmap)),
-      offset_(offset),
-      dims_(get_array<size_t, _Rank>(dims)),
-      strides_(make_strides<_T>(dims_))
-  {
-    if (offset_ + Size() > mmap_->Size())
-      throw std::out_of_range("array exceeding memory-mapped range");
-  }
-
-  /// Constructor for an array of a memory-mapped file for the given dimentions (no padding).
-  MMapArray(std::shared_ptr<MMap> mmap,
-            const std::array<size_t, _Rank>& dims,
-            size_t offset = 0UL)
-    : mmap_(std::move(mmap)),
-      offset_(offset),
-      dims_(dims),
-      strides_(make_strides<_T>(dims_))
-  {
-    if (offset_ + Size() > mmap_->Size())
-      throw std::out_of_range("array exceeding memory-mapped range");
-  }
-
-
-  /// Constructor for an array of a memory-mapped file for the given dimentions (no padding).
-  MMapArray(std::shared_ptr<MMap> mmap,
-            const std::array<size_t, _Rank>& dims,
-            const std::array<ssize_t, _Rank>& strides,
-            size_t offset = 0UL)
-    : mmap_(std::move(mmap)),
-      offset_(offset),
-      dims_(dims),
-      strides_(strides)
-  {
-    if (offset_ + Size() > mmap_->Size())
-      throw std::out_of_range("array exceeding memory-mapped range");
-  }
-
-  /// Size returns the size of the array in bytes.
-  size_t Size()                                           { return strides_[0] * dims_[0]; }
-
-
-  std::shared_ptr<MMap>       mmap_;
-  size_t                      offset_;
-  std::array<size_t, _Rank>   dims_;
-  std::array<ssize_t, _Rank>  strides_;
-};
-#endif
-#if 0
-template <typename _T, size_t _Rank>  MMapArray<_T, _Rank>
-inline MMapView::Array(const size_t(&dims)[_Rank],
-                       const ssize_t(&strides)[_Rank],
-                       size_t offset)
-{
-  auto arr = MMapArray<_T, _Rank>(mmap_, addr_ - static_cast<char*>(mmap_->Address()), dims, strides);
-  addr_ += arr.Size();
-  return arr;
-}
-
-
-template <typename _T, size_t _Rank>  MMapArray<_T, _Rank>
-inline MMapView::Array(const std::array<size_t, _Rank>& dims,
-                       const std::array<ssize_t, _Rank>& strides,
-                       size_t offset)
-{
-  auto arr = MMapArray<_T, _Rank>(mmap_, dims, strides, addr_ - static_cast<char*>(mmap_->Address()));
-  addr_ += arr.Size();
-  return arr;
-}
-
-template <typename _T, size_t _Rank>  MMapArray<_T, _Rank>
-inline MMapView::Array(const size_t(&dims)[_Rank], size_t offset)
-{
-  auto arr = MMapArray<_T, _Rank>(mmap_, dims, addr_ - static_cast<char*>(mmap_->Address()));
-  addr_ += arr.Size();
-  return arr;
-}
-#endif
-
 template< class T1, class T2 >
 constexpr bool operator==(const MemoryMapped<T1>& lhs, const MemoryMapped<T2>& rhs) noexcept;
-
+#endif
 
 } // namespace grid
 

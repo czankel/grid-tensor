@@ -100,9 +100,8 @@ equals(const _Tp* src1, const _Tp* src2,
 template <PrimitiveTensor  _Tensor1, PrimitiveTensor _Tensor2>
 bool operator==(_Tensor1&& tensor1, _Tensor2&& tensor2)
 {
-  // FIXME: decay seems wrong??? remove_cvref ?
-  constexpr size_t _Rank = std::decay_t<decltype(tensor1)>::rank;
-  static_assert(_Rank == std::decay_t<decltype(tensor2)>::rank,
+  constexpr size_t _Rank = std::remove_cvref_t<decltype(tensor1)>::rank;
+  static_assert(_Rank == std::remove_cvref_t<decltype(tensor2)>::rank,
                 "ranks mismatch between tensors");
 
   return base::equals<typename std::remove_cvref_t<_Tensor1>::value_type, _Rank>(

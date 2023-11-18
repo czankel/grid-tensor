@@ -11,6 +11,8 @@
 
 #include <iostream>
 
+#include "mmap.h"
+
 /// Tensor is an implementation of an "AI Tensor" for vector and matrix operations, and follows
 /// less the mathematical or physical definition.
 ///
@@ -18,12 +20,13 @@
 /// @tparam _Rank       Rank of the tensor with 0: scalar, 1: vector, 2: matrix, etc.
 /// @tparam _Allocator  Stateless allocator; defaults to std::allocator
 ///
+///
 /// Tensors define these member types:
 ///
 ///   value_type        _Tp
-///   allocator_type
-///   pointer           _Tp* (could be different for 'device' tensors)
-///   const_pointer     const _Tp*
+///   allocator_type    _Allocator
+///   pointer           Pointer type; depends on the implementation
+///   const_pointer     Constant pointer type; depends on the implementation
 ///
 ///
 /// Tensors also provide the following member methods:
@@ -35,13 +38,15 @@
 ///   const_pointer              Data() const
 ///
 ///
-/// A tensor view is also a tensor but doesn't own the data buffer. Instead, it points to
-/// the data buffer of another tensor. Because of the object lifetime of the tensor, it has
-/// some restrictions:
+/// Tensor View
 ///
-///  - A view can only be assigned to a tensor (or tensor view).
-///  - If a tensor (or tensor view is assigned to the view, the data is always copied to the
-///    'view' area, even if the other object is a rvalue reference.
+///   Tensor views are tensors that don't have "ownership" of the data but provide a "view" into
+///   the underlying tensor. Because of the object lifetime of the tensor, it comes with restrictions:
+///
+///    - A view is not default constructible and can only be assigned to a tensor (or other tensor view).
+///    - If a tensor (or tensor view is assigned to a view, the data is always copied to the view,
+///      even if the source object is a rvalue reference.
+///
 ///
 /// Allocators
 ///
@@ -65,8 +70,11 @@ namespace grid {
 
 constexpr static size_t kMaxRank = 4;
 
-/// StaticAllocator is a special "allocator for constant static data.
+/// StaticAllocator is a special "allocator" for constant static data.
 template <size_t...> struct StaticAllocator {};
+
+/// NoAllocator is a spcial "allocator" for an externally managed buffer.
+struct NoAllocator {};
 
 /// Broadcast defines to set the dimension to 1 ("broadcastable") in the axes argument of Tensor::View.
 inline constexpr ssize_t Broadcast = -1;
@@ -87,36 +95,22 @@ inline constexpr bool is_tensor_v =
 
 /// is_operator_v<_Operator> checks if a type is tensor operator, which requires to have a member
 /// operator()() overload.
+/// TODO: check also template signature
 template <typename _Operator>
 inline constexpr bool is_operator_v = requires (const _Operator& t) { t.operator()(); };
 
 
-// FIXME: use decltype?? merge with to_tensor?
-// helper class for identifying the result tensor of a tensor operation class
-template <typename _Operator> struct result_of;
-template <template <template <typename, size_t, typename...> typename, typename, size_t, typename...> typename _Operator,
-          template <typename, size_t, typename...> typename _Tensor, size_t _Rank, typename _T, typename _Allocator, typename... _Tensors>
-struct result_of<_Operator<_Tensor, _T, _Rank, _Allocator, _Tensors...>>
-{
-  using type = _Tensor<_T, _Rank, _Allocator>;
-  // FIXME decltype(std::invoke_return<&_Operator::operator(),_Operator>);
-};
-
-// FIXME: what's this? Make this a concept?
-// helper class for getting the tensor type of the tensor or tensor operation, which returns the default tensor.
+// to_tensor provides the type of the tensor or the type of the tensor resulting from a  tensor operation
 template <typename> struct to_tensor;
-
-template <template <typename, size_t, typename...> typename _Tensor, typename _T, size_t _Rank, typename... _Allocator>
-struct to_tensor<_Tensor<_T, _Rank, _Allocator...>>
-{
-  using type = _Tensor<_T, _Rank, _Allocator...>;
-};
-
-template <typename _Tensor>
-requires (is_operator_v<_Tensor>)
+template <typename _Tensor> requires (is_tensor_v<_Tensor> && !is_operator_v<_Tensor>)
 struct to_tensor<_Tensor>
 {
-  using type = typename result_of<_Tensor>::type;
+  using type = _Tensor;
+};
+template <typename _Operator> requires is_operator_v<_Operator>
+struct to_tensor<_Operator>
+{
+  using type = typename std::invoke_result<decltype(&_Operator::operator()), _Operator>::type;
 };
 
 
@@ -143,8 +137,6 @@ struct tensor_is_convertible_to<_Tensor1<_Tensor2, _Tp, _Rank, _Tensors...>, _Te
 {};
 
 
-
-// FIXME: can/should this be done purely as a concept?
 // tensor_is_primitive checks if a tensor includes a Data() member function thatJ returns an
 // artihmetic pointer type.
 template <typename _Tensor> using tensor_data_return_type = decltype(std::declval<_Tensor>().Data());
@@ -165,15 +157,11 @@ concept AnyTensor = is_tensor_v<_Tensor>;
 /// PrimitiveTensor requires that the buffer is directly accessible and consists of primitive types,
 template <typename _Tensor>
 concept PrimitiveTensor = AnyTensor<_Tensor> && tensor_is_primitive<_Tensor>::value;
-// FIXME: _Tensor&.Data() -> PrimitivePointer ??
-
-// TODO: TriviallyMappable requires that the tensor can be mapped to a trivial buffer but may incur a cost.
 
 /// AnyOperator requires that the provided argument is a tensor operator.
 template <typename _Operator>
 concept AnyOperator = is_operator_v<_Operator>;
 
-// FIXME: ConvertibleTensor??
 /// TensorConvertible requires that the tensor is a tensor or functor that returns a tensor
 template <typename _Tensor>
 concept TensorConvertible = is_tensor_v<_Tensor> || is_operator_v<_Tensor>;

@@ -7,6 +7,8 @@
 //
 
 #include <grid/tensor/tensor.h>
+
+// note: include these directly to reduce dependencies
 #include <grid/tensor/base/tensor.h>
 #include <grid/tensor/base/comparison.h>
 

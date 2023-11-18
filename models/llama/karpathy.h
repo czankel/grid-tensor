@@ -70,8 +70,7 @@ void KarpathyFile::Load(LLaMAModelT<Tensor, T>& model, const LLaMAFile& file) co
   // Tensor(view, {param.vocab_size, dim});
   // Seek view.Size()??
   // FIXME model.embeddings_ = Tensor(view.Array<T>({param.vocab_size, dim}));
-  model.embeddings_ = Tensor(model.mmap, {param.vocab_size, dim}, MemoryMap<T>);
-// FIXME: end move to model
+  model.embeddings_ = Tensor(view.Array<T>({param.vocab_size, dim}));
 
   // Karpathy orders the layer weights by the weights instead of layer
   model.layers_.resize(param.n_layers);
@@ -79,6 +78,7 @@ void KarpathyFile::Load(LLaMAModelT<Tensor, T>& model, const LLaMAFile& file) co
 
   for (int i = 0; i < param.n_layers; i++)
     layers[i].rms_att_weight_ = Tensor(view.Array<T>({dim}));
+   // FIXME: array does have something.... 
 #if 0
   for (i: param.n_layers)
     model.layers_[i].wq_ = Tensor(view.Array<T>({dim, n_kv_heads * head_size}));

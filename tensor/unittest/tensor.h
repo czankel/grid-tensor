@@ -226,10 +226,6 @@ TYPED_TEST_P(TensorTestSuite, TensorViewAllocInitializationTensor)
 
 TYPED_TEST_P(TensorTestSuite, TensorBroadcast1to2)
 {
-  // FIXME what's this?
-  //typename TypeParam::Tensor row = tensor1.View({grid::Broadcast, 0});
-  //EXPECT_EQ(row.Rank() = 1);
-
   typename TypeParam::Tensor tensor(4UL, 1.1);
   auto broadcast1 = tensor.View({0, grid::Broadcast});
   EXPECT_EQ(broadcast1.Rank(), 2);

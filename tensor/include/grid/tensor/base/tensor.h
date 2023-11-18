@@ -15,18 +15,14 @@
 #include <bitset>
 #include <initializer_list>
 
-#include "../mmap.h"
-#include "../tensor.h"
-#include "../tensor_parameters.h"
-
 #include "copy.h"
 
 namespace grid {
 namespace base {
 
-template <AnyTensor, size_t> class TensorView;
+template <PrimitiveTensor, size_t> class TensorView;
 
-/// Tensor provides a base implementation that is not optimized.
+/// Tensor provides an non-optimized base implementation of tensors.
 /// Note that the implementation implicitly requires that the buffer and strides are aligned to the value type.
 template <typename _Tp, size_t _Rank, typename Allocator=std::allocator<_Tp>>
 class Tensor
@@ -153,7 +149,7 @@ class Tensor
                   value_type init)
     : dims_(get_array<size_t, _Rank>(std::move(dims))),
       strides_(get_array<ssize_t, _Rank>(std::move(strides))),
-      size_(dims_[0] * strides_[0]), // FIXME potentially wrong
+      size_(get_buffer_size(dims_, strides_)),
       data_(new value_type[size_ / sizeof(value_type)])
   {
     initialize(data_, std::span{dims_}, std::span{strides_}, init);
@@ -165,7 +161,7 @@ class Tensor
                   Uninitialized<value_type>)
     : dims_(get_array<size_t, _Rank>(std::move(dims))),
       strides_(get_array<ssize_t, _Rank>(std::move(strides))),
-      size_(dims_[0] * strides_[0]), // FIXME potentially wrong
+      size_(get_buffer_size(dims_, strides_)),
       data_(new value_type[size_ / sizeof(value_type)])
   {}
 
@@ -173,7 +169,7 @@ class Tensor
   explicit Tensor(const size_t(&dim)[_Rank], const ssize_t(&stride)[_Rank], value_type init)
     : dims_(get_array<size_t, _Rank>(dim)),
       strides_(get_array<ssize_t, _Rank>(stride)),
-      size_(dims_[0] * strides_[0]), // FIXME: potentially wrong
+      size_(get_buffer_size(dims_, strides_)),
       data_(new value_type[size_ / sizeof(value_type)])
   {
     initialize(data_, std::span{dims_}, std::span{strides_}, init);
@@ -183,7 +179,7 @@ class Tensor
   explicit Tensor(const size_t(&dim)[_Rank], const ssize_t(&stride)[_Rank], Uninitialized<value_type>)
     : dims_(get_array<size_t, _Rank>(dim)),
       strides_(get_array<ssize_t, _Rank>(stride)),
-      size_(dims_[0] * strides_[0]),  // FIXME: potentially wrong
+      size_(get_buffer_size(dims_, strides_)),
       data_(new value_type[size_ / sizeof(value_type)])
   {}
 
@@ -192,25 +188,27 @@ class Tensor
   explicit Tensor(std::array<size_t, _Rank> dims, value_type init)
     : dims_(dims),
       strides_(make_strides<value_type>(dims)),
-      size_(dims_[0] * strides_[0]), // FIXME: potentially wrong
+      size_(get_buffer_size(dims_, strides_)),
       data_(new value_type[size_ / sizeof(value_type)])
   {
     initialize<_Rank>(data_, dims_, strides_, init);
   }
 
   /// Constructor for any rank tensor with a dynamically allocated initialized buffer with padding.
+  /// Note: assumes strides are type-aligned.
   explicit Tensor(std::array<size_t, _Rank> dims,
                   std::array<ssize_t, _Rank> strides,
                   value_type init)
     : dims_{dims},
       strides_{strides},
-      size_(dims_[0] * strides_[0]),   // FIXME: potentially wrong
-      data_(new value_type[size_ / sizeof(value_type)]) // FIXME??
+      size_(get_buffer_size(dims_, strides_)),
+      data_(new value_type[size_ / sizeof(value_type)])
   {
     initialize<_Rank>(data_, dims_, strides_, init);
   }
 
   /// Constructor for any rank tensor with a dynamically allocated uninitialized buffer.
+  /// Note: assumes strides are type-aligned.
   explicit Tensor(std::array<size_t, _Rank> dims, Uninitialized<value_type>)
     : dims_{dims},
       strides_{make_strides<value_type>(dims)},
@@ -219,6 +217,7 @@ class Tensor
   {}
 
   /// Constructor for any rank tensor with a dynamically allocated uninitialized buffer with padding.
+  /// Note: assumes strides are type-aligned.
   explicit Tensor(std::array<size_t, _Rank> dims,
                   std::array<ssize_t, _Rank> strides,
                   Uninitialized<value_type>)
@@ -230,6 +229,7 @@ class Tensor
 
 
   /// Constructor from a 'trivially copyable' tensor.
+  /// Note: assumes strides are type-aligned.
   template <PrimitiveTensor _Tensor>
   Tensor(const _Tensor& other)
     : dims_(other.Dimensions()),
@@ -297,20 +297,6 @@ class Tensor
   }
 
 
-  /// Copy is an assignment to a view of this tensor.
-  template <size_t _ViewRank, PrimitiveTensor _Tensor>
-  auto Copy(size_t offset,
-            const std::array<size_t, _ViewRank>& dims,
-            const std::array<ssize_t, _ViewRank>& strides,
-            const _Tensor& source)
-  {
-    char* ptr = reinterpret_cast<char*>(data_);
-    copy<value_type, _ViewRank>(reinterpret_cast<pointer>(ptr + offset), source.Data(), dims, strides, source.Strides());
-  }
-
-  // TODO: Add Tensor::Copy(Tensor&&)?
-
-
   /// Rank returns the rank of the tensor.
   constexpr static size_t Rank()                          { return _Rank; }
 
@@ -338,8 +324,8 @@ class Tensor
 
 
 /// Tensor<_Tp, 0, 1> is a specialization of a rank-0 tensor (scalar).
-template <typename _Tp>//, typename... _Allocator>
-class Tensor<_Tp, 0>//, _Allocator...>
+template <typename _Tp>
+class Tensor<_Tp, 0>
 {
  public:
   using value_type = _Tp;
@@ -390,7 +376,7 @@ class Tensor<_Tp, 1, StaticAllocator<_N>>
  public:
   using value_type = _Tp;
   using allocator_type = StaticAllocator<_N>;
-  using pointer = _Tp*;
+  using pointer = const _Tp*;
   using const_pointer = const _Tp*;
   constexpr static size_t rank = 1UL;
 
@@ -440,7 +426,7 @@ class Tensor<_Tp, 2, StaticAllocator<_M, _N>>
  public:
   using value_type = _Tp;
   using allocator_type = StaticAllocator<_M, _N>;
-  using pointer = _Tp*;
+  using pointer = const _Tp*;
   using const_pointer = const _Tp*;
   constexpr static size_t rank = 2UL;
 
@@ -493,7 +479,7 @@ class Tensor<_Tp, 3, StaticAllocator<_C, _M, _N>>
  public:
   using value_type = _Tp;
   using allocator_type = StaticAllocator<_C, _M, _N>;
-  using pointer = _Tp*;
+  using pointer = const _Tp*;
   using const_pointer = const _Tp*;
   constexpr static size_t rank = 3UL;
 
@@ -538,49 +524,33 @@ class Tensor<_Tp, 3, StaticAllocator<_C, _M, _N>>
 };
 
 
-/// Tensor<_Tp, _Rank, MemoryMapped{}> is a tensor for memory-mapped data
+/// Tensor<_Tp, _Rank, NoAllocator> is a tensor for an externally managed buffer
 template <typename _Tp, size_t _Rank>
-class Tensor<_Tp, _Rank, MemoryMapped<_Tp>>
+class Tensor<_Tp, _Rank, NoAllocator>
 {
  public:
   using value_type = _Tp;
-  using allocator_type = MemoryMapped<_Tp>;
+  using allocator_type = NoAllocator;
   using pointer = _Tp*;
   using const_pointer = const _Tp*;
   constexpr static size_t rank = _Rank;
 
   explicit Tensor() {}
 
-  // FIXME: type!!!
-  explicit Tensor(std::shared_ptr<MMap> mmap,
-                  const size_t(&dims)[_Rank],
-                  const ssize_t(&strides)[_Rank],
-                  size_t offset = 0UL)
-      : dims_(dims),
-        strides_(strides),
-        mmap_(mmap),
-        data_(reinterpret_cast<pointer>(static_cast<char*>(mmap_->Address()) + offset)),
-        size_(get_buffer_size<value_type>(dims_, strides_))
+  explicit Tensor(const ArrayView<value_type, _Rank>& arr)
+    : dims_(arr.Dimensions()),
+      strides_(arr.Strides()),
+      size_(arr.Size()),
+      data_(arr.Data())
   {}
 
-#if 0
-  /// Constructor for a memory-mapped buffer.
-  explicit Tensor(const MMapArray<value_type, _Rank>& arr)
-    : //size_(strides_[0] * dims_[0]),
-      dims_(arr.dims_),
-      strides_(arr.strides_),
-      mmap_(arr.mmap_),
-      data_(reinterpret_cast<pointer>(static_cast<char*>(mmap_->Address()) + arr.offset_))
+  explicit Tensor(ArrayView<value_type, _Rank>&& arr)
+    : dims_(std::move(arr.Dimensions())),
+      strides_(std::move(arr.Strides())),
+      size_(arr.Size()),
+      data_(std::move(arr.Data()))
   {}
 
-  // Constructor for a memory-mapped buffer.
-  explicit Tensor(MMapArray<value_type, _Rank>&& arr)
-    : dims_(std::move(arr.dims_)),
-      strides_(std::move(arr.strides_)),
-      mmap_(std::move(arr.mmap_)),
-      data_(reinterpret_cast<pointer>(static_cast<char*>(mmap_->Address()) + arr.offset_))
-  {}
-#endif
 
   /// View returns a "view" of the tensor, which can be a "sub-tensor" or add "broadcastable" axes.
   /// It requires that the underlying tensor's lifetime is ...
@@ -603,18 +573,16 @@ class Tensor<_Tp, _Rank, MemoryMapped<_Tp>>
   /// Strides returns the strides of the tensor.
   const std::array<ssize_t, _Rank>& Strides() const       { return strides_; }
 
-  /// FIXME wrong...
   /// Size returns the data buffer size.
-  size_t Size() const                                     { return mmap_->Size(); }
+  size_t Size() const                                     { return size_; }
 
   /// Data returns a pointer to the data buffer.
   const_pointer Data() const                              { return data_; }
 
 
-  size_t                      size_;
   std::array<size_t, _Rank>   dims_;
   std::array<ssize_t, _Rank>  strides_;
-  std::shared_ptr<MMap>       mmap_;
+  size_t                      size_;
   pointer                     data_;
 };
 
@@ -624,7 +592,7 @@ class Tensor<_Tp, _Rank, MemoryMapped<_Tp>>
 /// A view cannot be created from a temporary rval; it will return a tensor.
 ///
 //
-template <AnyTensor _Tensor, size_t _Rank>
+template <PrimitiveTensor _Tensor, size_t _Rank>
 class TensorView
 {
  public:
@@ -636,12 +604,22 @@ class TensorView
   // TensorView must be in the same scope and lifetime as the underlying tensor.
   TensorView() = delete;
 
+  // helper for a (value) const-qualified pointer cast
+  template <typename T, typename S> requires (std::is_const_v<std::remove_pointer_t<S>>)
+  const std::remove_pointer_t<T>* pointer_cast(S pointer)
+  {
+    return reinterpret_cast<const std::remove_pointer_t<T>*>(pointer);
+  }
+  template <typename T, typename S> requires (!std::is_const_v<std::remove_pointer_t<S>>)
+  std::remove_pointer_t<T>* pointer_cast(S pointer)
+  {
+    return reinterpret_cast<std::remove_pointer_t<T>*>(pointer);
+  }
+ 
   /// Constructor
   template <size_t _TensorRank>
   explicit TensorView(_Tensor& tensor, const ssize_t(& axes)[_Rank], const ssize_t(& offsets)[_TensorRank])
-    : tensor_(tensor),
-      offset_(0UL),
-      size_(0UL)
+    : size_(0UL)
   {
     std::bitset<_TensorRank> handled = false;
     auto strides = tensor.Strides();
@@ -668,21 +646,23 @@ class TensorView
         throw std::runtime_error("Invalid axis");
     }
 
+    size_t offset = 0UL;
     for (size_t i = 0; i < _TensorRank; i++)
     {
       if (offsets[i] > static_cast<ssize_t>(tensor.dims_[i] * tensor.strides_[i]))
         throw std::runtime_error("Offset exceeds dimension");
-      offset_ += offsets[i] * tensor.strides_[i];
+      offset += offsets[i] * tensor.strides_[i];
     }
+
+    data_ = reinterpret_cast<pointer>(pointer_cast<char*>(tensor.Data()) + offset);
   }
 
 
-  /// operator=(Tensor) copies data from the rhs tensor (or view) into the view of this tensor.
+  /// operator=(Tensor) copies data from the rhs tensor (or view) into the view of the dependent tensor.
   template <AnyTensor _FromTensor> requires (_FromTensor::rank == _Rank)
   auto operator=(const _FromTensor& rhs)
   {
-    tensor_.Copy(offset_, dims_, strides_, rhs);
-    return *this;
+    copy<value_type, _Rank>(data_, rhs.Data(), dims_, strides_, rhs.Strides());
   }
 
 
@@ -696,24 +676,17 @@ class TensorView
   const std::array<ssize_t, _Rank>& Strides() const       { return strides_; }
 
   /// Size returns the data buffer size.
-  size_t Size()                                           { return size_; }
+  size_t Size() const                                     { return size_; }
 
   /// Data returns a pointer to the data buffer.
-  pointer Data()                                          
-  {
-    return reinterpret_cast<pointer>(reinterpret_cast<char*>(tensor_.Data()) + offset_);
-  }
-  const_pointer Data() const
-  {
-    return reinterpret_cast<const_pointer>(reinterpret_cast<const char*>(tensor_.Data()) + offset_);
-  }
+  pointer Data()                                          { return &data_; }
+  const_pointer Data() const                              { return data_; }
 
-  _Tensor&                    tensor_;
-
+ private:
   std::array<size_t, _Rank>   dims_;
   std::array<ssize_t, _Rank>  strides_;
-  size_t                      offset_;
   size_t                      size_;
+  pointer                     data_;
 };
 
 // CTAD rules
@@ -806,19 +779,13 @@ explicit Tensor(std::array<size_t, _N>, Uninitialized<_Tp>) -> Tensor<_Tp, _N>;
 template <typename _Tp, size_t _N>
 explicit Tensor(std::array<size_t, _N>, std::array<ssize_t, _N>, Uninitialized<_Tp>) -> Tensor<_Tp, _N>;
 
-#if 0 // FIXME
-// Tensor<mmap, dim, strides> -> Rank-N tensor for a memory mapped buffer
+// Tensor<ArrayView> -> Rank-N tensor for an externally managed buffer
 template <typename _Tp, size_t _N>
-explicit Tensor(MMapArray<_Tp, _N>) -> Tensor<_Tp, _N, MemoryMapped<_Tp>>;
-#endif
-// Tensor<mmap, dim, strides> -> Rank-N tensor for a memory mapped buffer
-#if 0
+explicit Tensor(const ArrayView<_Tp, _N>&) -> Tensor<_Tp, _N, NoAllocator>;
 template <typename _Tp, size_t _N>
-explicit Tensor(std::shared_ptr<MMap>, const size_t(&)[_N], const ssize_t(&)[_N]) -> Tensor<_Tp, _N, MemoryMapped<_Tp>>;
-#endif
+explicit Tensor(ArrayView<_Tp, _N>&&) -> Tensor<_Tp, _N, NoAllocator>;
 
 // TensorView
-// FIXME: use Concept?
 template <typename _Tensor, size_t _Rank>
 Tensor(TensorView<_Tensor, _Rank>&&) -> Tensor<typename _Tensor::value_type, _Rank>;
 
