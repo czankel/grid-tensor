@@ -8,8 +8,8 @@
 
 // DO NOT INCLUDE THIS FILE DIRECTLY
 
-#ifndef GRID_TENSOR_SLOWCPU_COMPARISON_H
-#define GRID_TENSOR_SLOWCPU_COMPARISON_H
+#ifndef GRID_TENSOR_BASE_COMPARISON_H
+#define GRID_TENSOR_BASE_COMPARISON_H
 
 #include <type_traits>
 
@@ -115,4 +115,4 @@ bool operator==(_Tensor1&& tensor1, _Tensor2&& tensor2)
 
 } // end of namespace grid
 
-#endif // GRID_TENSOR_SLOWCPU_COMPARISON_H
+#endif // GRID_TENSOR_BASE_COMPARISON_H

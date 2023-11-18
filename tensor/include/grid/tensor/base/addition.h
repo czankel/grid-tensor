@@ -8,8 +8,8 @@
 
 // DO NOT INCLUDE THIS FILE DIRECTLY
 
-#ifndef GRID_TENSOR_SLOWCPU_ADDITION_H
-#define GRID_TENSOR_SLOWCPU_ADDITION_H
+#ifndef GRID_TENSOR_BASE_ADDITION_H
+#define GRID_TENSOR_BASE_ADDITION_H
 
 namespace grid {
 
@@ -107,4 +107,4 @@ TensorAdd(_Tensor1, _Tensor2)
 
 } // end of namespace grid
 
-#endif // GRID_TENSOR_SLOWCPU_ADDITION_H
+#endif // GRID_TENSOR_BASE_ADDITION_H

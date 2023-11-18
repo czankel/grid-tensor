@@ -7,8 +7,8 @@
 //
 
 #include <grid/tensor/tensor.h>
-#include <grid/tensor/slowcpu/tensor.h>
-#include <grid/tensor/slowcpu/comparison.h>
+#include <grid/tensor/base/tensor.h>
+#include <grid/tensor/base/comparison.h>
 
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"

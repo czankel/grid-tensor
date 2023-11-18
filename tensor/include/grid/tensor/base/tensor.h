@@ -8,8 +8,8 @@
 
 // DO NOT INCLUDE THIS FILE DIRECTLY
 
-#ifndef GRID_TENSOR_SLOWCPU_TENSOR_H
-#define GRID_TENSOR_SLOWCPU_TENSOR_H
+#ifndef GRID_TENSOR_BASE_TENSOR_H
+#define GRID_TENSOR_BASE_TENSOR_H
 
 #include <algorithm>
 #include <array>
@@ -501,4 +501,4 @@ TensorSlowCpu(const _TensorOp<_TensorRT,_T,  _Rank, _Tensors...>&) -> TensorSlow
 
 } // end of namespace grid
 
-#endif  // GRID_TENSOR_SLOWCPU_TENSOR_H
+#endif  // GRID_TENSOR_BASE_TENSOR_H

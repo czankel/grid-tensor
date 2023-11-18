@@ -8,8 +8,8 @@
 
 // DO NOT INCLUDE THIS FILE DIRECTLY
 
-#ifndef GRID_TENSOR_SLOWCPU_RMS_NORN_H
-#define GRID_TENSOR_SLOWCPU_RMS_NORN_H
+#ifndef GRID_TENSOR_BASE_RMS_NORN_H
+#define GRID_TENSOR_BASE_RMS_NORN_H
 
 #include <math.h>
 #include <tuple>
@@ -100,4 +100,4 @@ TensorRmsNorm(_Tensor)
 
 } // end of namespace grid
 
-#endif // GRID_TENSOR_SLOWCPU_RMS_NORN_H
+#endif // GRID_TENSOR_BASE_RMS_NORN_H

@@ -8,8 +8,8 @@
 
 // DO NOT INCLUDE THIS FILE DIRECTLY
 
-#ifndef GRID_TENSOR_SLOWCPU_MULTIPLY_H
-#define GRID_TENSOR_SLOWCPU_MULTIPLY_H
+#ifndef GRID_TENSOR_BASE_MULTIPLY_H
+#define GRID_TENSOR_BASE_MULTIPLY_H
 
 #include <algorithm>
 
@@ -175,4 +175,4 @@ TensorMul(_Tensor1, _Tensor2)
 
 } // end of namespace grid
 
-#endif  // GRID_TENSOR_SLOWCPU_MULTIPLY_H
+#endif  // GRID_TENSOR_BASE_MULTIPLY_H
