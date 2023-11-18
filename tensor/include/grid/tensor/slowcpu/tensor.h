@@ -19,8 +19,8 @@
 #include <numeric>
 #include <span>
 
-#include <grid/tensor/mmap.h>
-
+#include "../tensor_parameters.h"
+#include "../mmap.h"
 
 namespace grid {
 
