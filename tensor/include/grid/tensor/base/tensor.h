@@ -23,6 +23,7 @@
 #include "../mmap.h"
 
 namespace grid {
+namespace base {
 
 /// TensorSlowCpu is an unoptimized tensor implementatoin for the CPU.
 template <typename, size_t, auto...> struct TensorSlowCpu;
@@ -498,7 +499,7 @@ template <template <template <typename, size_t, auto...> typename, typename, siz
           template <typename, size_t, auto...> typename _TensorRT, typename _T, size_t _Rank, typename... _Tensors>
 TensorSlowCpu(const _TensorOp<_TensorRT,_T,  _Rank, _Tensors...>&) -> TensorSlowCpu<_T, _Rank>;
 
-
+} // end of namespace base
 } // end of namespace grid
 
 #endif  // GRID_TENSOR_BASE_TENSOR_H

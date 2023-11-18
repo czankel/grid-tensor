@@ -15,7 +15,7 @@
 struct TensorSlowCpuSuite
 {
   template <typename _T, size_t _Rank, auto... _Args>
-  using Tensor = grid::TensorSlowCpu<_T, _Rank, _Args...>;
+  using Tensor = grid::base::TensorSlowCpu<_T, _Rank, _Args...>;
 };
 
 #else
@@ -23,9 +23,9 @@ struct TensorSlowCpuSuite
 struct TensorSlowCpuSuite
 {
   template <typename _T, size_t _Rank, auto... _Args>
-  struct Tensor : grid::TensorSlowCpu<_T, _Rank, _Args...>
+  struct Tensor : grid::base::TensorSlowCpu<_T, _Rank, _Args...>
   {
-    using grid::TensorSlowCpu<_T, _Rank, _Args...>::TensorSlowCpu;
+    using grid::base::TensorSlowCpu<_T, _Rank, _Args...>::TensorSlowCpu;
   };
 
   template <typename _T>

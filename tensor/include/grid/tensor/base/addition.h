@@ -15,14 +15,14 @@ namespace grid {
 
 
 /// TensorAdd<TensorSlowCpu> implements tensor addition operation for tensors of the same rank.
-template <typename _T, size_t _Rank, TensorFor<TensorSlowCpu> _Tensor1, TensorFor<TensorSlowCpu> _Tensor2>
-struct TensorAdd<TensorSlowCpu, _T, _Rank, _Tensor1, _Tensor2> : TensorBaseOp
+template <typename _T, size_t _Rank, TensorFor<base::TensorSlowCpu> _Tensor1, TensorFor<base::TensorSlowCpu> _Tensor2>
+struct TensorAdd<base::TensorSlowCpu, _T, _Rank, _Tensor1, _Tensor2> : TensorBaseOp
 {
   constexpr static size_t Rank()                  { return _Rank; }
-  using tensor_type = TensorSlowCpu<_T, _Rank>;
+  using tensor_type = base::TensorSlowCpu<_T, _Rank>;
   using value_type = _T;
 
-  template <ConvertibleTensorFor<TensorSlowCpu> T1, ConvertibleTensorFor<TensorSlowCpu> T2>
+  template <ConvertibleTensorFor<base::TensorSlowCpu> T1, ConvertibleTensorFor<base::TensorSlowCpu> T2>
   TensorAdd(T1&& tensor1, T2&& tensor2)
    : tensor1_(std::forward<T1>(tensor1)),
      tensor2_(std::forward<T2>(tensor2))
@@ -81,7 +81,7 @@ struct TensorAdd<TensorSlowCpu, _T, _Rank, _Tensor1, _Tensor2> : TensorBaseOp
   auto operator()() const
   {
     auto& dims = tensor1_.Dims();
-    auto result = TensorSlowCpu(dims, Uninitialized<value_type>{});
+    auto result = base::TensorSlowCpu(dims, Uninitialized<value_type>{});
 
     add(reinterpret_cast<char*>(result.Data()),
         reinterpret_cast<const char*>(tensor1_.Data()),
@@ -100,9 +100,9 @@ struct TensorAdd<TensorSlowCpu, _T, _Rank, _Tensor1, _Tensor2> : TensorBaseOp
 
 // CTAD
 
-template <ConvertibleTensorFor<TensorSlowCpu> _Tensor1, ConvertibleTensorFor<TensorSlowCpu> _Tensor2>
+template <ConvertibleTensorFor<base::TensorSlowCpu> _Tensor1, ConvertibleTensorFor<base::TensorSlowCpu> _Tensor2>
 TensorAdd(_Tensor1, _Tensor2)
-  -> TensorAdd<TensorSlowCpu, typename _Tensor2::value_type, _Tensor1::Rank(),
+  -> TensorAdd<base::TensorSlowCpu, typename _Tensor2::value_type, _Tensor1::Rank(),
                typename _Tensor1::tensor_type, typename _Tensor2::tensor_type>;
 
 } // end of namespace grid
