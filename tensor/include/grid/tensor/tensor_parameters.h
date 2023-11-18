@@ -74,6 +74,16 @@ std::array<ssize_t, _Rank> make_strides(const std::array<size_t, _Rank>& dims)
   return make_strides_impl<_T>(dims, Indices{});
 }
 
+// get_buffer_size returns the size of the buffer from dimensions and strides.
+template<size_t _Rank>
+size_t get_buffer_size(const std::array<size_t, _Rank>& dims, const std::array<ssize_t, _Rank>& strides)
+{
+  size_t size = 0;
+  for (size_t i = 0; i < _Rank; i++)
+    size = std::max(size, dims[i] * strides[i]);
+  return size;
+}
+
 } // end of namespace grid
 
 #endif  // GRID_TENSOR_TENSOR_PARAMETERS_H
