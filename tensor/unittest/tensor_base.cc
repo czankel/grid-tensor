@@ -9,12 +9,11 @@
 #include <grid/tensor/tensor.h>
 #include <grid/tensor/base/tensor.h>
 #include <grid/tensor/base/comparison.h>
-#include <grid/tensor/base/addition.h>
 
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
 
-#include "addition.h"
-#include "tensor_slowcpu.h"
+#include "tensor.h"
+#include "tensor_base.h"
 
-INSTANTIATE_TYPED_TEST_SUITE_P(AdditionTestSlowCpu, AdditionTestSuite, TensorSlowCpuSuite);
+INSTANTIATE_TYPED_TEST_SUITE_P(TensorTestSlowCpu, TensorTestSuite, TensorSlowCpuSuite);
