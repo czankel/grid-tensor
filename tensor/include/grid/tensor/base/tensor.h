@@ -214,15 +214,15 @@ class Tensor
       data_(new value_type[size_ / sizeof(value_type)])
   {}
 
-  Tensor(Tensor&& other)
-    : dims_{std::move(other.dims_)},
-      strides_{std::move(other.strides_)},
-      size_(std::move(other.size_)),
-      data_(std::move(other.data_))
-  {
-    other.data_ = nullptr;
-  }
+  // Constructors for converting from a tensor operator.
+  template <AnyOperator Operator>
+  Tensor(Operator&& functor) : Tensor{std::move(functor())} {};
 
+  template <AnyOperator Operator>
+  Tensor(const Operator& functor) : Tensor{functor()} {};
+
+
+  /// Copy constructor
   Tensor(const Tensor& other)
     : dims_{other.Dimensions()},
       strides_{other.Strides()},
@@ -232,13 +232,15 @@ class Tensor
     copy<value_type, _Rank>(data_, other.Data(), dims_, strides_, other.Strides());
   }
 
-  // Constructors for converting from a tensor operator.
-  template <AnyOperator Operator>
-  Tensor(Operator&& functor) : Tensor{std::move(functor())} {};
-
-  template <AnyOperator Operator>
-  Tensor(const Operator& functor) : Tensor{functor()} {};
-
+  /// Move constructor
+  Tensor(Tensor&& other)
+    : dims_{std::move(other.dims_)},
+      strides_{std::move(other.strides_)},
+      size_(std::move(other.size_)),
+      data_(std::move(other.data_))
+  {
+    other.data_ = nullptr;
+  }
 
   /// Destructor
   ~Tensor()
@@ -274,6 +276,7 @@ class Tensor
     return *this;
   }
 
+  /// Operator assign
   template <AnyOperator _Operator>
   Tensor& operator=(_Operator&& oper)
   {
@@ -409,9 +412,9 @@ class Tensor<_Tp, 1, StaticAllocator<_N>>
   const_pointer Data() const                              { return array_.data(); }
 
  private:
-  std::array<size_t, 1>             dims_;
-  std::array<ssize_t, 1>            strides_;
-  std::array<value_type, _N>        array_;
+  std::array<size_t, 1>       dims_;
+  std::array<ssize_t, 1>      strides_;
+  std::array<value_type, _N>  array_;
 };
 
 
@@ -459,9 +462,9 @@ class Tensor<_Tp, 2, StaticAllocator<_M, _N>>
   const_pointer Data() const                              { return array_.data(); }
 
  private:
-  std::array<size_t, 2>             dims_;
-  std::array<ssize_t, 2>            strides_;
-  std::array<value_type, _M * _N>   array_;
+  std::array<size_t, 2>           dims_;
+  std::array<ssize_t, 2>          strides_;
+  std::array<value_type, _M * _N> array_;
 };
 
 
