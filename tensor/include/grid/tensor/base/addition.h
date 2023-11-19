@@ -81,7 +81,7 @@ class TensorAdd<Tensor, _T, _Rank, _Tensor1, _Tensor2>
   // FIXME: must be same rank? static_assert?
   auto operator()() const
   {
-    auto& dims = tensor1_.Dims();
+    auto& dims = tensor1_.Dimensions();
     auto result = Tensor(dims, Uninitialized<value_type>{});
 
     add(reinterpret_cast<char*>(result.Data()),

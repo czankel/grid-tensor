@@ -93,7 +93,7 @@ class TensorMul<Tensor, _T, _Rank, _Tensor1, _Tensor2>
 
   auto operator()() const requires (_Tensor1::rank == 1 && _Tensor2::rank == 1)
   {
-    auto& dims = tensor1_.Dims();
+    auto& dims = tensor1_.Dimensions();
     auto result = Tensor(Uninitialized<value_type>{});
 
     VecDot(reinterpret_cast<char*>(result.Data()),
@@ -108,7 +108,7 @@ class TensorMul<Tensor, _T, _Rank, _Tensor1, _Tensor2>
 
   auto operator()() const requires (_Tensor1::rank == 2 && _Tensor2::rank == 2)
   {
-    auto& dims = tensor1_.Dims();
+    auto& dims = tensor1_.Dimensions();
     auto result = Tensor({dims[0], dims[0]}, Uninitialized<value_type>{});
 
     // transpose second matrix
@@ -127,7 +127,7 @@ class TensorMul<Tensor, _T, _Rank, _Tensor1, _Tensor2>
 
   auto operator()() const requires (_Tensor2::rank == 0)
   {
-    auto& dims = tensor1_.Dims();
+    auto& dims = tensor1_.Dimensions();
     auto result = Tensor(dims, Uninitialized<value_type>{});
     Scale(reinterpret_cast<char*>(result.Data()),
           reinterpret_cast<const char*>(tensor1_.Data()),
@@ -140,7 +140,7 @@ class TensorMul<Tensor, _T, _Rank, _Tensor1, _Tensor2>
 
   auto operator()() const requires (_Tensor1::rank == 0 && _Tensor2::rank != 0)
   {
-    auto& dims = tensor2_.Dims();
+    auto& dims = tensor2_.Dimensions();
     auto result = Tensor(dims, Uninitialized<value_type>{});
     Scale(reinterpret_cast<char*>(result.Data()),
           reinterpret_cast<const char*>(tensor2_.Data()),

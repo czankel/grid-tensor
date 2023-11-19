@@ -101,7 +101,7 @@ bool operator==(_Tensor1&& tensor1, _Tensor2&& tensor2)
   return equals<typename std::remove_cvref_t<_Tensor1>::value_type, _Rank>(
                       reinterpret_cast<const char*>(tensor1.Data()),
                        reinterpret_cast<const char*>(tensor2.Data()),
-                       std::span(tensor1.Dims()),
+                       std::span(tensor1.Dimensions()),
                        std::span(tensor1.Strides()),
                        std::span(tensor2.Strides()));
 }

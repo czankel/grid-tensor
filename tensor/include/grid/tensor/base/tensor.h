@@ -212,7 +212,7 @@ class Tensor
   }
 
   Tensor(const Tensor& other)
-    : dims_{other.Dims()},
+    : dims_{other.Dimensions()},
       strides_{other.Strides()},
       size_(other.Size()),
       data_((char*)new value_type[size_ / sizeof(value_type)])
@@ -272,8 +272,8 @@ class Tensor
   /// Rank returns the rank of the tensor.
   constexpr static size_t Rank()                          { return _Rank; }
 
-  /// Dims returns the dimensions for the axis.
-  const std::array<size_t, _Rank>& Dims() const           { return dims_; }
+  /// Dimensions returns the dimensions for the axis.
+  const std::array<size_t, _Rank>& Dimensions() const     { return dims_; }
 
   /// Strides returns the strides for the axis.
   const std::array<ssize_t, _Rank>& Strides() const       { return strides_; }
@@ -314,8 +314,8 @@ class Tensor<_T, 0>
   /// Rank returns the rank of the tensor.
   constexpr static size_t Rank()                          { return 0UL; }
 
-  /// Dims returns the dimensions for the axis.
-  const std::array<size_t, 0>& Dims() const               { return dims_; }
+  /// Dimensions returns the dimensions for the axis.
+  const std::array<size_t, 0>& Dimensions() const         { return dims_; }
 
   /// Strides returns the strides for the axis.
   const std::array<ssize_t, 0>& Strides() const           { return {strides_}; }
@@ -356,8 +356,8 @@ class Tensor<_T, 1, StaticAllocator<_N>>
   /// Rank returns the rank of the tensor.
   constexpr static size_t Rank()                          { return 1UL; }
 
-  /// Dims returns the dimensions for the axis.
-  const std::array<size_t, 1>& Dims() const               { return dims_; }
+  /// Dimensions returns the dimensions for the axis.
+  const std::array<size_t, 1>& Dimensions() const         { return dims_; }
 
   /// Strides returns the strides for the axis.
   const std::array<ssize_t, 1>& Strides() const           { return strides_; }
@@ -397,8 +397,8 @@ class Tensor<_T, 2, StaticAllocator<_M, _N>>
   /// Rank returns the rank of the tensor.
   constexpr static size_t Rank()                          { return 2UL; }
 
-  /// Dims returns the dimensions for the axis.
-  const std::array<size_t, 2>& Dims() const               { return dims_; }
+  /// Dimensions returns the dimensions for the axis.
+  const std::array<size_t, 2>& Dimensions() const         { return dims_; }
 
   /// Strides returns the strides for the axis.
   const std::array<ssize_t, 2>& Strides() const           { return strides_; }
@@ -446,8 +446,8 @@ class Tensor<_T, _Rank, NoAllocator>
   /// Rank returns the rank of the tensor.
   constexpr static size_t Rank()                          { return _Rank; }
 
-  /// Dims returns the dimensions of the tensor.
-  const std::array<size_t, _Rank>& Dims() const           { return dims_; }
+  /// Dimensions returns the dimensions of the tensor.
+  const std::array<size_t, _Rank>& Dimensions() const     { return dims_; }
 
   /// Strides returns the strides of the tensor.
   const std::array<ssize_t, _Rank>& Strides() const       { return strides_; }

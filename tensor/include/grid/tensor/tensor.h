@@ -34,7 +34,7 @@ template <typename> struct Uninitialized {};
 template <typename _Tensor>
 inline constexpr bool is_tensor_v =
   std::is_class_v<typename std::remove_cvref_t<_Tensor>> &&
-  requires (const _Tensor& t) { t.Rank(); t.Dims(); t.Strides(); t.Data(); };
+  requires (const _Tensor& t) { t.Rank(); t.Dimensions(); t.Strides(); t.Data(); };
 
 
 /// is_operator_v<_Operator> checks if a type is tensor operator, which requires to have a member
@@ -153,7 +153,7 @@ std::ostream& operator<<(std::ostream& os, const grid::AnyTensor auto& tensor)
   using value_type = typename std::remove_reference_t<decltype(tensor)>::value_type;
   size_t rank = tensor.Rank();
 
-  auto dims = tensor.Dims();
+  auto dims = tensor.Dimensions();
   auto strides = tensor.Strides();
 
   std::function<void(int, const value_type*&)> print;
