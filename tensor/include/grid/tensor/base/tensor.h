@@ -27,15 +27,16 @@
 namespace grid {
 
 /// Tensor is an unoptimized tensor implementatoin for the CPU.
-template <typename, size_t, auto...> struct Tensor;
+template <typename, size_t, auto...> class Tensor;
 
 
 /// Tensor<_T, _Rank> is a specialization of Tensor for a dynamically allocated buffer.
 /// Note that this is also the Tensor used for any TensorOp result.
 /// TODO: see if constructors can be combined using implicit conversion
 template <typename _T, size_t _Rank>
-struct Tensor<_T, _Rank>
+class Tensor<_T, _Rank>
 {
+ public:
   using value_type = _T;
   using pointer = _T*;
   using const_pointer = const _T*;
@@ -286,7 +287,7 @@ struct Tensor<_T, _Rank>
   /// Data returns a pointer to the data buffer.
   char* Data() const                                      { return data_; }
 
-
+ private:
   std::array<size_t, _Rank>         dims_;
   std::array<ssize_t, _Rank>        strides_;
   size_t                            size_;
@@ -295,8 +296,9 @@ struct Tensor<_T, _Rank>
 
 /// Tensor<_T, 0, 1> is a specialization of a rank-0 tensor.
 template <typename _T>
-struct Tensor<_T, 0>
+class Tensor<_T, 0>
 {
+ public:
   using value_type = _T;
   using pointer = _T*;
   using const_pointer = const _T*;
@@ -327,6 +329,7 @@ struct Tensor<_T, 0>
   char* Data()                                            { return reinterpret_cast<char*>(array_.data()); }
   const char* Data() const                                { return reinterpret_cast<const char*>(array_.data()); }
 
+ private:
   constexpr static std::array<size_t, 0>  dims_{};
   constexpr static std::array<ssize_t, 0> strides_ = {};
   std::array<value_type, 1>               array_;
@@ -336,8 +339,9 @@ struct Tensor<_T, 0>
 /// Tensor<_T, 1, _N> is a specialization of a rank-1 tensor (vector) for a 'static' array.
 /// Note that the brace-initializer form of Tensors don't support padding.
 template <typename _T, size_t _N>
-struct Tensor<_T, 1, _N>
+class Tensor<_T, 1, _N>
 {
+ public:
   using value_type = _T;
   using pointer = const _T*;
   using const_pointer = const _T*;
@@ -365,7 +369,7 @@ struct Tensor<_T, 1, _N>
   /// Data returns a pointer to the data buffer.
   const char* Data() const                                { return reinterpret_cast<const char*>(array_.data()); }
 
-
+ private:
   std::array<size_t, 1>             dims_;
   std::array<ssize_t, 1>            strides_;
   std::array<value_type, _N>        array_;
@@ -375,8 +379,9 @@ struct Tensor<_T, 1, _N>
 /// Tensor<_T, _M, _N> is a specialization of a rank-2 tensor (matrix) for a 'static' array.
 /// Note that the brace-initializer form of Tensors don't support padding.
 template <typename _T, size_t _M, size_t _N>
-struct Tensor<_T, 2, _M, _N>
+class Tensor<_T, 2, _M, _N>
 {
+ public:
   using value_type = _T;
   using pointer = const _T*;
   using const_pointer = const _T*;
@@ -404,7 +409,7 @@ struct Tensor<_T, 2, _M, _N>
   /// Data returns a pointer to the data buffer.
   const char* Data() const                                { return reinterpret_cast<const char*>(array_.data()); }
 
-
+ private:
   std::array<size_t, 2>             dims_;
   std::array<ssize_t, 2>            strides_;
   std::array<value_type, _M * _N>   array_;
@@ -413,8 +418,9 @@ struct Tensor<_T, 2, _M, _N>
 
 /// TensorSLowCpu<_T, _Rank, kMemoryMapped> is a tensor for memory-mapped data
 template <typename _T, size_t _Rank>
-struct Tensor<_T, _Rank, kMemoryMapped>
+class Tensor<_T, _Rank, kMemoryMapped>
 {
+ public:
   using value_type = _T;
   using pointer = const _T*;
   using const_pointer = const _T*;
@@ -452,7 +458,7 @@ struct Tensor<_T, _Rank, kMemoryMapped>
   /// Data returns a pointer to the data buffer.
   char* Data() const                                      { return data_; }
 
-
+ private:
   std::array<size_t, _Rank>   dims_;
   std::array<ssize_t, _Rank>  strides_;
   std::shared_ptr<MMap>       mmap_;

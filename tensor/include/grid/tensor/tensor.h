@@ -123,9 +123,9 @@ concept ConvertibleTo = tensor_is_convertible_to<std::remove_cvref_t<T1>, T2>::v
 // Tensor basic arithmetic operations
 //
 
-template <template <typename, size_t, auto...> typename, typename, size_t, typename... > struct TensorAdd;
-template <template <typename, size_t, auto...> typename, typename, size_t, typename... > struct TensorMul;
-template <template <typename, size_t, auto...> typename, typename, size_t, typename... > struct TensorRmsNorm;
+template <template <typename, size_t, auto...> typename, typename, size_t, typename... > class TensorAdd;
+template <template <typename, size_t, auto...> typename, typename, size_t, typename... > class TensorMul;
+template <template <typename, size_t, auto...> typename, typename, size_t, typename... > class TensorRmsNorm;
 
 //
 // Operator overloading

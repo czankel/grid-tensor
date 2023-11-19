@@ -20,8 +20,9 @@ namespace grid {
 
 /// TensorRmsNorm<Tensor> implements RMS norm.
 template <typename _T, size_t _Rank, PrimitiveTensor _Tensor>
-struct TensorRmsNorm<Tensor, _T, _Rank, _Tensor>
+class TensorRmsNorm<Tensor, _T, _Rank, _Tensor>
 {
+ public:
   using value_type = _T;
   constexpr static size_t rank = _Rank;
 
@@ -86,6 +87,7 @@ struct TensorRmsNorm<Tensor, _T, _Rank, _Tensor>
     return TensorMul(tensor_, Tensor<double, 0>{scale});
   }
 
+ private:
   _Tensor tensor_;
 };
 

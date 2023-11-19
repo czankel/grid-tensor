@@ -17,8 +17,9 @@ namespace grid {
 /// TensorAdd<Tensor> implements tensor addition operation for tensors of the same rank.
 template <typename _T, size_t _Rank, PrimitiveTensor _Tensor1, PrimitiveTensor _Tensor2>
 requires (_Tensor1::Rank() == _Tensor2::Rank())
-struct TensorAdd<Tensor, _T, _Rank, _Tensor1, _Tensor2>
+class TensorAdd<Tensor, _T, _Rank, _Tensor1, _Tensor2>
 {
+ public:
   using value_type = _T;
   constexpr static size_t rank = _Rank;
 
@@ -93,6 +94,7 @@ struct TensorAdd<Tensor, _T, _Rank, _Tensor1, _Tensor2>
     return result;
   }
 
+ private:
   _Tensor1 tensor1_;
   _Tensor2 tensor2_;
 };

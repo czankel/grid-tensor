@@ -15,12 +15,12 @@
 
 namespace grid {
 
-
 /// TensorMul<Tensor> implements tensor multiplication operation for tensors of the same rank.
 /// Including matrix multiplication (MatMul) and vector dot-product (VecDot).
 template <typename _T, size_t _Rank, PrimitiveTensor _Tensor1, PrimitiveTensor _Tensor2>
-struct TensorMul<Tensor, _T, _Rank, _Tensor1, _Tensor2>
+class TensorMul<Tensor, _T, _Rank, _Tensor1, _Tensor2>
 {
+ public:
   using value_type = _T;
 
   template <ConvertibleTo<Tensor> T1, ConvertibleTo<Tensor> T2>
@@ -151,7 +151,7 @@ struct TensorMul<Tensor, _T, _Rank, _Tensor1, _Tensor2>
     return result;
   }
 
-
+ private:
   _Tensor1 tensor1_;
   _Tensor2 tensor2_;
 };
