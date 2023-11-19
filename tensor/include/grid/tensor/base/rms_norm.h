@@ -19,13 +19,13 @@
 namespace grid {
 
 /// TensorRmsNorm<Tensor> implements RMS norm.
-template <typename _T, size_t _Rank, TensorFor<Tensor> _Tensor>
-struct TensorRmsNorm<Tensor, _T, _Rank, _Tensor> : TensorBaseOp
+template <typename _T, size_t _Rank, PrimitiveTensor _Tensor>
+struct TensorRmsNorm<Tensor, _T, _Rank, _Tensor>
 {
-  using tensor_type = Tensor<_T, _Rank>;
   using value_type = _T;
+  constexpr static size_t rank = _Rank;
 
-  template <ConvertibleTensorFor<Tensor> T1>
+  template <ConvertibleTo<Tensor> T1>
   TensorRmsNorm(T1&& tensor) : tensor_(std::forward<T1>(tensor)) {}
 
   ~TensorRmsNorm() {}
@@ -36,8 +36,6 @@ struct TensorRmsNorm<Tensor, _T, _Rank, _Tensor> : TensorBaseOp
   TensorRmsNorm(TensorRmsNorm&& other) = delete;
   TensorRmsNorm& operator=(const TensorRmsNorm& other) = delete;
   TensorRmsNorm& operator=(TensorRmsNorm&& other) = delete;
-
-  constexpr static size_t Rank()                          { return _Rank; }
 
   inline auto
   SumSquare(const char* src,
@@ -77,7 +75,7 @@ struct TensorRmsNorm<Tensor, _T, _Rank, _Tensor> : TensorBaseOp
 
   // Functor
   // FIXME limit to floating point? inline std::enable_if_t<!std::is_floating_point_v<_T>...
-  tensor_type operator()() const
+  auto operator()() const
   {
     auto [value, count] = SumSquare(reinterpret_cast<const char*>(tensor_.Data()),
                                     std::span(tensor_.Dims()),
@@ -94,9 +92,9 @@ struct TensorRmsNorm<Tensor, _T, _Rank, _Tensor> : TensorBaseOp
 
 // CTAD
 
-template <ConvertibleTensorFor<Tensor> _Tensor>
+template <ConvertibleTo<Tensor> _Tensor>
 TensorRmsNorm(_Tensor)
-  -> TensorRmsNorm<Tensor, typename _Tensor::value_type, _Tensor::Rank(), typename _Tensor::tensor_type>;
+  -> TensorRmsNorm<Tensor, typename _Tensor::value_type, _Tensor::rank, typename to_tensor<_Tensor>::type>;
 
 } // end of namespace grid
 

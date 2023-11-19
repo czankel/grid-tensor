@@ -15,14 +15,14 @@ namespace grid {
 
 
 /// TensorAdd<Tensor> implements tensor addition operation for tensors of the same rank.
-template <typename _T, size_t _Rank, TensorFor<Tensor> _Tensor1, TensorFor<Tensor> _Tensor2>
-struct TensorAdd<Tensor, _T, _Rank, _Tensor1, _Tensor2> : TensorBaseOp
+template <typename _T, size_t _Rank, PrimitiveTensor _Tensor1, PrimitiveTensor _Tensor2>
+requires (_Tensor1::Rank() == _Tensor2::Rank())
+struct TensorAdd<Tensor, _T, _Rank, _Tensor1, _Tensor2>
 {
-  constexpr static size_t Rank()                  { return _Rank; }
-  using tensor_type = Tensor<_T, _Rank>;
   using value_type = _T;
+  constexpr static size_t rank = _Rank;
 
-  template <ConvertibleTensorFor<Tensor> T1, ConvertibleTensorFor<Tensor> T2>
+  template <ConvertibleTo<Tensor> T1, ConvertibleTo<Tensor> T2>
   TensorAdd(T1&& tensor1, T2&& tensor2)
    : tensor1_(std::forward<T1>(tensor1)),
      tensor2_(std::forward<T2>(tensor2))
@@ -100,10 +100,10 @@ struct TensorAdd<Tensor, _T, _Rank, _Tensor1, _Tensor2> : TensorBaseOp
 
 // CTAD
 
-template <ConvertibleTensorFor<Tensor> _Tensor1, ConvertibleTensorFor<Tensor> _Tensor2>
+template <ConvertibleTo<Tensor> _Tensor1, ConvertibleTo<Tensor> _Tensor2>
 TensorAdd(_Tensor1, _Tensor2)
-  -> TensorAdd<Tensor, typename _Tensor2::value_type, _Tensor1::Rank(),
-               typename _Tensor1::tensor_type, typename _Tensor2::tensor_type>;
+  -> TensorAdd<Tensor, typename _Tensor1::value_type, _Tensor1::rank,
+               typename to_tensor<_Tensor1>::type, typename to_tensor<_Tensor2>::type>;
 
 } // end of namespace grid
 

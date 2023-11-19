@@ -22,138 +22,130 @@ enum TensorType
   kMemoryMapped,      /// Memory mapped tensor
 };
 
-
-/// TensorBaseOp provides a base class for identifying tensor operator classes.
-///
-/// All Tensor operators/operations are required to derive from this class.
-/// They must include a type for the resulting tensor and one for the underlying
-/// primitive type:
-///
-///  typedef tensor_type;
-///  typedef value_type;
-///
-/// Tensor operators must also provide the following functions, similar to Tensors.
-///
-///  size_t Rank()
-struct TensorBaseOp {};
-
-
 /// Placeholder for specifying that a buffer allocation does not need to be initialized.
 template <typename> struct Uninitialized {};
-
-struct TensorBase;
-struct TensorBaseOp;
 
 //
 // Tensor Traits
 //
 
-/// is_tensor_op_v<_TensorOp> returns true if the template is derived from TensorOp
-template <typename _TensorOp>
-inline constexpr bool is_tensor_op_v = std::is_base_of_v<TensorBaseOp, std::remove_cvref_t<_TensorOp>>;
-
-// is_tensor_v returns true if the type is a tensor (derived from TensorBase)
+/// is_tensor_v checks if a type is a tensor, which requires to have the member functions:
+/// Dimensions, Strides, and Data.
 template <typename _Tensor>
-inline constexpr bool is_tensor_v = std::is_base_of_v<TensorBase, std::remove_cvref_t<_Tensor>>;
+inline constexpr bool is_tensor_v =
+  std::is_class_v<typename std::remove_cvref_t<_Tensor>> &&
+  requires (const _Tensor& t) { t.Rank(); t.Dims(); t.Strides(); t.Data(); };
 
-// helper functions to identify if a Tensor or TensorOp is for a specific device
-namespace details
+
+/// is_operator_v<_Operator> checks if a type is tensor operator, which requires to have a member
+/// operator()() overload.
+/// TODO: check also template signature
+template <typename _Operator>
+inline constexpr bool is_operator_v = requires (const _Operator& t) { t.operator()(); };
+
+
+// to_tensor provides the type of the tensor or the type of the tensor resulting from a  tensor operation
+template <typename> struct to_tensor;
+
+template <typename _Tensor> requires (is_tensor_v<_Tensor> && !is_operator_v<_Tensor>)
+struct to_tensor<_Tensor>
 {
-  template <template <typename, size_t, auto...> typename _Tensor,
-            typename _T, size_t _Rank, auto... _Args>
-  std::true_type test_ptr_conv(const volatile _Tensor<_T, _Rank, _Args...>*);
-  template<typename, typename>
-  std::false_type test_ptr_conv(const volatile void*);
+  using type = _Tensor;
+};
 
-  template <typename _Tensor, template <typename, size_t, auto...> typename _DeviceTensor>
-  auto test_is_same_device(int)
-    -> decltype(test_ptr_conv<_DeviceTensor>(static_cast<_Tensor*>(nullptr)));
+template <typename _Operator> requires is_operator_v<_Operator>
+struct to_tensor<_Operator>
+{
+  using type = typename std::invoke_result<decltype(&_Operator::operator()), _Operator>::type;
+};
 
-  template<typename, typename>
-  auto test_is_same_device(...) -> std::true_type; // private or ambiguous base
-}
 
-template <typename _Tensor, template <typename, size_t, auto...> typename _DeviceTensor>
-struct is_same_device :
-    std::integral_constant<
-        bool,
-        std::is_class<_Tensor>::value &&
-        decltype(details::test_is_same_device<_Tensor, _DeviceTensor>(0))::value
-    > {};
+// is_same_tensor<TENSOR1, TENSOR2> checks if two tensors are of the same type.
+template <typename, template <typename, size_t, auto...> typename> struct is_same_tensor_as : std::false_type {};
 
-template <template <template <typename, size_t, auto...> typename, typename, size_t, typename...> typename _TensorOp,
-          template <typename, size_t, auto...> typename _Tensor, size_t _Rank, typename _T, typename... _Tensors>
-struct is_same_device<_TensorOp<_Tensor, _T, _Rank, _Tensors...>, _Tensor> : std::true_type {};
+template <template <typename, size_t, auto...> typename _Tensor, typename _Tp, size_t _Rank, auto... _Args>
+struct is_same_tensor_as<_Tensor<_Tp, _Rank, _Args...>, _Tensor> : std::true_type {};
 
-template <typename _Tensor, template <typename, size_t, auto...> typename _DeviceTensor>
-inline constexpr bool is_same_device_v = is_same_device<std::remove_cvref_t<_Tensor>, _DeviceTensor>::value;
+
+// tensor_is_convertible_to<FROM,TO> check if TO = FROM is a valid assignment.
+template <typename, template <typename, size_t, auto...> typename> struct tensor_is_convertible_to;
+
+template <template <typename, size_t, auto...> typename _Tensor1,
+          template <typename, size_t, auto...> typename _Tensor2,
+          typename _Tp, size_t _Rank, auto... _Args>
+struct tensor_is_convertible_to<_Tensor1<_Tp, _Rank, _Args...>, _Tensor2>
+ : std::is_assignable<_Tensor2<_Tp, _Rank>, _Tensor1<_Tp, _Rank, _Args...>>
+{};
+
+template <template <template <typename, size_t, auto...> typename, typename, size_t, typename...> typename _Operator,
+          template <typename, size_t, auto...> typename _Tensor,
+          typename _Tp, size_t _Rank, typename... _Tensors>
+struct tensor_is_convertible_to<_Operator<_Tensor, _Tp, _Rank, _Tensors...>, _Tensor>
+ : std::is_assignable<_Tensor<_Tp, _Rank>, _Operator<_Tensor, _Tp, _Rank, _Tensors...>>
+{};
+
+
+// tensor_is_primitive checks if a tensor includes a Data() member function thatJ returns an
+// artihmetic pointer type.
+template <typename _Tensor> using tensor_data_return_type = decltype(std::declval<_Tensor>().Data());
+
+template<class _Tensor> struct tensor_is_primitive_helper :
+  std::integral_constant<bool, std::is_pointer_v<tensor_data_return_type<_Tensor>> &&
+                               std::is_arithmetic_v<std::remove_pointer_t<tensor_data_return_type<_Tensor>>>> {};
+
+template<class _Tensor>
+struct tensor_is_primitive : tensor_is_primitive_helper<std::remove_reference_t<_Tensor>> {};
 
 //
 // Concepts
 //
 
-/// TensorFor<DEVICE> requires that the provided argument is a Tensor for the specific DEVICE.
-template <typename _Tensor, template <typename, size_t, auto...> typename _DeviceTensor>
-concept TensorFor = is_tensor_v<_Tensor> && is_same_device_v<_Tensor, _DeviceTensor>;
-
-/// AnyTensor requires that the provided argument is a Tensor
+/// AnyTensor requires that the provided argument is a tensor.
 template <typename _Tensor>
 concept AnyTensor = is_tensor_v<_Tensor>;
 
-/// TensorOpFor<DEVICE> requires that the provided argument is a TensorOp for the specific DEVICE.
-template <typename _TensorOp, template <typename, size_t, auto...> typename _DeviceTensor>
-concept TensorOpFor = is_tensor_op_v<_TensorOp> && is_same_device_v<_TensorOp, _DeviceTensor>;
-
-/// AnyTensorOp requires that the provided argument is a TensorOp
-template <typename _TensorOp>
-concept AnyTensorOp = is_tensor_op_v<_TensorOp>;
-
-/// ConvertibleTensorFor<DEVICE> requires that the provided argument can be converted to a Tensor
-/// for the specified DEVICE. Currently, these are Tensors and TensorOps.
-template <typename _Tensor, template <typename, size_t, auto...> typename _DeviceTensor>
-concept ConvertibleTensorFor = (is_tensor_v<_Tensor> || is_tensor_op_v<_Tensor>) && is_same_device_v<_Tensor, _DeviceTensor>;
-
-/// AnyConvertibleTensor requires that the provided argument can be converted to a Tensor.
+/// PrimitiveTensor requires that the buffer is directly accessible and consists of primitive types,
 template <typename _Tensor>
-concept AnyConvertibleTensor = is_tensor_v<_Tensor> || is_tensor_op_v<_Tensor>;
+concept PrimitiveTensor = AnyTensor<_Tensor> && tensor_is_primitive<_Tensor>::value;
 
-/// TensorRank<RANK> requires that the provided argument is a tensor of the rank RANK.
-template <typename _Tensor, size_t _Rank>
-concept TensorRank = (is_tensor_v<_Tensor> || is_tensor_op_v<_Tensor>) && _Tensor::Rank() == _Rank;
+/// AnyOperator requires that the provided argument is a tensor operator.
+template <typename _Operator>
+concept AnyOperator = is_operator_v<_Operator>;
 
-template <typename _Tensor, size_t _Rank>
-concept TensorNotRank = (is_tensor_v<_Tensor> || is_tensor_op_v<_Tensor>) && _Tensor::Rank() != _Rank;
+/// TensorConvertible requires that the tensor is a tensor or functor that returns a tensor
+template <typename _Tensor>
+concept TensorConvertible = is_tensor_v<_Tensor> || is_operator_v<_Tensor>;
 
-/// TensorBase provides a base class for derived "device" tensor implementations with
-/// optimizations specific to CPUs and accelerators.
-struct TensorBase
-{
-  friend std::ostream& operator<<(std::ostream& os, const AnyTensor auto& tensor);
-};
+template <typename T1, template <typename, size_t, auto...> typename T2>
+concept ConvertibleTo = tensor_is_convertible_to<std::remove_cvref_t<T1>, T2>::value;
 
+//
 // Tensor basic arithmetic operations
+//
 
 template <template <typename, size_t, auto...> typename, typename, size_t, typename... > struct TensorAdd;
 template <template <typename, size_t, auto...> typename, typename, size_t, typename... > struct TensorMul;
 template <template <typename, size_t, auto...> typename, typename, size_t, typename... > struct TensorRmsNorm;
 
-
+//
 // Operator overloading
+//
 
 // operator+ (TensorType, TensorType)
-template <AnyConvertibleTensor _Tensor1, AnyConvertibleTensor _Tensor2>
+template <TensorConvertible _Tensor1, TensorConvertible _Tensor2>
 auto operator+(_Tensor1&& tensor1, _Tensor2&& tensor2)
 {
   return TensorAdd(std::forward<_Tensor1>(tensor1), std::forward<_Tensor2>(tensor2));
 }
 
 // operator* (TensorType, TensorType)
-template <AnyConvertibleTensor _Tensor1, AnyConvertibleTensor _Tensor2>
+template <TensorConvertible _Tensor1, TensorConvertible _Tensor2>
 auto operator*(_Tensor1&& tensor1, _Tensor2&& tensor2)
 {
   return TensorMul(std::forward<_Tensor1>(tensor1), std::forward<_Tensor2>(tensor2));
 }
 
+} // end of namespace grid
 
 /// operator<< outputs the tensor buffer.
 std::ostream& operator<<(std::ostream& os, const grid::AnyTensor auto& tensor)
@@ -203,7 +195,5 @@ std::ostream& operator<<(std::ostream& os, const grid::AnyTensor auto& tensor)
 
   return os;
 }
-
-} // end of namespace grid
 
 #endif  // GRID_TENSOR_TENSOR_H
