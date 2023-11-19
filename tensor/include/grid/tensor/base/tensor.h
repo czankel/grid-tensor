@@ -22,6 +22,8 @@
 #include "../tensor_parameters.h"
 #include "../mmap.h"
 
+#include "copy.h"
+
 namespace grid {
 namespace base {
 
@@ -33,10 +35,12 @@ template <typename, size_t, auto...> struct Tensor;
 /// Note that this is also the Tensor used for any TensorOp result.
 /// TODO: see if constructors can be combined using implicit conversion
 template <typename _T, size_t _Rank>
-struct Tensor<_T, _Rank> : TensorBase
+struct Tensor<_T, _Rank>
 {
-  using tensor_type = Tensor<_T, _Rank>;
   using value_type = _T;
+  using pointer = _T*;
+  using const_pointer = const _T*;
+  constexpr static size_t rank = _Rank;
 
   inline void
   initialize(char* ptr,
@@ -201,35 +205,71 @@ struct Tensor<_T, _Rank> : TensorBase
       data_((char*)new value_type[size_ / sizeof(value_type)])
   {}
 
-
-  // Copy constructor
-  // TODO: simple copy; implement reference counted buffers
-  Tensor(const Tensor& other)
-    : dims_{other.dims_},
-      strides_{other.strides_},
-      size_(other.size_),
-      data_(other.data_)
-  {}
-
-  // Move constructor
   Tensor(Tensor&& other)
-    : dims_{other.dims_},
-      strides_{other.strides_},
-      size_(other.size_),
+    : dims_{std::move(other.dims_)},
+      strides_{std::move(other.strides_)},
+      size_(std::move(other.size_)),
       data_(std::move(other.data_))
   {
     other.data_ = nullptr;
   }
 
+  Tensor(const Tensor& other)
+    : dims_{other.Dims()},
+      strides_{other.Strides()},
+      size_(other.Size()),
+      data_((char*)new value_type[size_ / sizeof(value_type)])
+  {
+    printf("COPY TENSOR\n");
+    copy<value_type, _Rank>((value_type*)data_, (value_type*)other.Data(), dims_, strides_, other.Strides());
+  }
+
   // Constructors for converting from a tensor operator.
-  template <TensorOpFor<Tensor> Operator> Tensor(Operator&& op) : Tensor{std::move(op())} {}
-  template <TensorOpFor<Tensor> Operator> Tensor(const Operator& op) : Tensor{op()} {}
+  template <AnyOperator Operator>
+  Tensor(Operator&& functor) : Tensor{std::move(functor())} {};
+
+  template <AnyOperator Operator>
+  Tensor(const Operator& functor) : Tensor{functor()} {};
+
 
   /// Destructor
   ~Tensor()
   {
     if (data_ != nullptr)
       delete[] data_;
+  }
+
+
+  /// Assign operator
+  template <PrimitiveTensor _Tensor>
+  Tensor& operator=(const _Tensor& other)
+  {
+    dims_ = other.Dimensions();
+    strides_ = make_strides<value_type>(dims_);
+    size_ = strides_[0] * dims_[0];
+    if (data_ != nullptr)
+      delete[] data_;
+    data_ = new value_type[size_ / sizeof(value_type)];
+    copy<value_type, _Rank>(data_, other.Data(), dims_, strides_, other.Strides());
+    return *this;
+  }
+
+  /// Move-assign is only supported from the same type
+  Tensor& operator=(Tensor&& other)
+  {
+    dims_ = other.Dimensions();
+    strides_ = make_strides<value_type>(dims_);
+    size_ = strides_[0] * dims_[0];
+    if (data_ != nullptr)
+      delete[] data_;
+    data_ = other.Data();
+    return *this;
+  }
+
+  template <AnyOperator _Operator>
+  Tensor& operator=(_Operator&& oper)
+  {
+    return operator=(std::forward<_Operator>(oper)());
   }
 
 
@@ -257,10 +297,12 @@ struct Tensor<_T, _Rank> : TensorBase
 
 /// Tensor<_T, 0, 1> is a specialization of a rank-0 tensor.
 template <typename _T>
-struct Tensor<_T, 0> : TensorBase
+struct Tensor<_T, 0>
 {
-  using tensor_type = Tensor<_T, 0>;
   using value_type = _T;
+  using pointer = _T*;
+  using const_pointer = const _T*;
+  constexpr static size_t rank = 0UL;
 
   /// Constructor for a rank-1 tensor (vector) with brace initialization.
   explicit Tensor(_T init) : array_{init} {}
@@ -296,9 +338,8 @@ struct Tensor<_T, 0> : TensorBase
 /// Tensor<_T, 1, _N> is a specialization of a rank-1 tensor (vector) for a 'static' array.
 /// Note that the brace-initializer form of Tensors don't support padding.
 template <typename _T, size_t _N>
-struct Tensor<_T, 1, _N> : TensorBase
+struct Tensor<_T, 1, _N>
 {
-  using tensor_type = Tensor<_T, 1, _N>;
   using value_type = _T;
   using pointer = const _T*;
   using const_pointer = const _T*;
@@ -336,10 +377,12 @@ struct Tensor<_T, 1, _N> : TensorBase
 /// Tensor<_T, _M, _N> is a specialization of a rank-2 tensor (matrix) for a 'static' array.
 /// Note that the brace-initializer form of Tensors don't support padding.
 template <typename _T, size_t _M, size_t _N>
-struct Tensor<_T, 2, _M, _N> : TensorBase
+struct Tensor<_T, 2, _M, _N>
 {
-  using tensor_type = Tensor<_T, 2, _M, _N>;
   using value_type = _T;
+  using pointer = const _T*;
+  using const_pointer = const _T*;
+  constexpr static size_t rank = 2UL;
 
   /// Constructor for a rank-2 (matrix) brace initialization.
   explicit Tensor(std::initializer_list<std::initializer_list<value_type>>&& init)
@@ -372,10 +415,12 @@ struct Tensor<_T, 2, _M, _N> : TensorBase
 
 /// TensorSLowCpu<_T, _Rank, kMemoryMapped> is a tensor for memory-mapped data
 template <typename _T, size_t _Rank>
-struct Tensor<_T, _Rank, kMemoryMapped> : TensorBase
+struct Tensor<_T, _Rank, kMemoryMapped>
 {
-  using tensor_type = Tensor<_T, _Rank, kMemoryMapped>;
   using value_type = _T;
+  using pointer = const _T*;
+  using const_pointer = const _T*;
+  constexpr static size_t rank = _Rank;
 
   /// Constructor for a memory-mapped buffer.
   explicit Tensor(const MMapArray<_T, _Rank>& arr)

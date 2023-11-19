@@ -18,14 +18,12 @@ namespace grid {
 
 /// TensorMul<base::Tensor> implements tensor multiplication operation for tensors of the same rank.
 /// Including matrix multiplication (MatMul) and vector dot-product (VecDot).
-template <typename _T, size_t _Rank, TensorFor<base::Tensor> _Tensor1, TensorFor<base::Tensor> _Tensor2>
-struct TensorMul<base::Tensor, _T, _Rank, _Tensor1, _Tensor2> : TensorBaseOp
+template <typename _T, size_t _Rank, PrimitiveTensor _Tensor1, PrimitiveTensor _Tensor2>
+struct TensorMul<base::Tensor, _T, _Rank, _Tensor1, _Tensor2>
 {
-  constexpr static size_t Rank()                          { return _Rank; }
-  using tensor_type = base::Tensor<_T, _Rank>;
   using value_type = _T;
 
-  template <ConvertibleTensorFor<base::Tensor> T1, ConvertibleTensorFor<base::Tensor> T2>
+  template <ConvertibleTo<base::Tensor> T1, ConvertibleTo<base::Tensor> T2>
   TensorMul(T1&& tensor1, T2&& tensor2)
    : tensor1_(std::forward<T1>(tensor1)),
      tensor2_(std::forward<T2>(tensor2))
@@ -93,10 +91,7 @@ struct TensorMul<base::Tensor, _T, _Rank, _Tensor1, _Tensor2> : TensorBaseOp
   }
 
 
-  // Functors
-
-  template <TensorRank<1> = _Tensor1, TensorRank<1> = _Tensor2>
-  auto operator()() const
+  auto operator()() const requires (_Tensor1::rank == 1 && _Tensor2::rank == 1)
   {
     auto& dims = tensor1_.Dims();
     auto result = base::Tensor(Uninitialized<value_type>{});
@@ -109,10 +104,9 @@ struct TensorMul<base::Tensor, _T, _Rank, _Tensor1, _Tensor2> : TensorBaseOp
         std::span(tensor2_.Strides()));
 
     return result;
-   }
+  }
 
-  template <TensorRank<2> = _Tensor1, TensorRank<2> = _Tensor2>
-  auto operator()() const
+  auto operator()() const requires (_Tensor1::rank == 2 && _Tensor2::rank == 2)
   {
     auto& dims = tensor1_.Dims();
     auto result = base::Tensor({dims[0], dims[0]}, Uninitialized<value_type>{});
@@ -131,8 +125,7 @@ struct TensorMul<base::Tensor, _T, _Rank, _Tensor1, _Tensor2> : TensorBaseOp
     return result;
   }
 
-  template <TensorRank<0> = _Tensor2>
-  auto operator()() const
+  auto operator()() const requires (_Tensor2::rank == 0)
   {
     auto& dims = tensor1_.Dims();
     auto result = base::Tensor(dims, Uninitialized<value_type>{});
@@ -145,8 +138,7 @@ struct TensorMul<base::Tensor, _T, _Rank, _Tensor1, _Tensor2> : TensorBaseOp
     return result;
   }
 
-  template <TensorRank<0> = _Tensor1, TensorNotRank<0> = _Tensor2>
-  auto operator()() const
+  auto operator()() const requires (_Tensor1::rank == 0 && _Tensor2::rank != 0)
   {
     auto& dims = tensor2_.Dims();
     auto result = base::Tensor(dims, Uninitialized<value_type>{});
@@ -167,10 +159,10 @@ struct TensorMul<base::Tensor, _T, _Rank, _Tensor1, _Tensor2> : TensorBaseOp
 
 // CTAD
 
-template <ConvertibleTensorFor<base::Tensor> _Tensor1, ConvertibleTensorFor<base::Tensor> _Tensor2>
+template <ConvertibleTo<base::Tensor> _Tensor1, ConvertibleTo<base::Tensor> _Tensor2>
 TensorMul(_Tensor1, _Tensor2)
-  -> TensorMul<base::Tensor, typename _Tensor2::value_type, std::max(_Tensor1::Rank(), _Tensor2::Rank()),
-               typename _Tensor1::tensor_type, typename _Tensor2::tensor_type>;
+  -> TensorMul<base::Tensor, typename _Tensor2::value_type, std::max(_Tensor1::rank, _Tensor2::rank),
+               typename to_tensor<_Tensor1>::type, typename to_tensor<_Tensor2>::type>;
 
 
 } // end of namespace grid

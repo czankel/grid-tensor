@@ -68,6 +68,7 @@ TYPED_TEST_P(AdditionTestSuite, TensorAddAdd)
                                  { 5.6, 5.6, 5.6 },
                                  { 5.6, 5.6, 5.6 }};
 
+  // FIXME: doesn't use rvalue as much as possible? needs  auto&& op31 = std::move(t31) + std::move(t32) + std::move(t33);
   auto&& op31 = t31 + t32 + t33;
   auto res3 = op31();
   EXPECT_EQ(res3, v3);
