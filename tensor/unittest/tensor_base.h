@@ -28,14 +28,19 @@ struct TensorBaseType
     using grid::Tensor<_T, _Rank, _Allocator>::Tensor;
   };
 
+  // rank-0 tensor
   template <typename _T>
   explicit Tensor(_T) -> Tensor<_T, 0>;
   template <typename _T>
   explicit Tensor(grid::Uninitialized<_T>) -> Tensor<_T, 0>;
+
+  // static tensors
   template <typename _T, typename... _Ts>
   explicit Tensor(_T, _Ts...) -> Tensor<std::common_type_t<_T, _Ts...>, 1, grid::StaticAllocator<sizeof...(_Ts)+1>>;
   template <typename _T, size_t... _N>
   explicit Tensor(_T(&&... l)[_N]) -> Tensor<_T, 2, grid::StaticAllocator<sizeof...(_N), std::max({_N...})>>;
+
+  // dynamic tensors
   template <typename _T>
   explicit Tensor(size_t, _T) -> Tensor<_T, 1>;
   template <typename _T>
@@ -68,9 +73,12 @@ struct TensorBaseType
   explicit Tensor(std::array<size_t, _N>, grid::Uninitialized<_T>) -> Tensor<_T, _N>;
   template <typename _T, size_t _N>
   explicit Tensor(std::array<size_t, _N>, std::array<ssize_t, _N>, grid::Uninitialized<_T>) -> Tensor<_T, _N>;
-  template <typename _T, size_t _N>
-  explicit Tensor(grid::MMapArray<_T, _N>) -> Tensor<_T, _N, grid::NoAllocator>;
 
+  // tensor array-view
+  template <typename _Tp, size_t N>
+  explicit Tensor(grid::ArrayView<_Tp, N>) -> Tensor<_Tp, N, grid::NoAllocator>;
+
+  // operators
   template <template <template <typename, size_t, typename...> typename, typename, size_t, typename...> typename _TensorOp,
   template <typename, size_t, typename...> typename _TensorRT, typename _T, size_t _Rank, typename... _Tensors>
   Tensor(_TensorOp<_TensorRT, _T, _Rank, _Tensors...>&&) -> Tensor<_T, _Rank>;

@@ -11,16 +11,11 @@
 #ifndef GRID_TENSOR_BASE_TENSOR_H
 #define GRID_TENSOR_BASE_TENSOR_H
 
-#include <algorithm>
 #include <array>
-#include <cstring>
 #include <initializer_list>
-#include <memory>
-#include <numeric>
-#include <span>
 
+#include "../array.h"
 #include "../tensor_parameters.h"
-#include "../mmap.h"
 
 #include "copy.h"
 
@@ -417,30 +412,31 @@ class Tensor<_T, 2, StaticAllocator<_M, _N>>
 };
 
 
-/// TensorSLowCpu<_T, _Rank, MemoryMapped> is a tensor for memory-mapped data
+/// Tensor<_T, _Rank, NoAllocator> is a tensor for an externally managed buffer
 template <typename _T, size_t _Rank>
 class Tensor<_T, _Rank, NoAllocator>
 {
  public:
   using value_type = _T;
+  using allocator_type = NoAllocator;
   using pointer = const _T*;
   using const_pointer = const _T*;
   constexpr static size_t rank = _Rank;
 
-  /// Constructor for a memory-mapped buffer.
-  explicit Tensor(const MMapArray<value_type, _Rank>& arr)
+  explicit Tensor() {}
+
+  explicit Tensor(const ArrayView<value_type, _Rank>& arr)
     : dims_(arr.dims_),
-      strides_(arr.strides_),
-      mmap_(arr.mmap_),
-      data_(static_cast<char*>(mmap_->Address()) + arr.offset_)
+      strides_(arr.Strides()),
+      size_(arr.Size()),
+      data_(arr.Data())
   {}
 
-  // Constructor for a memory-mapped buffer.
-  explicit Tensor(MMapArray<value_type, _Rank>&& arr)
-    : dims_(std::move(arr.dims_)),
-      strides_(std::move(arr.strides_)),
-      mmap_(std::move(arr.mmap_)),
-      data_(static_cast<char*>(mmap_->Address()) + arr.offset_)
+  explicit Tensor(ArrayView<value_type, _Rank>&& arr)
+    : dims_(std::move(arr.Dimensions())),
+      strides_(std::move(arr.Strides())),
+      size_(arr.Size()),
+      data_(std::move(arr.Data()))
   {}
 
 
@@ -454,7 +450,7 @@ class Tensor<_T, _Rank, NoAllocator>
   const std::array<ssize_t, _Rank>& Strides() const       { return strides_; }
 
   /// Size returns the data buffer size.
-  size_t Size()                                           { return strides_[0] * dims_[0]; }
+  size_t Size()                                           { return size_; }
 
   /// Data returns a pointer to the data buffer.
   char* Data() const                                      { return data_; }
@@ -462,8 +458,8 @@ class Tensor<_T, _Rank, NoAllocator>
  private:
   std::array<size_t, _Rank>   dims_;
   std::array<ssize_t, _Rank>  strides_;
-  std::shared_ptr<MMap>       mmap_;
-  char*                       data_;
+  size_t                      size_;
+  pointer                     data_;
 };
 
 
@@ -553,11 +549,11 @@ explicit Tensor(std::array<size_t, _N>, Uninitialized<_T>) -> Tensor<_T, _N>;
 template <typename _T, size_t _N>
 explicit Tensor(std::array<size_t, _N>, std::array<ssize_t, _N>, Uninitialized<_T>) -> Tensor<_T, _N>;
 
-
-// Tensor<mmap, dim, strides> -> Rank-N tensor for a memory mapped buffer
+// Tensor<ArrayView> -> Rank-N tensor for an externally managed buffer
 template <typename _T, size_t _N>
-explicit Tensor(MMapArray<_T, _N>) -> Tensor<_T, _N, NoAllocator>;
-
+explicit Tensor(const ArrayView<_T, _N>&) -> Tensor<_T, _N, NoAllocator>;
+template <typename _T, size_t _N>
+explicit Tensor(ArrayView<_T, _N>&&) -> Tensor<_T, _N, NoAllocator>;
 
 // TensorOp -> Tensor (move)
 template <template <template <typename, size_t, typename...> typename, typename, size_t, typename...> typename _TensorOp,

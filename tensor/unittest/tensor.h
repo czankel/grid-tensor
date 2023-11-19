@@ -151,11 +151,11 @@ TYPED_TEST_P(TensorTestSuite, TensorMMap)
 
   auto dims1 = view.Read<std::array<size_t, 2>>();
   auto strides1 = view.Read<std::array<size_t, 2>>();
-  typename TypeParam::Tensor tensor1(view.Array<double>(0UL, dims1, grid::make_strides<double>(strides1)));
+  typename TypeParam::Tensor tensor1(view.Array<double>(dims1, grid::make_strides<double>(strides1)));
 
   auto dims2 = view.Read<std::array<size_t, 2>>();
   auto strides2 = view.Read<std::array<size_t, 2>>();
-  typename TypeParam::Tensor tensor2(view.Array<double>(0UL, dims2, grid::make_strides<double>(strides2)));
+  typename TypeParam::Tensor tensor2(view.Array<double>(dims2, grid::make_strides<double>(strides2)));
 
   std::fclose(tmpf);
 }
