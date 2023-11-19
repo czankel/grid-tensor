@@ -14,6 +14,13 @@
 namespace grid {
 
 /// TensorAdd<Tensor> implements tensor addition operation for tensors of the same rank.
+///
+/// "Broadcasting" supports specfic additions, such as:
+///
+///   Matrix + column-vector --> Matrix is split into column blocks, each added with the vector
+///   Matrix + row-vector    --> Matrix is split into row blocks, each added with the vector
+///
+/// Note that tensor ranks must always match. In the case of broadcasting, the dimension is simply set to 1.
 template <typename _Tp, size_t _Rank, PrimitiveTensor _Tensor1, PrimitiveTensor _Tensor2>
 requires (_Tensor1::Rank() == _Tensor2::Rank())
 class TensorAdd<Tensor, _Tp, _Rank, _Tensor1, _Tensor2>
@@ -40,6 +47,23 @@ class TensorAdd<Tensor, _Tp, _Rank, _Tensor1, _Tensor2>
   TensorAdd& operator=(TensorAdd&& other) = delete;
 
  private:
+  // ExpandDimensions expands "broadcast" dimension (dim = 1) to the dimension of the other tensor.
+  std::array<size_t, _Rank> ExpandDimensions(const _Tensor1& tensor1, const _Tensor2& tensor2) const
+  {
+    const auto& dimensions1 = tensor1.Dimensions();
+    const auto& dimensions2 = tensor2.Dimensions();
+
+    std::array<size_t, _Rank> dimensions;
+    for (size_t i = 0; i < _Rank; i++)
+    {
+      if (dimensions1[i] != dimensions2[i] && dimensions1[i] != 1 && dimensions2[i] != 1)
+        throw std::runtime_error("Invalid dimensions");
+      dimensions[i] = dimensions1[i] == 1 ? dimensions2[i] : dimensions1[i];
+    }
+
+    return dimensions;
+  }
+
   inline void add(pointer dest, const_pointer src1, const_pointer src2,
                   std::span<const size_t,  0> dimensions,
                   std::span<const ssize_t, 0>,
@@ -84,13 +108,12 @@ class TensorAdd<Tensor, _Tp, _Rank, _Tensor1, _Tensor2>
       reinterpret_cast<const char*&>(src2) += strides2[0];
     }
   }
-
  public:
 
   /// operator()() executes the operation and returns a tensor.
   auto operator()() const
   {
-    auto& dimensions = tensor1_.Dimensions();
+    auto dimensions = ExpandDimensions(tensor1_, tensor2_);
     auto result = Tensor(dimensions, Uninitialized<value_type>{});
 
     add(result.Data(),
