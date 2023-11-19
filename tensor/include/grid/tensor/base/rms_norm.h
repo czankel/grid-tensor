@@ -19,13 +19,13 @@
 namespace grid {
 
 /// TensorRmsNorm<Tensor> implements RMS norm.
-template <typename _T, size_t _Rank, PrimitiveTensor _Tensor>
-class TensorRmsNorm<Tensor, _T, _Rank, _Tensor>
+template <typename _Tp, size_t _Rank, PrimitiveTensor _Tensor>
+class TensorRmsNorm<Tensor, _Tp, _Rank, _Tensor>
 {
  public:
-  using value_type = _T;
-  using pointer = _T*;
-  using const_pointer = const _T*;
+  using value_type = _Tp;
+  using pointer = _Tp*;
+  using const_pointer = const _Tp*;
   constexpr static size_t rank = _Rank;
 
   template <ConvertibleTo<Tensor> T1>

@@ -14,14 +14,14 @@
 namespace grid {
 
 /// TensorAdd<Tensor> implements tensor addition operation for tensors of the same rank.
-template <typename _T, size_t _Rank, PrimitiveTensor _Tensor1, PrimitiveTensor _Tensor2>
+template <typename _Tp, size_t _Rank, PrimitiveTensor _Tensor1, PrimitiveTensor _Tensor2>
 requires (_Tensor1::Rank() == _Tensor2::Rank())
-class TensorAdd<Tensor, _T, _Rank, _Tensor1, _Tensor2>
+class TensorAdd<Tensor, _Tp, _Rank, _Tensor1, _Tensor2>
 {
  public:
-  using value_type = _T;
-  using pointer = _T*;
-  using const_pointer = const _T*;
+  using value_type = _Tp;
+  using pointer = _Tp*;
+  using const_pointer = const _Tp*;
   constexpr static size_t rank = _Rank;
 
   template <ConvertibleTo<Tensor> T1, ConvertibleTo<Tensor> T2>

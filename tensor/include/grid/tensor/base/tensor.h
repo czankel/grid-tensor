@@ -26,16 +26,16 @@ template <PrimitiveTensor, size_t> class TensorView;
 
 /// Tensor provides an non-optimized base implementation of tensors.
 /// Note that the implementation implicitly requires that the buffer and strides are aligned to the value type.
-template <typename _T, size_t _Rank, typename Allocator=std::allocator<_T>>
+template <typename _Tp, size_t _Rank, typename Allocator=std::allocator<_Tp>>
 class Tensor
 {
   template <PrimitiveTensor T, size_t R> friend class TensorView;
 
  public:
-  using value_type = _T;
+  using value_type = _Tp;
   using allocator_type = Allocator;
-  using pointer = _T*;
-  using const_pointer = const _T*;
+  using pointer = _Tp*;
+  using const_pointer = const _Tp*;
   constexpr static size_t rank = _Rank;
 
  private:
@@ -319,15 +319,15 @@ class Tensor
   pointer                           data_;
 };
 
-/// Tensor<_T, 0, 1> is a specialization of a rank-0 tensor.
-template <typename _T>
-class Tensor<_T, 0>
+/// Tensor<T, 0, 1> is a specialization of a rank-0 tensor.
+template <typename _Tp>
+class Tensor<_Tp, 0>
 {
  public:
-  using value_type = _T;
+  using value_type = _Tp;
   using allocator_type = StaticAllocator<1>;
-  using pointer = _T*;
-  using const_pointer = const _T*;
+  using pointer = _Tp*;
+  using const_pointer = const _Tp*;
   constexpr static size_t rank = 0UL;
 
   /// Constructor for a rank-1 tensor (vector) with brace initialization.
@@ -349,7 +349,7 @@ class Tensor<_T, 0>
   const std::array<ssize_t, 0>& Strides() const           { return {strides_}; }
 
   /// Size returns the size of the entire buffer.
-  size_t Size() const                                     { return sizeof(_T); }
+  size_t Size() const                                     { return sizeof(value_type); }
 
   /// Data returns a pointer to the data buffer.
   pointer Data()                                          { return &data_; }
@@ -364,16 +364,16 @@ class Tensor<_T, 0>
 };
 
 
-/// Tensor<_T, 1, _N> is a specialization of a rank-1 tensor (vector) for a 'static' array.
+/// Tensor<T, 1, N> is a specialization of a rank-1 tensor (vector) for a 'static' array.
 /// Note that the brace-initializer form of Tensors don't support padding.
-template <typename _T, size_t _N>
-class Tensor<_T, 1, StaticAllocator<_N>>
+template <typename _Tp, size_t _N>
+class Tensor<_Tp, 1, StaticAllocator<_N>>
 {
  public:
-  using value_type = _T;
+  using value_type = _Tp;
   using allocator_type = StaticAllocator<_N>;
-  using pointer = const _T*;
-  using const_pointer = const _T*;
+  using pointer = const _Tp*;
+  using const_pointer = const _Tp*;
   constexpr static size_t rank = 1UL;
 
   /// Constructor for a rank-1 tensor (vector) with brace initialization.
@@ -415,15 +415,15 @@ class Tensor<_T, 1, StaticAllocator<_N>>
 };
 
 
-/// Tensor<_T, _M, _N> is a specialization of a rank-2 tensor (matrix) for a 'static' array.
+/// Tensor<T, M, N> is a specialization of a rank-2 tensor (matrix) for a 'static' array.
 /// Note that the brace-initializer form of Tensors don't support padding.
-template <typename _T, size_t _M, size_t _N>
-class Tensor<_T, 2, StaticAllocator<_M, _N>>
+template <typename _Tp, size_t _M, size_t _N>
+class Tensor<_Tp, 2, StaticAllocator<_M, _N>>
 {
  public:
-  using value_type = _T;
-  using pointer = const _T*;
-  using const_pointer = const _T*;
+  using value_type = _Tp;
+  using pointer = const _Tp*;
+  using const_pointer = const _Tp*;
   constexpr static size_t rank = 2UL;
 
   /// Constructor for a rank-2 (matrix) brace initialization.
@@ -465,16 +465,16 @@ class Tensor<_T, 2, StaticAllocator<_M, _N>>
 };
 
 
-/// Tensor<_T, _C, _M, _N> is a specialization of a rank-3 tensor for a 'static' array.
+/// Tensor<T, C, M, N> is a specialization of a rank-3 tensor for a 'static' array.
 /// Note that the brace-initializer form of Tensors don't support padding.
-template <typename _T, size_t _C, size_t _M, size_t _N>
-class Tensor<_T, 3, StaticAllocator<_C, _M, _N>>
+template <typename _Tp, size_t _C, size_t _M, size_t _N>
+class Tensor<_Tp, 3, StaticAllocator<_C, _M, _N>>
 {
  public:
-  using value_type = _T;
+  using value_type = _Tp;
   using allocator_type = StaticAllocator<_C, _M, _N>;
-  using pointer = const _T*;
-  using const_pointer = const _T*;
+  using pointer = const _Tp*;
+  using const_pointer = const _Tp*;
   constexpr static size_t rank = 3UL;
 
   /// Constructor for a rank-2 (matrix) brace initialization.
@@ -518,15 +518,15 @@ class Tensor<_T, 3, StaticAllocator<_C, _M, _N>>
 };
 
 
-/// Tensor<_T, _Rank, NoAllocator> is a tensor for an externally managed buffer
-template <typename _T, size_t _Rank>
-class Tensor<_T, _Rank, NoAllocator>
+/// Tensor<T, Rank, NoAllocator> is a tensor for an externally managed buffer
+template <typename _Tp, size_t _Rank>
+class Tensor<_Tp, _Rank, NoAllocator>
 {
  public:
-  using value_type = _T;
+  using value_type = _Tp;
   using allocator_type = NoAllocator;
-  using pointer = const _T*;
-  using const_pointer = const _T*;
+  using pointer = const _Tp*;
+  using const_pointer = const _Tp*;
   constexpr static size_t rank = _Rank;
 
   explicit Tensor() {}
@@ -687,102 +687,92 @@ class TensorView
 // Rank-0
 
 // Tensor{T} -> Rank-0 tensor with a static/local array
-template <typename _T>
-explicit Tensor(_T) -> Tensor<_T, 0>;
+template <typename _Tp>
+explicit Tensor(_Tp) -> Tensor<_Tp, 0>;
 
 // Tensor{Uninitailzied<T>} -> Rank-0 tensor with a static/local array
-template <typename _T>
-explicit Tensor(Uninitialized<_T>) -> Tensor<_T, 0>;
+template <typename _Tp>
+explicit Tensor(Uninitialized<_Tp>) -> Tensor<_Tp, 0>;
 
-// Static Allocator
+// Tensor with Static Allocator - Brace-initializer List
 
 // Tensor{Ts...} -> Rank-1 tensor with a static/local array (brace-initializer).
-template <typename _T, typename... _Ts>
-explicit Tensor(_T, _Ts...) -> Tensor<std::common_type_t<_T, _Ts...>, 1, StaticAllocator<sizeof...(_Ts)+1>>;
+template <typename _Tp, typename... _Ts>
+explicit Tensor(_Tp, _Ts...) -> Tensor<std::common_type_t<_Tp, _Ts...>, 1, StaticAllocator<sizeof...(_Ts)+1>>;
 
 // Tensor{{...},...} -> Rank-2 tensor with a static/local array (brace-initializer).
-template <typename _T, size_t... _N>
-Tensor(_T(&&... l)[_N]) -> Tensor<_T, 2, StaticAllocator<sizeof...(_N), std::max({_N...})>>;
+template <typename _Tp, size_t... _N>
+Tensor(_Tp(&&... l)[_N]) -> Tensor<_Tp, 2, StaticAllocator<sizeof...(_N), std::max({_N...})>>;
 
 // Tensor{{{...},...},...} -> Rank-3 tensor with a static/local array (brace-initializer).
-template <typename _T, size_t... _M, size_t... _N>
-explicit Tensor(_T(&&... l)[_M][_N]) -> Tensor<_T, 3, StaticAllocator<sizeof...(_M), std::max({_M...}), std::max({_N...})>>;
+template <typename _Tp, size_t... _M, size_t... _N>
+explicit Tensor(_Tp(&&... l)[_M][_N]) -> Tensor<_Tp, 3, StaticAllocator<sizeof...(_M), std::max({_M...}), std::max({_N...})>>;
 
-// Dynamic Allocator
+// Tensor with Dynamic Allocator - Paremter List
 
-// Tensor(uint, _T) -> Rank-1 tensor with a dynamically allocated buffer.
-template <typename _T>
-explicit Tensor(size_t, _T) -> Tensor<_T, 1>;
+// Tensor(uint,T) -> Rank-1 tensor with a dynamically allocated buffer.
+template <typename _Tp>
+explicit Tensor(size_t, _Tp) -> Tensor<_Tp, 1>;
 
 // Tensor(uint, Uninitialized<T>) -> Rank-1 tensor with a dynamically allocated uninitialized buffer.
-template <typename _T>
-explicit Tensor(size_t, Uninitialized<_T>) -> Tensor<_T, 1>;
+template <typename _Tp>
+explicit Tensor(size_t, Uninitialized<_Tp>) -> Tensor<_Tp, 1>;
 
-// Tensor(uint, uint, _T) -> Rank-2 tensor with a dynamically allocated buffer.
-template <typename _T>
-explicit Tensor(size_t, size_t, _T) -> Tensor<_T, 2>;
+// Tensor(uint, uint, T) -> Rank-2 tensor with a dynamically allocated buffer.
+template <typename _Tp>
+explicit Tensor(size_t, size_t, _Tp) -> Tensor<_Tp, 2>;
 
 // Tensor(uint, Uninitialized<T>) -> Rank-2 tensor with a dynamically allocated uninitialized buffer.
-template <typename _T>
-explicit Tensor(size_t, size_t, Uninitialized<_T>) -> Tensor<_T, 2>;
+template <typename _Tp>
+explicit Tensor(size_t, size_t, Uninitialized<_Tp>) -> Tensor<_Tp, 2>;
 
 // Tensor(&[], &[], T) -> Rank-N tensor with a dynamically allocated initialized buffer.
-template <typename _T, size_t _N>
-explicit Tensor(const size_t(&)[_N], const ssize_t(&)[_N], _T) -> Tensor<_T, _N>;
+template <typename _Tp, size_t _N>
+explicit Tensor(const size_t(&)[_N], const ssize_t(&)[_N], _Tp) -> Tensor<_Tp, _N>;
 
 // Tensor(&[], &[], Uninitialized<T>) -> Rank-N tensor with a dynamically allocated uninitialized buffer.
-template <typename _T, size_t _N>
-explicit Tensor(const size_t(&)[_N], const ssize_t(&)[_N], Uninitialized<_T>) -> Tensor<_T, _N>;
+template <typename _Tp, size_t _N>
+explicit Tensor(const size_t(&)[_N], const ssize_t(&)[_N], Uninitialized<_Tp>) -> Tensor<_Tp, _N>;
 
-// Tensor(&&[], &&[], _T) -> Rank-N tensor with a dynamically allocated initialized buffer.
-template <typename _T, size_t _N>
-explicit Tensor(size_t(&&)[_N], ssize_t(&&)[_N], _T) -> Tensor<_T, _N>;
+// Tensor(&&[], &&[], T) -> Rank-N tensor with a dynamically allocated initialized buffer.
+template <typename _Tp, size_t _N>
+explicit Tensor(size_t(&&)[_N], ssize_t(&&)[_N], _Tp) -> Tensor<_Tp, _N>;
 
 // Tensor(&&[], &&[]) -> Rank-N tensor with a dynamically allocated uninitialized buffer.
-template <typename _T, size_t _N>
-explicit Tensor(size_t(&&)[_N], ssize_t(&&)[_N], Uninitialized<_T>) -> Tensor<_T, _N>;
+template <typename _Tp, size_t _N>
+explicit Tensor(size_t(&&)[_N], ssize_t(&&)[_N], Uninitialized<_Tp>) -> Tensor<_Tp, _N>;
 
 // Tensor(&[], T) -> Rank-N tensor with a dynamically allocated initialized buffer.
-template <typename _T, size_t _N>
-explicit Tensor(const size_t(&)[_N], _T) -> Tensor<_T, _N>;
+template <typename _Tp, size_t _N>
+explicit Tensor(const size_t(&)[_N], _Tp) -> Tensor<_Tp, _N>;
 
 // Tensor(&[], Uninitialized<T>) -> Rank-N tensor with a dynamically allocated uninitialized buffer.
-template <typename _T, size_t _N>
-explicit Tensor(const size_t(&)[_N], Uninitialized<_T>) -> Tensor<_T, _N>;
+template <typename _Tp, size_t _N>
+explicit Tensor(const size_t(&)[_N], Uninitialized<_Tp>) -> Tensor<_Tp, _N>;
 
 // Tensor(&&[], T) -> Rank-N tensor with a dynamically allocated initialized buffer.
-template <typename _T, size_t _N>
-explicit Tensor(const size_t(&&)[_N], _T) -> Tensor<_T, _N>;
+template <typename _Tp, size_t _N>
+explicit Tensor(const size_t(&&)[_N], _Tp) -> Tensor<_Tp, _N>;
 
 // Tensor(&&[], Uninitialized<T>) -> Rank-N tensor with a dynamically allocated uninitialized buffer.
-template <typename _T, size_t _N>
-explicit Tensor(const size_t(&&)[_N], Uninitialized<_T>) -> Tensor<_T, _N>;
+template <typename _Tp, size_t _N>
+explicit Tensor(const size_t(&&)[_N], Uninitialized<_Tp>) -> Tensor<_Tp, _N>;
 
 // Tensor(array, T)
-template <typename _T, size_t _N>
-Tensor(std::array<size_t, _N>, _T) -> Tensor<_T, _N>;
+template <typename _Tp, size_t _N>
+Tensor(std::array<size_t, _N>, _Tp) -> Tensor<_Tp, _N>;
 
 // Tensor(array, array, T)
-template <typename _T, size_t _N>
-explicit Tensor(std::array<size_t, _N>, std::array<ssize_t, _N>, _T) -> Tensor<_T, _N>;
+template <typename _Tp, size_t _N>
+explicit Tensor(std::array<size_t, _N>, std::array<ssize_t, _N>, _Tp) -> Tensor<_Tp, _N>;
 
 // Tensor(array, Uninitialized<T>)
-template <typename _T, size_t _N>
-explicit Tensor(std::array<size_t, _N>, Uninitialized<_T>) -> Tensor<_T, _N>;
+template <typename _Tp, size_t _N>
+explicit Tensor(std::array<size_t, _N>, Uninitialized<_Tp>) -> Tensor<_Tp, _N>;
 
 // Tensor(array, array, Uninitialized<T>)
-template <typename _T, size_t _N>
-explicit Tensor(std::array<size_t, _N>, std::array<ssize_t, _N>, Uninitialized<_T>) -> Tensor<_T, _N>;
-
-// ArrayView
-
-// Tensor<ArrayView> -> Rank-N tensor for an externally managed buffer
-template <typename _T, size_t _N>
-explicit Tensor(const ArrayView<_T, _N>&) -> Tensor<_T, _N, NoAllocator>;
-template <typename _T, size_t _N>
-explicit Tensor(ArrayView<_T, _N>&&) -> Tensor<_T, _N, NoAllocator>;
-
-
+template <typename _Tp, size_t _N>
+explicit Tensor(std::array<size_t, _N>, std::array<ssize_t, _N>, Uninitialized<_Tp>) -> Tensor<_Tp, _N>;
 
 // Tensor with Dynamic Allocator - TensorView Argument
 
@@ -794,13 +784,22 @@ Tensor(const TensorView<_Tensor, _Rank>&) -> Tensor<typename _Tensor::value_type
 // Tensor with Dynamic Allocator - Operator Argument
 // TensorOp -> Tensor (move)
 template <template <template <typename, size_t, typename...> typename, typename, size_t, typename...> typename _TensorOp,
-          template <typename, size_t, typename...> typename _TensorRT, typename _T, size_t _Rank, typename... _Tensors>
-Tensor(_TensorOp<_TensorRT, _T, _Rank, _Tensors...>&&) -> Tensor<_T, _Rank>;
+          template <typename, size_t, typename...> typename _TensorRT, typename _Tp, size_t _Rank, typename... _Tensors>
+Tensor(_TensorOp<_TensorRT, _Tp, _Rank, _Tensors...>&&) -> Tensor<_Tp, _Rank>;
 
 // TensorOp -> Tensor (copy)
 template <template <template <typename, size_t, typename...> typename, typename, size_t, typename...> typename _TensorOp,
-          template <typename, size_t, typename...> typename _TensorRT, typename _T, size_t _Rank, typename... _Tensors>
-Tensor(const _TensorOp<_TensorRT,_T,  _Rank, _Tensors...>&) -> Tensor<_T, _Rank>;
+          template <typename, size_t, typename...> typename _TensorRT, typename _Tp, size_t _Rank, typename... _Tensors>
+Tensor(const _TensorOp<_TensorRT,_Tp,  _Rank, _Tensors...>&) -> Tensor<_Tp, _Rank>;
+
+// Tensor with "NoAllocator" - ArrayView
+
+// Tensor<ArrayView> -> Rank-N tensor for an externally managed buffer
+template <typename _Tp, size_t _N>
+explicit Tensor(const ArrayView<_Tp, _N>&) -> Tensor<_Tp, _N, NoAllocator>;
+template <typename _Tp, size_t _N>
+explicit Tensor(ArrayView<_Tp, _N>&&) -> Tensor<_Tp, _N, NoAllocator>;
+
 
 } // end of namespace grid
 
