@@ -54,6 +54,34 @@ TYPED_TEST_P(TensorTestSuite, TensorBraceInitializationRank2Integer)
   EXPECT_EQ(data[9], 32);
 }
 
+TYPED_TEST_P(TensorTestSuite, TensorBraceInitializationRank3Integer)
+{
+  typename TypeParam::Tensor tensor1{ { { 111, 112, 113, 114, 115 },
+                                        { 121, 122, 123, 124, 125 },
+                                        { 131, 132, 133, 134, 135 },
+                                        { 141, 142, 143, 144, 145 } },
+                                      { { 211, 212, 213, 214, 215 },
+                                        { 221, 222, 223, 224, 225 },
+                                        { 231, 232, 233, 234, 235 },
+                                        { 241, 242, 243, 244, 245 } },
+                                      { { 311, 312, 313, 314, 315 },
+                                        { 321, 322, 323, 324, 325 },
+                                        { 331, 332, 333, 334, 335 },
+                                        { 341, 342, 343, 344, 345 } } };
+
+  EXPECT_EQ(tensor1.Rank(), 3);
+  EXPECT_THAT(tensor1.Dimensions(), ElementsAre(3, 4, 5));
+  EXPECT_THAT(tensor1.Strides(), ElementsAre(size<int>(4*5), size<int>(5), size<int>(1)));
+
+  const int* data = reinterpret_cast<const int*>(tensor1.Data());
+  EXPECT_EQ(data[0],  111);
+  EXPECT_EQ(data[6],  122);
+  EXPECT_EQ(data[12], 133);
+  EXPECT_EQ(data[18], 144);
+  EXPECT_EQ(data[20], 211);
+  EXPECT_EQ(data[59], 345);
+}
+
 TYPED_TEST_P(TensorTestSuite, TensorAllocInitializedRank1Double)
 {
   typename TypeParam::Tensor tensor1(4UL, 1.2);
@@ -165,6 +193,7 @@ REGISTER_TYPED_TEST_SUITE_P(TensorTestSuite,
     TensorBraceInitializationRank0Integer,
     TensorBraceInitializationRank1Integer,
     TensorBraceInitializationRank2Integer,
+    TensorBraceInitializationRank3Integer,
     TensorAllocInitializedRank1Double,
     TensorAllocUninitializedRank1Double,
     TensorAllocInitializedRank2Char,

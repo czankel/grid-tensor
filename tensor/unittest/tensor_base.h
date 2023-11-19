@@ -39,6 +39,8 @@ struct TensorBaseType
   explicit Tensor(_T, _Ts...) -> Tensor<std::common_type_t<_T, _Ts...>, 1, grid::StaticAllocator<sizeof...(_Ts)+1>>;
   template <typename _T, size_t... _N>
   explicit Tensor(_T(&&... l)[_N]) -> Tensor<_T, 2, grid::StaticAllocator<sizeof...(_N), std::max({_N...})>>;
+  template <typename T, size_t... M, size_t... N>
+  explicit Tensor(T(&&... l)[M][N]) -> Tensor<T, 3, grid::StaticAllocator<sizeof...(M), std::max({M...}), std::max({N...})>>;
 
   // dynamic tensors
   template <typename _T>

@@ -36,6 +36,25 @@ get_array(std::initializer_list<std::initializer_list<_T>>&& init)
   return arr;
 }
 
+// get_array(initializer_list<initializer_list<initializer_list>>) returns a std::array from a
+// 3-dimensional initializer list.
+template <typename _Tp, size_t _C, size_t _M, size_t _N>
+inline constexpr std::array<_Tp, _C * _M * _N>
+get_array(std::initializer_list<std::initializer_list<std::initializer_list<_Tp>>>&& init)
+{
+  std::array<_Tp, _C * _M * _N> arr{};
+  auto line_it = arr.begin();
+  for (auto lt : init)
+  {
+    for (auto it : lt)
+    {
+      std::copy(it.begin(), it.end(), line_it);
+      line_it += _N;
+    }
+  }
+  return arr;
+}
+
 template <typename _T, size_t _N>
 inline constexpr std::array<_T, _N>
 get_array(const _T(&init)[_N])
