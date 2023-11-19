@@ -81,7 +81,7 @@ class TensorRmsNorm<Tensor, _T, _Rank, _Tensor>
 
     constexpr value_type eps = std::numeric_limits<value_type>::epsilon();
     value_type scale = 1.0/sqrtf(value / count + eps);
-    return TensorMul(tensor_, Tensor{scale});
+    return TensorMul(tensor_, Tensor{scale})();
   }
 
  private:

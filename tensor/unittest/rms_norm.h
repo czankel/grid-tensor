@@ -33,6 +33,9 @@ TYPED_TEST_P(RmsNormTestSuite, TensorNormRmsRank2)
   typename TypeParam::Tensor tensor{ { 1.618, 2., 3.14, 5.382, -8.5}, { 13., -21., 34.77, 55., 43.5} };
   auto op = grid::TensorRmsNorm(tensor);
   auto result = op();
+
+  // TODO: check actual result
+  EXPECT_EQ(result.Rank(), 2);
 }
 
 REGISTER_TYPED_TEST_SUITE_P(RmsNormTestSuite,
