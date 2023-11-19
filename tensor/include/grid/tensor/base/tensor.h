@@ -12,6 +12,7 @@
 #define GRID_TENSOR_BASE_TENSOR_H
 
 #include <array>
+#include <bitset>
 #include <initializer_list>
 
 #include "../array.h"
@@ -21,11 +22,15 @@
 
 namespace grid {
 
+template <PrimitiveTensor, size_t> class TensorView;
+
 /// Tensor provides an non-optimized base implementation of tensors.
 /// Note that the implementation implicitly requires that the buffer and strides are aligned to the value type.
 template <typename _T, size_t _Rank, typename Allocator=std::allocator<_T>>
 class Tensor
 {
+  template <PrimitiveTensor T, size_t R> friend class TensorView;
+
  public:
   using value_type = _T;
   using allocator_type = Allocator;
@@ -186,6 +191,19 @@ class Tensor
       data_(new value_type[size_ / sizeof(value_type)])
   {}
 
+
+  /// Constructor from a 'trivially copyable' tensor.
+  /// Note: assumes strides are type-aligned.
+  template <PrimitiveTensor _Tensor>
+  Tensor(const _Tensor& other)
+    : dims_(other.Dimensions()),
+      strides_(other.Strides()),
+      size_(other.Size()),
+      data_(new value_type[size_ / sizeof(value_type)])
+  {
+    copy<value_type, _Rank>(data_, other.Data(), dims_, strides_, other.Strides());
+  }
+
   /// Constructor for any rank tensor with a dynamically allocated uninitialized buffer with padding.
   explicit Tensor(std::array<size_t, _Rank> dims,
                   std::array<ssize_t, _Rank> strides,
@@ -260,6 +278,21 @@ class Tensor
   Tensor& operator=(_Operator&& oper)
   {
     return operator=(std::forward<_Operator>(oper)());
+  }
+
+
+  /// View returns a "view" of the tensor, which can be a "sub-tensor" or add "broadcastable" axes.
+  /// It requires that the underlying tensor's lifetime is ...
+  template <size_t _ViewRank>
+  auto View(const ssize_t(& axes)[_ViewRank], const ssize_t(& offsets)[_Rank] = {0})
+  {
+    return TensorView(*this, axes, offsets);
+  }
+
+  template <size_t _ViewRank>
+  auto View(const ssize_t(& axes)[_ViewRank], const ssize_t(& offsets)[_Rank] = {0}) const
+  {
+    return TensorView(*this, axes, offsets);
   }
 
 
@@ -350,6 +383,16 @@ class Tensor<_T, 1, StaticAllocator<_N>>
       array_(get_array<value_type, _N>(std::move(init)))
   {}
 
+
+  /// View returns a "view" of the tensor, which can be a "sub-tensor" or add "broadcastable" axes.
+  /// It requires that the underlying tensor's lifetime is ...
+  template <size_t _ViewRank>
+  auto View(const ssize_t(& axes)[_ViewRank], const ssize_t(& offsets)[1]) const &
+  {
+    return TensorView(*this, axes, offsets);
+  }
+
+
   /// Rank returns the rank of the tensor.
   constexpr static size_t Rank()                          { return 1UL; }
 
@@ -389,6 +432,16 @@ class Tensor<_T, 2, StaticAllocator<_M, _N>>
       strides_{ sizeof(value_type) * _N, sizeof(value_type)},
       array_(get_array<value_type, _M, _N>(std::move(init)))
   {}
+
+
+  /// View returns a "view" of the tensor, which can be a "sub-tensor" or add "broadcastable" axes.
+  /// It requires that the underlying tensor's lifetime is ...
+  template <size_t _ViewRank>
+  auto View(const ssize_t(& axes)[_ViewRank], const ssize_t(& offsets)[2]) const &
+  {
+    return TensorView(*this, axes, offsets);
+  }
+
 
   /// Rank returns the rank of the tensor.
   constexpr static size_t Rank()                          { return 2UL; }
@@ -493,6 +546,15 @@ class Tensor<_T, _Rank, NoAllocator>
   {}
 
 
+  /// View returns a "view" of the tensor, which can be a "sub-tensor" or add "broadcastable" axes.
+  /// It requires that the underlying tensor's lifetime is ...
+  template <size_t _ViewRank>
+  auto View(const ssize_t(& axes)[_ViewRank], const ssize_t(& offsets)[_Rank]) const &
+  {
+    return TensorView(*this, axes, offsets);
+  }
+
+
   /// Rank returns the rank of the tensor.
   constexpr static size_t Rank()                          { return _Rank; }
 
@@ -507,6 +569,109 @@ class Tensor<_T, _Rank, NoAllocator>
 
   /// Data returns a pointer to the data buffer.
   char* Data() const                                      { return data_; }
+
+ private:
+  std::array<size_t, _Rank>   dims_;
+  std::array<ssize_t, _Rank>  strides_;
+  size_t                      size_;
+  pointer                     data_;
+};
+
+
+/// TensorView<Tensor, Rank> implements a view of a tensor.
+///
+/// Note that a view cannot be created from a temporary rval; it will return a tensor.
+template <PrimitiveTensor _Tensor, size_t _Rank>
+class TensorView
+{
+ public:
+  using value_type = typename _Tensor::value_type;
+  using pointer = typename _Tensor::pointer;
+  using const_pointer = typename _Tensor::const_pointer;
+  constexpr static size_t rank = _Rank;
+
+ private:
+  // pointer_cast provides a (value) const-qualified pointer cast
+  template <typename T, typename S> requires (std::is_const_v<std::remove_pointer_t<S>>)
+  const std::remove_pointer_t<T>* pointer_cast(S pointer)
+  {
+    return reinterpret_cast<const std::remove_pointer_t<T>*>(pointer);
+  }
+  template <typename T, typename S> requires (!std::is_const_v<std::remove_pointer_t<S>>)
+  std::remove_pointer_t<T>* pointer_cast(S pointer)
+  {
+    return reinterpret_cast<std::remove_pointer_t<T>*>(pointer);
+  }
+
+ public:
+  // TensorView must be in the same scope and lifetime as the underlying tensor.
+  TensorView() = delete;
+
+  /// Constructor
+  template <size_t _TensorRank>
+  explicit TensorView(_Tensor& tensor, const ssize_t(& axes)[_Rank], const ssize_t(& offsets)[_TensorRank])
+    : size_(0UL)
+  {
+    std::bitset<_TensorRank> handled = false;
+    auto strides = tensor.Strides();
+    auto dims    = tensor.Dimensions();
+
+    for (ssize_t i = static_cast<ssize_t>(_Rank) - 1; i >= 0; i--)
+    {
+      if (axes[i] >= 0 && axes[i] < static_cast<ssize_t>(_TensorRank))
+      {
+        if (handled[axes[i]])
+          throw std::runtime_error("axis can only be used once");
+
+        handled.set(axes[i]);
+        dims_[i] = dims[axes[i]];
+        strides_[i] = strides[axes[i]];
+        size_ += dims_[i] * strides_[i];
+      }
+      else if (axes[i] == Broadcast)
+      {
+        dims_[i] = 1;
+        strides_[i] = 0;
+      }
+      else
+        throw std::runtime_error("Invalid axis");
+    }
+
+    size_t offset = 0UL;
+    for (size_t i = 0; i < _TensorRank; i++)
+    {
+      if (offsets[i] > static_cast<ssize_t>(tensor.dims_[i] * tensor.strides_[i]))
+        throw std::runtime_error("Offset exceeds dimension");
+      offset += offsets[i] * tensor.strides_[i];
+    }
+
+    data_ = reinterpret_cast<pointer>(pointer_cast<char*>(tensor.Data()) + offset);
+  }
+
+
+  /// operator=(Tensor) copies data from the rhs tensor (or view) into the view of the dependent tensor.
+  template <AnyTensor _FromTensor> requires (_FromTensor::rank == _Rank)
+  auto operator=(const _FromTensor& rhs)
+  {
+    copy<value_type, _Rank>(data_, rhs.Data(), dims_, strides_, rhs.Strides());
+  }
+
+
+  /// Rank returns the rank of the tensor.
+  constexpr static size_t Rank()                          { return _Rank; }
+
+  /// Dimensions returns the dimensions of the tensor.
+  const std::array<size_t, _Rank>& Dimensions() const     { return dims_; }
+
+  /// Strides returns the strides of the tensor.
+  const std::array<ssize_t, _Rank>& Strides() const       { return strides_; }
+
+  /// Size returns the data buffer size.
+  size_t Size() const                                     { return size_; }
+
+  /// Data returns a pointer to the data buffer.
+  pointer Data()                                          { return &data_; }
+  const_pointer Data() const                              { return data_; }
 
  private:
   std::array<size_t, _Rank>   dims_;
@@ -618,6 +783,15 @@ template <typename _T, size_t _N>
 explicit Tensor(ArrayView<_T, _N>&&) -> Tensor<_T, _N, NoAllocator>;
 
 
+
+// Tensor with Dynamic Allocator - TensorView Argument
+
+template <typename _Tensor, size_t _Rank>
+Tensor(TensorView<_Tensor, _Rank>&&) -> Tensor<typename _Tensor::value_type, _Rank>;
+template <typename _Tensor, size_t _Rank>
+Tensor(const TensorView<_Tensor, _Rank>&) -> Tensor<typename _Tensor::value_type, _Rank>;
+
+// Tensor with Dynamic Allocator - Operator Argument
 // TensorOp -> Tensor (move)
 template <template <template <typename, size_t, typename...> typename, typename, size_t, typename...> typename _TensorOp,
           template <typename, size_t, typename...> typename _TensorRT, typename _T, size_t _Rank, typename... _Tensors>

@@ -188,6 +188,62 @@ TYPED_TEST_P(TensorTestSuite, TensorMMap)
   std::fclose(tmpf);
 }
 
+TYPED_TEST_P(TensorTestSuite, TensorViewBraceInitializationTensor)
+{
+  typename TypeParam::Tensor tensor1{ { { 111, 112, 113, 114, 115 },
+                                        { 121, 122, 123, 124, 125 },
+                                        { 131, 132, 133, 134, 135 },
+                                        { 141, 142, 143, 144, 145 } },
+                                      { { 211, 212, 213, 214, 215 },
+                                        { 221, 222, 223, 224, 225 },
+                                        { 231, 232, 233, 234, 235 },
+                                        { 241, 242, 243, 244, 245 } },
+                                      { { 311, 312, 313, 314, 315 },
+                                        { 321, 322, 323, 324, 325 },
+                                        { 331, 332, 333, 334, 335 },
+                                        { 341, 342, 343, 344, 345 } } };
+
+  auto view_row = tensor1.View({ 2 }, {1, 2, 0});
+  EXPECT_EQ(view_row.Rank(), 1);
+  EXPECT_THAT(view_row.Dimensions(), ElementsAre(5));
+  EXPECT_THAT(view_row.Strides(), ElementsAre(size<int>(1)));
+  typename TypeParam::Tensor expected{231, 232, 233, 234, 235};
+  EXPECT_EQ(view_row, expected);
+}
+
+TYPED_TEST_P(TensorTestSuite, TensorViewAllocInitializationTensor)
+{
+  typename TypeParam::Tensor tensor(4UL, 5UL, 1.1);
+  tensor.View({0}, {0, 1}) = typename TypeParam::Tensor{2.1, 3.2, 4.3, 5.4, 6.5};
+  typename TypeParam::Tensor expected{ { 1.1, 2.1, 1.1, 1.1, 1.1},
+                                       { 1.1, 3.2, 1.1, 1.1, 1.1},
+                                       { 1.1, 4.3, 1.1, 1.1, 1.1},
+                                       { 1.1, 5.4, 1.1, 1.1, 1.1} };
+
+  EXPECT_THAT(tensor.Dimensions(), ElementsAre(4, 5));
+  EXPECT_THAT(tensor.Strides(), ElementsAre(size<double>(5 * 1), size<double>(1)));
+  EXPECT_EQ(tensor, expected);
+}
+
+TYPED_TEST_P(TensorTestSuite, TensorBroadcast1to2)
+{
+  typename TypeParam::Tensor tensor(4UL, 1.1);
+  auto broadcast1 = tensor.View({0, grid::Broadcast});
+  EXPECT_EQ(broadcast1.Rank(), 2);
+  EXPECT_THAT(broadcast1.Dimensions(), ElementsAre(4, 1));
+  EXPECT_THAT(broadcast1.Strides(), ElementsAre(size<double>(1), size<double>(0)));
+
+  typename TypeParam::Tensor tensor2 = broadcast1;
+  auto broadcast2 = tensor2.View({grid::Broadcast, 1, 0, grid::Broadcast});
+  EXPECT_EQ(broadcast2.Rank(), 4);
+  EXPECT_THAT(broadcast2.Dimensions(), ElementsAre(1, 1, 4, 1));
+  EXPECT_THAT(broadcast2.Strides(), ElementsAre(
+        size<double>(0),
+        size<double>(0),
+        size<double>(1),
+        size<double>(0)));
+}
+
 
 REGISTER_TYPED_TEST_SUITE_P(TensorTestSuite,
     TensorBraceInitializationRank0Integer,
@@ -201,4 +257,7 @@ REGISTER_TYPED_TEST_SUITE_P(TensorTestSuite,
     TensorAllocInitializedRank3Double,
     TensorAllocUninitializedRank3Double,
     TensorAllocUninitializedPattedRank3Double,
-    TensorMMap);
+    TensorMMap,
+    TensorViewBraceInitializationTensor,
+    TensorViewAllocInitializationTensor,
+    TensorBroadcast1to2);
