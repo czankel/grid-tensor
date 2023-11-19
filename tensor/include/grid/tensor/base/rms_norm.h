@@ -31,8 +31,6 @@ class TensorRmsNorm<Tensor, _T, _Rank, _Tensor>
   template <ConvertibleTo<Tensor> T1>
   TensorRmsNorm(T1&& tensor) : tensor_(std::forward<T1>(tensor)) {}
 
-  ~TensorRmsNorm() {}
-
   // delete assignment and copy/move constructors
   TensorRmsNorm() = delete;
   TensorRmsNorm(const TensorRmsNorm& other) = delete;
@@ -40,6 +38,7 @@ class TensorRmsNorm<Tensor, _T, _Rank, _Tensor>
   TensorRmsNorm& operator=(const TensorRmsNorm& other) = delete;
   TensorRmsNorm& operator=(TensorRmsNorm&& other) = delete;
 
+ private:
   inline auto
   SumSquare(const_pointer src,
             std::span<const size_t,  1> dims,
@@ -72,7 +71,9 @@ class TensorRmsNorm<Tensor, _T, _Rank, _Tensor>
     return std::tuple{value, count};
   }
 
+ public:
 
+  /// operator()() executes the operation and returns a tensor.
   auto operator()() const requires (std::is_floating_point_v<value_type>)
   {
     auto [value, count] = SumSquare(tensor_.Data(),
@@ -88,8 +89,9 @@ class TensorRmsNorm<Tensor, _T, _Rank, _Tensor>
   _Tensor tensor_;
 };
 
-
+//
 // CTAD
+//
 
 template <ConvertibleTo<Tensor> _Tensor>
 TensorRmsNorm(_Tensor)

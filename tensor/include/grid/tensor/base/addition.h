@@ -13,7 +13,6 @@
 
 namespace grid {
 
-
 /// TensorAdd<Tensor> implements tensor addition operation for tensors of the same rank.
 template <typename _T, size_t _Rank, PrimitiveTensor _Tensor1, PrimitiveTensor _Tensor2>
 requires (_Tensor1::Rank() == _Tensor2::Rank())
@@ -40,7 +39,7 @@ class TensorAdd<Tensor, _T, _Rank, _Tensor1, _Tensor2>
   TensorAdd& operator=(const TensorAdd& other) = delete;
   TensorAdd& operator=(TensorAdd&& other) = delete;
 
-
+ private:
   inline void add(pointer dest, const_pointer src1, const_pointer src2,
                   std::span<const size_t,  0> dims,
                   std::span<const ssize_t, 0>,
@@ -86,9 +85,9 @@ class TensorAdd<Tensor, _T, _Rank, _Tensor1, _Tensor2>
     }
   }
 
+ public:
 
-  // Functor
-  // FIXME: must be same rank? static_assert?
+  /// operator()() executes the operation and returns a tensor.
   auto operator()() const
   {
     auto& dims = tensor1_.Dimensions();
@@ -109,8 +108,9 @@ class TensorAdd<Tensor, _T, _Rank, _Tensor1, _Tensor2>
   _Tensor2 tensor2_;
 };
 
-
+//
 // CTAD
+//
 
 template <ConvertibleTo<Tensor> _Tensor1, ConvertibleTo<Tensor> _Tensor2>
 TensorAdd(_Tensor1, _Tensor2)

@@ -11,12 +11,10 @@
 #ifndef GRID_TENSOR_BASE_MULTIPLY_H
 #define GRID_TENSOR_BASE_MULTIPLY_H
 
-#include <algorithm>
-
 namespace grid {
 
-/// TensorMul<Tensor> implements tensor multiplication operation for tensors of the same rank.
-/// Including matrix multiplication (MatMul) and vector dot-product (VecDot).
+/// TensorMul<Tensor> implements tensor multiplication operation for tensors of the same and
+/// different ranks, such as matrix multiplication (MatMul) and vector dot-product (VecDot).
 template <typename _T, size_t _Rank, PrimitiveTensor _Tensor1, PrimitiveTensor _Tensor2>
 class TensorMul<Tensor, _T, _Rank, _Tensor1, _Tensor2>
 {
@@ -32,8 +30,6 @@ class TensorMul<Tensor, _T, _Rank, _Tensor1, _Tensor2>
      tensor2_(std::forward<T2>(tensor2))
   {}
 
-  ~TensorMul() {}
-
   // delete assignment and copy/move constructors
   TensorMul() = delete;
   TensorMul(const TensorMul& other) = delete;
@@ -41,6 +37,7 @@ class TensorMul<Tensor, _T, _Rank, _Tensor1, _Tensor2>
   TensorMul& operator=(const TensorMul& other) = delete;
   TensorMul& operator=(TensorMul&& other) = delete;
 
+ private:
   inline void VecDot(pointer dest, const_pointer src1, const_pointer src2,
                      std::span<const size_t,  1> dims,
                      std::span<const ssize_t, 1> strides1,
@@ -111,7 +108,9 @@ class TensorMul<Tensor, _T, _Rank, _Tensor1, _Tensor2>
     }
   }
 
+ public:
 
+  /// operator()() executes the operation and returns a tensor.
   auto operator()() const requires (_Tensor1::rank == 1 && _Tensor2::rank == 1)
   {
     auto& dims = tensor1_.Dimensions();
@@ -132,7 +131,7 @@ class TensorMul<Tensor, _T, _Rank, _Tensor1, _Tensor2>
     auto& dims = tensor1_.Dimensions();
     auto result = Tensor({dims[0], dims[0]}, Uninitialized<value_type>{});
 
-    // transpose second matrix
+    // transpose right matrix
     auto strides = tensor2_.Strides();
     std::swap(strides[0], strides[1]);
 
@@ -179,14 +178,14 @@ class TensorMul<Tensor, _T, _Rank, _Tensor1, _Tensor2>
   _Tensor2 tensor2_;
 };
 
-
+//
 // CTAD
+//
 
 template <ConvertibleTo<Tensor> _Tensor1, ConvertibleTo<Tensor> _Tensor2>
 TensorMul(_Tensor1, _Tensor2)
   -> TensorMul<Tensor, typename _Tensor2::value_type, std::max(_Tensor1::rank, _Tensor2::rank),
                typename to_tensor<_Tensor1>::type, typename to_tensor<_Tensor2>::type>;
-
 
 } // end of namespace grid
 
