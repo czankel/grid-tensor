@@ -16,11 +16,11 @@
 
 namespace grid {
 
-/// Non-type enumerator for tensor template parameters
-enum TensorType
-{
-  kMemoryMapped,      /// Memory mapped tensor
-};
+/// StaticAllocator is a special "allocator" for constant static data.
+template <size_t...> struct StaticAllocator {};
+
+/// NoAllocator is a spcial "allocator" for an externally managed buffer.
+struct NoAllocator {};
 
 /// Placeholder for specifying that a buffer allocation does not need to be initialized.
 template <typename> struct Uninitialized {};
@@ -61,24 +61,24 @@ struct to_tensor<_Operator>
 
 
 // is_same_tensor<TENSOR1, TENSOR2> checks if two tensors are of the same type.
-template <typename, template <typename, size_t, auto...> typename> struct is_same_tensor_as : std::false_type {};
+template <typename, template <typename, size_t, typename...> typename> struct is_same_tensor_as : std::false_type {};
 
-template <template <typename, size_t, auto...> typename _Tensor, typename _Tp, size_t _Rank, auto... _Args>
-struct is_same_tensor_as<_Tensor<_Tp, _Rank, _Args...>, _Tensor> : std::true_type {};
+template <template <typename, size_t, typename...> typename _Tensor, typename _Tp, size_t _Rank, typename... _Allocator>
+struct is_same_tensor_as<_Tensor<_Tp, _Rank, _Allocator...>, _Tensor> : std::true_type {};
 
 
 // tensor_is_convertible_to<FROM,TO> check if TO = FROM is a valid assignment.
-template <typename, template <typename, size_t, auto...> typename> struct tensor_is_convertible_to;
+template <typename, template <typename, size_t, typename...> typename> struct tensor_is_convertible_to;
 
-template <template <typename, size_t, auto...> typename _Tensor1,
-          template <typename, size_t, auto...> typename _Tensor2,
-          typename _Tp, size_t _Rank, auto... _Args>
-struct tensor_is_convertible_to<_Tensor1<_Tp, _Rank, _Args...>, _Tensor2>
- : std::is_assignable<_Tensor2<_Tp, _Rank>, _Tensor1<_Tp, _Rank, _Args...>>
+template <template <typename, size_t, typename...> typename _Tensor1,
+          template <typename, size_t, typename...> typename _Tensor2,
+          typename _Tp, size_t _Rank, typename... _Allocator>
+struct tensor_is_convertible_to<_Tensor1<_Tp, _Rank, _Allocator...>, _Tensor2>
+ : std::is_assignable<_Tensor2<_Tp, _Rank>, _Tensor1<_Tp, _Rank, _Allocator...>>
 {};
 
-template <template <template <typename, size_t, auto...> typename, typename, size_t, typename...> typename _Operator,
-          template <typename, size_t, auto...> typename _Tensor,
+template <template <template <typename, size_t, typename...> typename, typename, size_t, typename...> typename _Operator,
+          template <typename, size_t, typename...> typename _Tensor,
           typename _Tp, size_t _Rank, typename... _Tensors>
 struct tensor_is_convertible_to<_Operator<_Tensor, _Tp, _Rank, _Tensors...>, _Tensor>
  : std::is_assignable<_Tensor<_Tp, _Rank>, _Operator<_Tensor, _Tp, _Rank, _Tensors...>>
@@ -116,16 +116,16 @@ concept AnyOperator = is_operator_v<_Operator>;
 template <typename _Tensor>
 concept TensorConvertible = is_tensor_v<_Tensor> || is_operator_v<_Tensor>;
 
-template <typename T1, template <typename, size_t, auto...> typename T2>
+template <typename T1, template <typename, size_t, typename...> typename T2>
 concept ConvertibleTo = tensor_is_convertible_to<std::remove_cvref_t<T1>, T2>::value;
 
 //
 // Tensor basic arithmetic operations
 //
 
-template <template <typename, size_t, auto...> typename, typename, size_t, typename... > class TensorAdd;
-template <template <typename, size_t, auto...> typename, typename, size_t, typename... > class TensorMul;
-template <template <typename, size_t, auto...> typename, typename, size_t, typename... > class TensorRmsNorm;
+template <template <typename, size_t, typename...> typename, typename, size_t, typename... > class TensorAdd;
+template <template <typename, size_t, typename...> typename, typename, size_t, typename... > class TensorMul;
+template <template <typename, size_t, typename...> typename, typename, size_t, typename... > class TensorRmsNorm;
 
 //
 // Operator overloading

@@ -26,22 +26,19 @@
 
 namespace grid {
 
-/// Tensor is an unoptimized tensor implementatoin for the CPU.
-template <typename, size_t, auto...> class Tensor;
-
-
-/// Tensor<_T, _Rank> is a specialization of Tensor for a dynamically allocated buffer.
-/// Note that this is also the Tensor used for any TensorOp result.
-/// TODO: see if constructors can be combined using implicit conversion
-template <typename _T, size_t _Rank>
-class Tensor<_T, _Rank>
+/// Tensor provides an non-optimized base implementation of tensors.
+/// Note that the implementation implicitly requires that the buffer and strides are aligned to the value type.
+template <typename _T, size_t _Rank, typename Allocator=std::allocator<_T>>
+class Tensor
 {
  public:
   using value_type = _T;
+  using allocator_type = Allocator;
   using pointer = _T*;
   using const_pointer = const _T*;
   constexpr static size_t rank = _Rank;
 
+ private:
   inline void
   initialize(char* ptr,
              std::span<size_t, 1> dims,
@@ -66,7 +63,7 @@ class Tensor<_T, _Rank>
                  init);
   }
 
-
+ public:
   /// Constructor for a rank-1 tensor (vector) with a dynamically allocated buffer without padding.
   explicit Tensor(size_t dim, value_type init)
     : dims_{dim},
@@ -300,6 +297,7 @@ class Tensor<_T, 0>
 {
  public:
   using value_type = _T;
+  using allocator_type = StaticAllocator<1>;
   using pointer = _T*;
   using const_pointer = const _T*;
   constexpr static size_t rank = 0UL;
@@ -339,10 +337,11 @@ class Tensor<_T, 0>
 /// Tensor<_T, 1, _N> is a specialization of a rank-1 tensor (vector) for a 'static' array.
 /// Note that the brace-initializer form of Tensors don't support padding.
 template <typename _T, size_t _N>
-class Tensor<_T, 1, _N>
+class Tensor<_T, 1, StaticAllocator<_N>>
 {
  public:
   using value_type = _T;
+  using allocator_type = StaticAllocator<_N>;
   using pointer = const _T*;
   using const_pointer = const _T*;
   constexpr static size_t rank = 1UL;
@@ -379,10 +378,11 @@ class Tensor<_T, 1, _N>
 /// Tensor<_T, _M, _N> is a specialization of a rank-2 tensor (matrix) for a 'static' array.
 /// Note that the brace-initializer form of Tensors don't support padding.
 template <typename _T, size_t _M, size_t _N>
-class Tensor<_T, 2, _M, _N>
+class Tensor<_T, 2, StaticAllocator<_M, _N>>
 {
  public:
   using value_type = _T;
+  using allocator_type = StaticAllocator<_M, _N>;
   using pointer = const _T*;
   using const_pointer = const _T*;
   constexpr static size_t rank = 2UL;
@@ -416,9 +416,9 @@ class Tensor<_T, 2, _M, _N>
 };
 
 
-/// TensorSLowCpu<_T, _Rank, kMemoryMapped> is a tensor for memory-mapped data
+/// TensorSLowCpu<_T, _Rank, MemoryMapped> is a tensor for memory-mapped data
 template <typename _T, size_t _Rank>
-class Tensor<_T, _Rank, kMemoryMapped>
+class Tensor<_T, _Rank, NoAllocator>
 {
  public:
   using value_type = _T;
@@ -478,11 +478,11 @@ explicit Tensor(Uninitialized<_T>) -> Tensor<_T, 0>;
 
 // Tensor{Ts...} -> Rank-1 tensor with a static/local array (brace-initializer).
 template <typename _T, typename... _Ts>
-explicit Tensor(_T, _Ts...) -> Tensor<std::common_type_t<_T, _Ts...>, 1, sizeof...(_Ts)+1>;
+explicit Tensor(_T, _Ts...) -> Tensor<std::common_type_t<_T, _Ts...>, 1, StaticAllocator<sizeof...(_Ts)+1>>;
 
 // Tensor{{...},...} -> Rank-2 tensor with a static/local array (brace-initializer).
 template <typename _T, size_t... _N>
-Tensor(_T(&&... l)[_N]) -> Tensor<_T, 2, sizeof...(_N), std::max({_N...})>;
+Tensor(_T(&&... l)[_N]) -> Tensor<_T, 2, StaticAllocator<sizeof...(_N), std::max({_N...})>>;
 
 
 // Tensor(uint, _T) -> Rank-1 tensor with a dynamically allocated buffer.
@@ -555,17 +555,17 @@ explicit Tensor(std::array<size_t, _N>, std::array<ssize_t, _N>, Uninitialized<_
 
 // Tensor<mmap, dim, strides> -> Rank-N tensor for a memory mapped buffer
 template <typename _T, size_t _N>
-explicit Tensor(MMapArray<_T, _N>) -> Tensor<_T, _N, kMemoryMapped>;
+explicit Tensor(MMapArray<_T, _N>) -> Tensor<_T, _N, NoAllocator>;
 
 
 // TensorOp -> Tensor (move)
-template <template <template <typename, size_t, auto...> typename, typename, size_t, typename...> typename _TensorOp,
-          template <typename, size_t, auto...> typename _TensorRT, typename _T, size_t _Rank, typename... _Tensors>
+template <template <template <typename, size_t, typename...> typename, typename, size_t, typename...> typename _TensorOp,
+          template <typename, size_t, typename...> typename _TensorRT, typename _T, size_t _Rank, typename... _Tensors>
 Tensor(_TensorOp<_TensorRT, _T, _Rank, _Tensors...>&&) -> Tensor<_T, _Rank>;
 
 // TensorOp -> Tensor (copy)
-template <template <template <typename, size_t, auto...> typename, typename, size_t, typename...> typename _TensorOp,
-          template <typename, size_t, auto...> typename _TensorRT, typename _T, size_t _Rank, typename... _Tensors>
+template <template <template <typename, size_t, typename...> typename, typename, size_t, typename...> typename _TensorOp,
+          template <typename, size_t, typename...> typename _TensorRT, typename _T, size_t _Rank, typename... _Tensors>
 Tensor(const _TensorOp<_TensorRT,_T,  _Rank, _Tensors...>&) -> Tensor<_T, _Rank>;
 
 } // end of namespace grid
