@@ -21,6 +21,8 @@ class TensorAdd<Tensor, _T, _Rank, _Tensor1, _Tensor2>
 {
  public:
   using value_type = _T;
+  using pointer = _T*;
+  using const_pointer = const _T*;
   constexpr static size_t rank = _Rank;
 
   template <ConvertibleTo<Tensor> T1, ConvertibleTo<Tensor> T2>
@@ -38,44 +40,52 @@ class TensorAdd<Tensor, _T, _Rank, _Tensor1, _Tensor2>
   TensorAdd& operator=(const TensorAdd& other) = delete;
   TensorAdd& operator=(TensorAdd&& other) = delete;
 
-  inline void add(char* dest, const char* src1, const char* src2,
+
+  inline void add(pointer dest, const_pointer src1, const_pointer src2,
                   std::span<const size_t,  0> dims,
                   std::span<const ssize_t, 0>,
                   std::span<const ssize_t, 0>,
                   std::span<const ssize_t, 0>) const
   {
-    *reinterpret_cast<value_type*>(dest) =
-      *reinterpret_cast<const value_type*>(src1) + *reinterpret_cast<const value_type*>(src2);
+    *dest = *src1 + *src2;
   }
 
-
-  // TODO: move conditional up the call chain (create addslow and addfast call-chains)
-  inline void add(char* dest, const char* src1, const char* src2,
+  inline void add(pointer dest, const_pointer src1, const_pointer src2,
                   std::span<const size_t,  1> dims,
                   std::span<const ssize_t, 1>,
                   std::span<const ssize_t, 1> strides1,
                   std::span<const ssize_t, 1> strides2) const
   {
-    value_type* datadest = reinterpret_cast<value_type*>(dest);
-    for (size_t i = 0; i < dims[0]; i++, src1 += strides1[0], src2 += strides2[0])
-      datadest[i] = *reinterpret_cast<const value_type*>(src1) + *reinterpret_cast<const value_type*>(src2);
+    for (size_t i = 0; i < dims[0]; i++)
+    {
+      dest[i] = *src1 + *src2;
+      reinterpret_cast<const char*&>(src1) += strides1[0];
+      reinterpret_cast<const char*&>(src2) += strides2[0];
+    }
   }
 
   template <size_t _N> inline
-  void add(char* dest, const char* src1, const char* src2,
+  void add(pointer dest, const_pointer src1, const_pointer src2,
            std::span<const size_t,  _N> dims,
            std::span<const ssize_t, _N> strides0,
            std::span<const ssize_t, _N> strides1,
            std::span<const ssize_t, _N> strides2) const
   {
     static_assert(_N != std::dynamic_extent, "dynamic_extent not allowed");
-    for (size_t i = 0; i < dims[0]; i++, dest += strides0[0], src1 += strides1[0], src2 += strides2[0])
+    for (size_t i = 0; i < dims[0]; i++)
+    {
       add(dest, src1, src2,
           std::span<const size_t,  _N - 1>(dims.begin() + 1, _N - 1),
           std::span<const ssize_t, _N - 1>(strides0.begin() + 1, _N - 1),
           std::span<const ssize_t, _N - 1>(strides1.begin() + 1, _N - 1),
           std::span<const ssize_t, _N - 1>(strides2.begin() + 1, _N - 1));
+
+      reinterpret_cast<char*&>(dest) += strides0[0];
+      reinterpret_cast<const char*&>(src1) += strides1[0];
+      reinterpret_cast<const char*&>(src2) += strides2[0];
+    }
   }
+
 
   // Functor
   // FIXME: must be same rank? static_assert?
@@ -84,13 +94,13 @@ class TensorAdd<Tensor, _T, _Rank, _Tensor1, _Tensor2>
     auto& dims = tensor1_.Dimensions();
     auto result = Tensor(dims, Uninitialized<value_type>{});
 
-    add(reinterpret_cast<char*>(result.Data()),
-        reinterpret_cast<const char*>(tensor1_.Data()),
-        reinterpret_cast<const char*>(tensor2_.Data()),
-        std::span(dims),
-        std::span(result.Strides()),
-        std::span(tensor1_.Strides()),
-        std::span(tensor2_.Strides()));
+    add(result.Data(),
+        tensor1_.Data(),
+        tensor2_.Data(),
+        std::span<const size_t, _Rank>(dims),
+        std::span<const ssize_t, _Rank>(result.Strides()),
+        std::span<const ssize_t, _Rank>(tensor1_.Strides()),
+        std::span<const ssize_t, _Rank>(tensor2_.Strides()));
     return result;
   }
 

@@ -40,23 +40,23 @@ class Tensor
 
  private:
   inline void
-  initialize(char* ptr,
+  initialize(pointer ptr,
              std::span<size_t, 1> dims,
              std::span<ssize_t, 1> strides,
              value_type init)
   {
-    for (size_t i = 0; i < dims[0]; i++, ptr += strides[0])
-      *reinterpret_cast<value_type*>(ptr) = init;
+    for (size_t i = 0; i < dims[0]; i++, ptr = ptr + strides[0]/sizeof(value_type))
+      *ptr = init;
   }
 
   template <size_t _N>
   inline void
-  initialize(char* ptr,
+  initialize(pointer ptr,
              std::span<size_t, _N> dims,
              std::span<ssize_t, _N> strides,
              value_type init)
   {
-    for (size_t i = 0; i < dims[0]; i++, ptr += strides[0])
+    for (size_t i = 0; i < dims[0]; i++, ptr += strides[0]/sizeof(value_type))
       initialize(ptr,
                  std::span<size_t, _N - 1>(dims.begin() + 1, dims.end()),
                  std::span<ssize_t, _N - 1>(strides.begin() + 1, strides.end()),
@@ -67,9 +67,9 @@ class Tensor
   /// Constructor for a rank-1 tensor (vector) with a dynamically allocated buffer without padding.
   explicit Tensor(size_t dim, value_type init)
     : dims_{dim},
-      strides_{make_strides<_T>(dims_)},
-      size_(get_buffer_size(dims_, strides_)),
-      data_((char*)new value_type[size_ / sizeof(value_type)])
+      strides_{make_strides<value_type>(dims_)},
+      size_(dims_[0] * strides_[0]),
+      data_(new value_type[size_ / sizeof(value_type)])
   {
     initialize(data_, std::span{dims_}, std::span{strides_}, init);
   }
@@ -77,17 +77,17 @@ class Tensor
   /// Constructor for a rank-1 tensor (vector) with a dynamically allocated uninitialized buffer.
   explicit Tensor(size_t dim, Uninitialized<value_type>)
     : dims_{dim},
-      strides_{make_strides<_T>(dims_)},
-      size_(get_buffer_size(dims_, strides_)),
-      data_((char*)new value_type[size_ / sizeof(value_type)])
+      strides_{make_strides<value_type>(dims_)},
+      size_(dims_[0] * strides_[0]),
+      data_(new value_type[size_ / sizeof(value_type)])
   {}
 
   /// Constructor for a rank-2 tensor (matrix) with a dynamically allocated buffer and no padding.
   explicit Tensor(size_t dim_m, int dim_n, value_type init)
     : dims_{dim_m, dim_n},
-      strides_{make_strides<_T>(dims_)},
-      size_(get_buffer_size(dims_, strides_)),
-      data_((char*)new value_type[size_ / sizeof(value_type)])
+      strides_{make_strides<value_type>(dims_)},
+      size_(dims_[0] * strides_[0]),
+      data_(new value_type[size_ / sizeof(value_type)])
   {
     initialize(data_, std::span{dims_}, std::span{strides_}, init);
   }
@@ -95,17 +95,17 @@ class Tensor
   /// Constructor for a rank-2 tensor (matrix) with a dynamically allocated uninitialized buffer.
   explicit Tensor(size_t dim_m, int dim_n, Uninitialized<value_type>)
     : dims_{dim_m, dim_n},
-      strides_{make_strides<_T>(dims_)},
-      size_(get_buffer_size(dims_, strides_)),
-      data_((char*)new value_type[size_ / sizeof(value_type)])
+      strides_{make_strides<value_type>(dims_)},
+      size_(dims_[0] * strides_[0]),
+      data_(new value_type[size_ / sizeof(value_type)])
   {}
 
   /// Constructor for any rank tensor with a dynamically allocated initialized buffer
   explicit Tensor(std::initializer_list<size_t>&& dims, value_type init)
     : dims_(get_array<size_t, _Rank>(std::move(dims))),
-      strides_{make_strides<_T>(dims_)},
-      size_(get_buffer_size(dims_, strides_)),
-      data_((char*)new value_type[size_ / sizeof(value_type)])
+      strides_{make_strides<value_type>(dims_)},
+      size_(dims_[0] * strides_[0]),
+      data_(new value_type[size_ / sizeof(value_type)])
   {
     initialize(data_, std::span{dims_}, std::span{strides_}, init);
   }
@@ -114,31 +114,31 @@ class Tensor
   /// Constructor for any rank tensor with a dynamically allocated initialized buffer
   explicit Tensor(std::initializer_list<size_t>&& dims, Uninitialized<value_type>)
     : dims_(get_array<size_t, _Rank>(std::move(dims))),
-      strides_{make_strides<_T>(dims_)},
-      size_(get_buffer_size(dims_, strides_)),
-      data_((char*)new value_type[size_ / sizeof(value_type)])
-  { }
+      strides_{make_strides<value_type>(dims_)},
+      size_(dims_[0] * strides_[0]),
+      data_(new value_type[size_ / sizeof(value_type)])
+  {}
 
   /// Constructor for any rank tensor with a dynamically allocated initialized buffer with strides.
   explicit Tensor(std::initializer_list<size_t>&& dims,
-                         std::initializer_list<ssize_t>&& strides,
-                         value_type init)
+                  std::initializer_list<ssize_t>&& strides,
+                  value_type init)
     : dims_(get_array<size_t, _Rank>(std::move(dims))),
       strides_(get_array<ssize_t, _Rank>(std::move(strides))),
       size_(get_buffer_size(dims_, strides_)),
-      data_((char*)new value_type[size_ / sizeof(value_type)])
+      data_(new value_type[size_ / sizeof(value_type)])
   {
     initialize(data_, std::span{dims_}, std::span{strides_}, init);
   }
 
   /// Constructor for any rank tensor with a dynamically allocated uninitialized buffer with strides.
   explicit Tensor(std::initializer_list<size_t>&& dims,
-                         std::initializer_list<ssize_t>&& strides,
-                         Uninitialized<value_type>)
+                  std::initializer_list<ssize_t>&& strides,
+                  Uninitialized<value_type>)
     : dims_(get_array<size_t, _Rank>(std::move(dims))),
       strides_(get_array<ssize_t, _Rank>(std::move(strides))),
       size_(get_buffer_size(dims_, strides_)),
-      data_((char*)new value_type[size_ / sizeof(value_type)])
+      data_(new value_type[size_ / sizeof(value_type)])
   {}
 
   /// Constructor for any rank tensor with a dynamically allocated initialized buffer
@@ -146,60 +146,59 @@ class Tensor
     : dims_(get_array<size_t, _Rank>(dim)),
       strides_(get_array<ssize_t, _Rank>(stride)),
       size_(get_buffer_size(dims_, strides_)),
-      data_((char*)new value_type[size_ / sizeof(value_type)])
+      data_(new value_type[size_ / sizeof(value_type)])
   {
     initialize(data_, std::span{dims_}, std::span{strides_}, init);
   }
 
   /// Constructor for any rank tensor with a dynamically allocated uninitialized buffer
-  explicit Tensor(const size_t(&dim)[_Rank], const ssize_t(&stride)[_Rank], Uninitialized<_T>)
+  explicit Tensor(const size_t(&dim)[_Rank], const ssize_t(&stride)[_Rank], Uninitialized<value_type>)
     : dims_(get_array<size_t, _Rank>(dim)),
       strides_(get_array<ssize_t, _Rank>(stride)),
       size_(get_buffer_size(dims_, strides_)),
-      data_((char*)new value_type[size_ / sizeof(value_type)])
+      data_(new value_type[size_ / sizeof(value_type)])
   {}
 
 
   /// Constructor for any rank tensor with a dynamically allocated initialized buffer.
-  explicit Tensor(std::array<size_t, _Rank> dims,
-                         value_type init)
+  explicit Tensor(std::array<size_t, _Rank> dims, value_type init)
     : dims_(dims),
-      strides_(make_strides<_T>(dims)),
+      strides_(make_strides<value_type>(dims)),
       size_(get_buffer_size(dims_, strides_)),
-      data_((char*)new value_type[size_ / sizeof(value_type)])
+      data_(new value_type[size_ / sizeof(value_type)])
   {
     initialize<_Rank>(data_, dims_, strides_, init);
   }
 
   /// Constructor for any rank tensor with a dynamically allocated initialized buffer with padding.
   explicit Tensor(std::array<size_t, _Rank> dims,
-                         std::array<ssize_t, _Rank> strides,
-                         value_type init)
+                  std::array<ssize_t, _Rank> strides,
+                  value_type init)
     : dims_{dims},
       strides_{strides},
       size_(get_buffer_size(dims_, strides_)),
-      data_((char*)new value_type[size_ / sizeof(value_type)])
+      data_(new value_type[size_ / sizeof(value_type)])
   {
     initialize<_Rank>(data_, dims_, strides_, init);
   }
 
   /// Constructor for any rank tensor with a dynamically allocated uninitialized buffer.
-  explicit Tensor(std::array<size_t, _Rank> dims,
-                         Uninitialized<value_type>)
+  /// Note: assumes strides are type-aligned.
+  explicit Tensor(std::array<size_t, _Rank> dims, Uninitialized<value_type>)
     : dims_{dims},
-      strides_{make_strides<_T>(dims)},
-      size_(get_buffer_size(dims_, strides_)),
-      data_((char*)new value_type[size_ / sizeof(value_type)])
+      strides_{make_strides<value_type>(dims)},
+      size_(dims_[0] * strides_[0]),
+      data_(new value_type[size_ / sizeof(value_type)])
   {}
 
   /// Constructor for any rank tensor with a dynamically allocated uninitialized buffer with padding.
   explicit Tensor(std::array<size_t, _Rank> dims,
-                         std::array<ssize_t, _Rank> strides,
-                         Uninitialized<value_type>)
+                  std::array<ssize_t, _Rank> strides,
+                  Uninitialized<value_type>)
     : dims_{dims},
       strides_{strides},
-      size_(get_buffer_size(dims_, strides_)),
-      data_((char*)new value_type[size_ / sizeof(value_type)])
+      size_(dims_[0] * strides_[0]),
+      data_(new value_type[size_ / sizeof(value_type)])
   {}
 
   Tensor(Tensor&& other)
@@ -215,9 +214,9 @@ class Tensor
     : dims_{other.Dimensions()},
       strides_{other.Strides()},
       size_(other.Size()),
-      data_((char*)new value_type[size_ / sizeof(value_type)])
+      data_(new value_type[size_ / sizeof(value_type)])
   {
-    copy<value_type, _Rank>((value_type*)data_, (value_type*)other.Data(), dims_, strides_, other.Strides());
+    copy<value_type, _Rank>(data_, other.Data(), dims_, strides_, other.Strides());
   }
 
   // Constructors for converting from a tensor operator.
@@ -282,13 +281,14 @@ class Tensor
   size_t Size() const                                     { return size_; }
 
   /// Data returns a pointer to the data buffer.
-  char* Data() const                                      { return data_; }
+  pointer Data()                                          { return data_; }
+  const_pointer Data() const                              { return data_; }
 
  private:
   std::array<size_t, _Rank>         dims_;
   std::array<ssize_t, _Rank>        strides_;
   size_t                            size_;
-  char*                             data_;
+  pointer                           data_;
 };
 
 /// Tensor<_T, 0, 1> is a specialization of a rank-0 tensor.
@@ -303,13 +303,13 @@ class Tensor<_T, 0>
   constexpr static size_t rank = 0UL;
 
   /// Constructor for a rank-1 tensor (vector) with brace initialization.
-  explicit Tensor(_T init) : array_{init} {}
+  explicit Tensor(value_type init) : data_{init} {}
 
-  explicit Tensor(Uninitialized<_T>) {}
+  explicit Tensor(Uninitialized<value_type>) {}
 
-  explicit Tensor(const std::array<size_t, 0>&, _T init) : array_{init} {}
+  explicit Tensor(const std::array<size_t, 0>&, value_type init) : data_{init} {}
 
-  explicit Tensor(const std::array<size_t, 0>&, Uninitialized<_T>) {}
+  explicit Tensor(const std::array<size_t, 0>&, Uninitialized<value_type>) {}
 
   /// Rank returns the rank of the tensor.
   constexpr static size_t Rank()                          { return 0UL; }
@@ -324,13 +324,15 @@ class Tensor<_T, 0>
   size_t Size() const                                     { return sizeof(_T); }
 
   /// Data returns a pointer to the data buffer.
-  char* Data()                                            { return reinterpret_cast<char*>(array_.data()); }
-  const char* Data() const                                { return reinterpret_cast<const char*>(array_.data()); }
+  pointer Data()                                          { return &data_; }
+
+  /// Data returns a pointer to the data buffer.
+  const_pointer Data() const                              { return &data_; }
 
  private:
   constexpr static std::array<size_t, 0>  dims_{};
   constexpr static std::array<ssize_t, 0> strides_ = {};
-  std::array<value_type, 1>               array_;
+  value_type                              data_;
 };
 
 
@@ -349,8 +351,8 @@ class Tensor<_T, 1, StaticAllocator<_N>>
   /// Constructor for a rank-1 tensor (vector) with brace initialization.
   explicit Tensor(std::initializer_list<value_type>&& init)
     : dims_{_N},
-      strides_{sizeof(_T)},
-      array_(get_array<_T, _N>(std::move(init)))
+      strides_{sizeof(value_type)},
+      array_(get_array<value_type, _N>(std::move(init)))
   {}
 
   /// Rank returns the rank of the tensor.
@@ -363,10 +365,10 @@ class Tensor<_T, 1, StaticAllocator<_N>>
   const std::array<ssize_t, 1>& Strides() const           { return strides_; }
 
   /// Size returns the size of the entire buffer.
-  size_t Size() const                                     { return sizeof(_T) * _N; }
+  size_t Size() const                                     { return sizeof(value_type) * _N; }
 
   /// Data returns a pointer to the data buffer.
-  const char* Data() const                                { return reinterpret_cast<const char*>(array_.data()); }
+  const_pointer Data() const                              { return array_.data(); }
 
  private:
   std::array<size_t, 1>             dims_;
@@ -382,7 +384,6 @@ class Tensor<_T, 2, StaticAllocator<_M, _N>>
 {
  public:
   using value_type = _T;
-  using allocator_type = StaticAllocator<_M, _N>;
   using pointer = const _T*;
   using const_pointer = const _T*;
   constexpr static size_t rank = 2UL;
@@ -390,8 +391,8 @@ class Tensor<_T, 2, StaticAllocator<_M, _N>>
   /// Constructor for a rank-2 (matrix) brace initialization.
   explicit Tensor(std::initializer_list<std::initializer_list<value_type>>&& init)
     : dims_{_M, _N},
-      strides_{ sizeof(_T) * _N, sizeof(_T)},
-      array_(get_array<_T, _M, _N>(std::move(init)))
+      strides_{ sizeof(value_type) * _N, sizeof(value_type)},
+      array_(get_array<value_type, _M, _N>(std::move(init)))
   {}
 
   /// Rank returns the rank of the tensor.
@@ -407,7 +408,7 @@ class Tensor<_T, 2, StaticAllocator<_M, _N>>
   size_t Size() const                                     { return sizeof(value_type) * _M * _N; }
 
   /// Data returns a pointer to the data buffer.
-  const char* Data() const                                { return reinterpret_cast<const char*>(array_.data()); }
+  const_pointer Data() const                              { return array_.data(); }
 
  private:
   std::array<size_t, 2>             dims_;
@@ -427,7 +428,7 @@ class Tensor<_T, _Rank, NoAllocator>
   constexpr static size_t rank = _Rank;
 
   /// Constructor for a memory-mapped buffer.
-  explicit Tensor(const MMapArray<_T, _Rank>& arr)
+  explicit Tensor(const MMapArray<value_type, _Rank>& arr)
     : dims_(arr.dims_),
       strides_(arr.strides_),
       mmap_(arr.mmap_),
@@ -435,7 +436,7 @@ class Tensor<_T, _Rank, NoAllocator>
   {}
 
   // Constructor for a memory-mapped buffer.
-  explicit Tensor(MMapArray<_T, _Rank>&& arr)
+  explicit Tensor(MMapArray<value_type, _Rank>&& arr)
     : dims_(std::move(arr.dims_)),
       strides_(std::move(arr.strides_)),
       mmap_(std::move(arr.mmap_)),
