@@ -15,14 +15,14 @@ namespace grid {
 
 
 /// TensorAdd<Tensor> implements tensor addition operation for tensors of the same rank.
-template <typename _T, size_t _Rank, TensorFor<base::Tensor> _Tensor1, TensorFor<base::Tensor> _Tensor2>
-struct TensorAdd<base::Tensor, _T, _Rank, _Tensor1, _Tensor2> : TensorBaseOp
+template <typename _T, size_t _Rank, TensorFor<Tensor> _Tensor1, TensorFor<Tensor> _Tensor2>
+struct TensorAdd<Tensor, _T, _Rank, _Tensor1, _Tensor2> : TensorBaseOp
 {
   constexpr static size_t Rank()                  { return _Rank; }
-  using tensor_type = base::Tensor<_T, _Rank>;
+  using tensor_type = Tensor<_T, _Rank>;
   using value_type = _T;
 
-  template <ConvertibleTensorFor<base::Tensor> T1, ConvertibleTensorFor<base::Tensor> T2>
+  template <ConvertibleTensorFor<Tensor> T1, ConvertibleTensorFor<Tensor> T2>
   TensorAdd(T1&& tensor1, T2&& tensor2)
    : tensor1_(std::forward<T1>(tensor1)),
      tensor2_(std::forward<T2>(tensor2))
@@ -81,7 +81,7 @@ struct TensorAdd<base::Tensor, _T, _Rank, _Tensor1, _Tensor2> : TensorBaseOp
   auto operator()() const
   {
     auto& dims = tensor1_.Dims();
-    auto result = base::Tensor(dims, Uninitialized<value_type>{});
+    auto result = Tensor(dims, Uninitialized<value_type>{});
 
     add(reinterpret_cast<char*>(result.Data()),
         reinterpret_cast<const char*>(tensor1_.Data()),
@@ -100,9 +100,9 @@ struct TensorAdd<base::Tensor, _T, _Rank, _Tensor1, _Tensor2> : TensorBaseOp
 
 // CTAD
 
-template <ConvertibleTensorFor<base::Tensor> _Tensor1, ConvertibleTensorFor<base::Tensor> _Tensor2>
+template <ConvertibleTensorFor<Tensor> _Tensor1, ConvertibleTensorFor<Tensor> _Tensor2>
 TensorAdd(_Tensor1, _Tensor2)
-  -> TensorAdd<base::Tensor, typename _Tensor2::value_type, _Tensor1::Rank(),
+  -> TensorAdd<Tensor, typename _Tensor2::value_type, _Tensor1::Rank(),
                typename _Tensor1::tensor_type, typename _Tensor2::tensor_type>;
 
 } // end of namespace grid

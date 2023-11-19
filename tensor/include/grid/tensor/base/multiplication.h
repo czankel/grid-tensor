@@ -16,16 +16,16 @@
 namespace grid {
 
 
-/// TensorMul<base::Tensor> implements tensor multiplication operation for tensors of the same rank.
+/// TensorMul<Tensor> implements tensor multiplication operation for tensors of the same rank.
 /// Including matrix multiplication (MatMul) and vector dot-product (VecDot).
-template <typename _T, size_t _Rank, TensorFor<base::Tensor> _Tensor1, TensorFor<base::Tensor> _Tensor2>
-struct TensorMul<base::Tensor, _T, _Rank, _Tensor1, _Tensor2> : TensorBaseOp
+template <typename _T, size_t _Rank, TensorFor<Tensor> _Tensor1, TensorFor<Tensor> _Tensor2>
+struct TensorMul<Tensor, _T, _Rank, _Tensor1, _Tensor2> : TensorBaseOp
 {
   constexpr static size_t Rank()                          { return _Rank; }
-  using tensor_type = base::Tensor<_T, _Rank>;
+  using tensor_type = Tensor<_T, _Rank>;
   using value_type = _T;
 
-  template <ConvertibleTensorFor<base::Tensor> T1, ConvertibleTensorFor<base::Tensor> T2>
+  template <ConvertibleTensorFor<Tensor> T1, ConvertibleTensorFor<Tensor> T2>
   TensorMul(T1&& tensor1, T2&& tensor2)
    : tensor1_(std::forward<T1>(tensor1)),
      tensor2_(std::forward<T2>(tensor2))
@@ -99,7 +99,7 @@ struct TensorMul<base::Tensor, _T, _Rank, _Tensor1, _Tensor2> : TensorBaseOp
   auto operator()() const
   {
     auto& dims = tensor1_.Dims();
-    auto result = base::Tensor(Uninitialized<value_type>{});
+    auto result = Tensor(Uninitialized<value_type>{});
 
     VecDot(reinterpret_cast<char*>(result.Data()),
         reinterpret_cast<const char*>(tensor1_.Data()),
@@ -115,7 +115,7 @@ struct TensorMul<base::Tensor, _T, _Rank, _Tensor1, _Tensor2> : TensorBaseOp
   auto operator()() const
   {
     auto& dims = tensor1_.Dims();
-    auto result = base::Tensor({dims[0], dims[0]}, Uninitialized<value_type>{});
+    auto result = Tensor({dims[0], dims[0]}, Uninitialized<value_type>{});
 
     // transpose second matrix
     auto strides = tensor2_.Strides();
@@ -135,7 +135,7 @@ struct TensorMul<base::Tensor, _T, _Rank, _Tensor1, _Tensor2> : TensorBaseOp
   auto operator()() const
   {
     auto& dims = tensor1_.Dims();
-    auto result = base::Tensor(dims, Uninitialized<value_type>{});
+    auto result = Tensor(dims, Uninitialized<value_type>{});
     Scale(reinterpret_cast<char*>(result.Data()),
           reinterpret_cast<const char*>(tensor1_.Data()),
           *reinterpret_cast<const value_type*>(tensor2_.Data()),
@@ -149,7 +149,7 @@ struct TensorMul<base::Tensor, _T, _Rank, _Tensor1, _Tensor2> : TensorBaseOp
   auto operator()() const
   {
     auto& dims = tensor2_.Dims();
-    auto result = base::Tensor(dims, Uninitialized<value_type>{});
+    auto result = Tensor(dims, Uninitialized<value_type>{});
     Scale(reinterpret_cast<char*>(result.Data()),
           reinterpret_cast<const char*>(tensor2_.Data()),
           *reinterpret_cast<const value_type*>(tensor1_.Data()),
@@ -167,9 +167,9 @@ struct TensorMul<base::Tensor, _T, _Rank, _Tensor1, _Tensor2> : TensorBaseOp
 
 // CTAD
 
-template <ConvertibleTensorFor<base::Tensor> _Tensor1, ConvertibleTensorFor<base::Tensor> _Tensor2>
+template <ConvertibleTensorFor<Tensor> _Tensor1, ConvertibleTensorFor<Tensor> _Tensor2>
 TensorMul(_Tensor1, _Tensor2)
-  -> TensorMul<base::Tensor, typename _Tensor2::value_type, std::max(_Tensor1::Rank(), _Tensor2::Rank()),
+  -> TensorMul<Tensor, typename _Tensor2::value_type, std::max(_Tensor1::Rank(), _Tensor2::Rank()),
                typename _Tensor1::tensor_type, typename _Tensor2::tensor_type>;
 
 
