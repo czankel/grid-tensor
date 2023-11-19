@@ -14,7 +14,6 @@
 #include <span>
 
 namespace grid {
-namespace base {
 
 // copy copies the data between buffers accordig to dimensions and strides.
 template <typename _Tp, size_t>
@@ -61,7 +60,6 @@ copy(_Tp* dst, const _Tp* src,
   }
 }
 
-} // end of namespace base
 } // end of namespace grid
 
 #endif  // GRID_TENSOR_BASE_COPY_H

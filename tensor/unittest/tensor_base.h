@@ -15,7 +15,7 @@
 struct TensorBaseType
 {
   template <typename _T, size_t _Rank, auto... _Args>
-  using Tensor = grid::base::Tensor<_T, _Rank, _Args...>;
+  using Tensor = grid::Tensor<_T, _Rank, _Args...>;
 };
 
 #else
@@ -23,9 +23,9 @@ struct TensorBaseType
 struct TensorBaseType
 {
   template <typename _T, size_t _Rank, auto... _Args>
-  struct Tensor : grid::base::Tensor<_T, _Rank, _Args...>
+  struct Tensor : grid::Tensor<_T, _Rank, _Args...>
   {
-    using grid::base::Tensor<_T, _Rank, _Args...>::Tensor;
+    using grid::Tensor<_T, _Rank, _Args...>::Tensor;
   };
 
   template <typename _T>

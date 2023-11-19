@@ -25,7 +25,6 @@
 #include "copy.h"
 
 namespace grid {
-namespace base {
 
 /// Tensor is an unoptimized tensor implementatoin for the CPU.
 template <typename, size_t, auto...> struct Tensor;
@@ -564,7 +563,6 @@ template <template <template <typename, size_t, auto...> typename, typename, siz
           template <typename, size_t, auto...> typename _TensorRT, typename _T, size_t _Rank, typename... _Tensors>
 Tensor(const _TensorOp<_TensorRT,_T,  _Rank, _Tensors...>&) -> Tensor<_T, _Rank>;
 
-} // end of namespace base
 } // end of namespace grid
 
 #endif  // GRID_TENSOR_BASE_TENSOR_H

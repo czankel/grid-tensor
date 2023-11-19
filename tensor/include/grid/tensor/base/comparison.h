@@ -14,7 +14,6 @@
 #include <type_traits>
 
 namespace grid {
-namespace base {
 
 template <typename _T, size_t>
 inline std::enable_if_t<!std::is_floating_point_v<_T>, bool>
@@ -91,9 +90,6 @@ equals(const char* src1, const char* src2,
   return true;
 }
 
-} // end of namespace base
-
-
 // TODO: will https://open-std.org/JTC1/SC22/WG21/docs/papers/2019/p1045r1.html help for using tensor.Rank() as constexpr?
 template <PrimitiveTensor _Tensor1, PrimitiveTensor _Tensor2>
 bool operator==(_Tensor1&& tensor1, _Tensor2&& tensor2)
@@ -102,7 +98,7 @@ bool operator==(_Tensor1&& tensor1, _Tensor2&& tensor2)
   static_assert(_Rank == std::decay_t<decltype(tensor2)>::Rank(),
                 "ranks mismatch between tensors");
 
-  return base::equals<typename std::remove_cvref_t<_Tensor1>::value_type, _Rank>(
+  return equals<typename std::remove_cvref_t<_Tensor1>::value_type, _Rank>(
                       reinterpret_cast<const char*>(tensor1.Data()),
                        reinterpret_cast<const char*>(tensor2.Data()),
                        std::span(tensor1.Dims()),
