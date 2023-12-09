@@ -34,6 +34,13 @@ class TensorMul<Tensor, _Tp, _Rank, _Tensor1, _Tensor2>
         throw std::runtime_error("dimensions don't match");
   }
 
+  template <ConvertibleTo<Tensor> T1, Scalar S>
+  TensorMul(T1&& tensor1, S scalar)
+   : tensor1_(std::forward<T1>(tensor1)),
+     tensor2_(scalar)
+  {}
+
+
   // delete assignment and copy/move constructors
   TensorMul() = delete;
   TensorMul(const TensorMul& other) = delete;
@@ -178,6 +185,50 @@ class TensorMul<Tensor, _Tp, _Rank, _Tensor1, _Tensor2>
     return result;
   }
 
+  /// operator()() executes and returns a (vector) tensor of a matrix * vector multiplication.
+  auto operator()() const requires (_Tensor1::rank == 2 && _Tensor2::rank == 1)
+  {
+    auto&& dimensions1 = tensor1_.Dimensions();
+    auto result = Tensor(dimensions1[0], Uninitialized<value_type>{});
+    size_t dimensions[] = {dimensions1[0], dimensions1[1], 1};
+
+    std::array<ssize_t, 2> strides0 = {result.Strides()[0], 0};
+    std::array<ssize_t, 2> strides2 = {tensor2_.Strides()[0], 0};
+
+    // Use: M_m_n * V_n = M_m_n * V_n_1 -> V_m
+    MatMul(result.Data(),
+           tensor1_.Data(),
+           tensor2_.Data(),
+           std::span(dimensions),
+           std::span(strides0),
+           std::span(tensor1_.Strides()),
+           std::span(strides2));
+
+    return result;
+  }
+
+  /// operator()() executes and returns a (vector) tensor of a vector * matrix multiplication.
+  auto operator()() const requires (_Tensor1::rank == 1 && _Tensor2::rank == 2)
+  {
+    auto&& dimensions2 = tensor2_.Dimensions();
+    auto result = Tensor(dimensions2[1], Uninitialized<value_type>{});
+    size_t dimensions[] = {1, dimensions2[0], dimensions2[1]};
+
+    std::array<ssize_t, 2> strides  = {0L, result.Strides()[0]};
+    std::array<ssize_t, 2> strides1 = {0L, tensor1_.Strides()[0]};
+
+    // Use V_m * M_m_n = V_1_m * M_m_n -> V_n
+    MatMul(result.Data(),
+           tensor1_.Data(),
+           tensor2_.Data(),
+           std::span(dimensions),
+           std::span(strides),
+           std::span(strides1),
+           std::span(tensor2_.Strides()));
+
+    return result;
+  }
+
  private:
   _Tensor1 tensor1_;
   _Tensor2 tensor2_;
@@ -191,6 +242,11 @@ template <ConvertibleTo<Tensor> _Tensor1, ConvertibleTo<Tensor> _Tensor2>
 TensorMul(_Tensor1, _Tensor2)
   -> TensorMul<Tensor, typename _Tensor2::value_type, std::max(_Tensor1::rank, _Tensor2::rank),
                typename to_tensor<_Tensor1>::type, typename to_tensor<_Tensor2>::type>;
+
+template <ConvertibleTo<Tensor> _Tensor, Scalar _Scalar>
+TensorMul(_Tensor, _Scalar)
+  -> TensorMul<Tensor, typename _Tensor::value_type, _Tensor::rank,
+               typename to_tensor<_Tensor>::type, Tensor<typename _Tensor::value_type, 0>>;
 
 } // end of namespace grid
 

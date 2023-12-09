@@ -28,6 +28,10 @@ inline constexpr ssize_t Broadcast = -1;
 /// Placeholder for specifying that a buffer allocation does not need to be initialized.
 template <typename> struct Uninitialized {};
 
+/// Scalar defines an arithmetic type, such as integer, float, etc.
+template <typename T>
+concept Scalar = std::is_arithmetic_v<T>;
+
 //
 // Tensor Traits
 //
