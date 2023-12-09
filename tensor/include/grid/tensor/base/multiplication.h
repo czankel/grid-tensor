@@ -28,7 +28,11 @@ class TensorMul<Tensor, _Tp, _Rank, _Tensor1, _Tensor2>
   TensorMul(T1&& tensor1, T2&& tensor2)
    : tensor1_(std::forward<T1>(tensor1)),
      tensor2_(std::forward<T2>(tensor2))
-  {}
+  {
+    if constexpr (_Tensor1::rank > 0 && _Tensor2::rank > 0)
+      if (tensor1_.Dimensions()[_Tensor1::rank - 1] != tensor2_.Dimensions()[0])
+        throw std::runtime_error("dimensions don't match");
+  }
 
   // delete assignment and copy/move constructors
   TensorMul() = delete;
@@ -39,22 +43,23 @@ class TensorMul<Tensor, _Tp, _Rank, _Tensor1, _Tensor2>
 
  private:
   inline void VecDot(pointer dest, const_pointer src1, const_pointer src2,
-                     std::span<const size_t,  1> dimensions,
-                     std::span<const ssize_t, 1> strides1,
-                     std::span<const ssize_t, 1> strides2) const
+                     size_t dimensions, ssize_t strides1, ssize_t strides2) const
   {
     value_type sum{0};
-    for (size_t i = 0; i < dimensions[0]; i++)
+    for (size_t i = 0; i < dimensions; i++)
     {
       sum += *src1 * *src2;
-      reinterpret_cast<const char*&>(src1) += strides1[0];
-      reinterpret_cast<const char*&>(src2) += strides2[0];
+      reinterpret_cast<const char*&>(src1) += strides1;
+      reinterpret_cast<const char*&>(src2) += strides2;
     }
     *dest = sum;
   }
 
+  // Note that dimensions are mkn: M_m_k * M_k_n -> M(m,n)
+  // Note that strides for all tensors (destination and sources) are:
+  //    [0] row: m -> m + 1,  [1] col: n -> n + 1
   inline void MatMul(pointer dest, const_pointer src1, const_pointer src2,
-                     std::span<const size_t,  2> dimensions,
+                     std::span<const size_t,  3> dimensions,
                      std::span<const ssize_t, 2> strides0,
                      std::span<const ssize_t, 2> strides1,
                      std::span<const ssize_t, 2> strides2) const
@@ -63,14 +68,11 @@ class TensorMul<Tensor, _Tp, _Rank, _Tensor1, _Tensor2>
     {
       pointer destprime = dest;
       const_pointer src2prime = src2;
-      for (size_t n = 0; n < dimensions[0]; n++)
+      for (size_t n = 0; n < dimensions[2]; n++)
       {
-        VecDot(destprime, src1, src2prime,
-               std::span<const size_t,  1>(dimensions.begin() + 1, dimensions.end()),
-               std::span<const ssize_t, 1>(strides1.begin() + 1, strides1.end()),
-               std::span<const ssize_t, 1>(strides2.begin() + 1, strides2.end()));
+        VecDot(destprime, src1, src2prime, dimensions[1], strides1[1], strides2[0]);
         reinterpret_cast<char*&>(destprime) += strides0[1];
-        reinterpret_cast<const char*&>(src2prime) += strides0[1];
+        reinterpret_cast<const char*&>(src2prime) += strides2[1];
       }
       reinterpret_cast<char*&>(dest) += strides0[0];
       reinterpret_cast<const char*&>(src1) += strides1[0];
@@ -110,30 +112,29 @@ class TensorMul<Tensor, _Tp, _Rank, _Tensor1, _Tensor2>
 
  public:
 
-  /// operator()() executes the operation and returns a tensor.
+  /// operator()() executes and returns a (scalar) tensor with the 'vector dot' multiplication.
   auto operator()() const requires (_Tensor1::rank == 1 && _Tensor2::rank == 1)
   {
-    auto& dimensions = tensor1_.Dimensions();
+    size_t dimensions = tensor1_.Dimensions()[0];
     auto result = Tensor(Uninitialized<value_type>{});
 
     VecDot(result.Data(),
            tensor1_.Data(),
            tensor2_.Data(),
-           std::span(dimensions),
-           std::span(tensor1_.Strides()),
-           std::span(tensor2_.Strides()));
+           dimensions,
+           tensor1_.Strides()[0],
+           tensor2_.Strides()[0]);
 
     return result;
   }
 
+  /// operator()() executes and returns a (matrix) tensor for a mtrix multiplication.
   auto operator()() const requires (_Tensor1::rank == 2 && _Tensor2::rank == 2)
   {
-    auto& dimensions = tensor1_.Dimensions();
-    auto result = Tensor({dimensions[0], dimensions[0]}, Uninitialized<value_type>{});
-
-    // transpose right matrix
-    auto strides = tensor2_.Strides();
-    std::swap(strides[0], strides[1]);
+    auto&& dimensions1 = tensor1_.Dimensions();
+    auto&& dimensions2 = tensor2_.Dimensions();
+    size_t dimensions[] = {dimensions1[0], dimensions1[1], dimensions2[1]};
+    auto result = Tensor({dimensions1[0], dimensions2[1]}, Uninitialized<value_type>{});
 
     MatMul(result.Data(),
            tensor1_.Data(),
@@ -141,15 +142,17 @@ class TensorMul<Tensor, _Tp, _Rank, _Tensor1, _Tensor2>
            std::span(dimensions),
            std::span(result.Strides()),
            std::span(tensor1_.Strides()),
-           std::span(strides));
+           std::span(tensor2_.Strides()));
 
     return result;
   }
 
+  /// operator()() execute and returns a tensor of the same rank for a matrix/vector * scalar multiplication.
   auto operator()() const requires (_Tensor2::rank == 0)
   {
-    auto& dimensions = tensor1_.Dimensions();
+    auto&& dimensions = tensor1_.Dimensions();
     auto result = Tensor(dimensions, Uninitialized<value_type>{});
+
     Scale(result.Data(),
           tensor1_.Data(),
           *tensor2_.Data(),
@@ -159,10 +162,12 @@ class TensorMul<Tensor, _Tp, _Rank, _Tensor1, _Tensor2>
     return result;
   }
 
+  /// operator()() execute and returns a tensor of the same rank for a scalar * matrix/vector multiplication.
   auto operator()() const requires (_Tensor1::rank == 0 && _Tensor2::rank != 0)
   {
-    auto& dimensions = tensor2_.Dimensions();
+    auto&& dimensions = tensor2_.Dimensions();
     auto result = Tensor(dimensions, Uninitialized<value_type>{});
+
     Scale(result.Data(),
           tensor2_.Data(),
           *tensor1_.Data(),
