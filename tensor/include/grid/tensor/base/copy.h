@@ -29,11 +29,11 @@ copy(_Tp* dst, const _Tp* src,
 template <typename _Tp, size_t>
 inline void
 copy(_Tp* dst, const _Tp* src,
-     std::span<const size_t,  1> dims,
+     std::span<const size_t,  1> dimensions,
      std::span<const ssize_t, 1> strides1,
      std::span<const ssize_t, 1> strides2)
 {
-  for (size_t i = 0; i < dims[0]; i++)
+  for (size_t i = 0; i < dimensions[0]; i++)
   {
     *dst = *src;
     reinterpret_cast<char*&>(dst) += strides1[0];
@@ -44,15 +44,15 @@ copy(_Tp* dst, const _Tp* src,
 template <typename _Tp, size_t _N>
 inline std::enable_if_t<(_N > 1), void>
 copy(_Tp* dst, const _Tp* src,
-       std::span<const size_t,  _N> dims,
+       std::span<const size_t,  _N> dimensions,
        std::span<const ssize_t, _N> strides1,
        std::span<const ssize_t, _N> strides2)
 {
   static_assert(_N != std::dynamic_extent, "dynamic_extent not allowed");
-  for (size_t i = 0; i < dims[0]; i++)
+  for (size_t i = 0; i < dimensions[0]; i++)
   {
     copy<_Tp, _N - 1>(dst, src,
-                     std::span<const size_t,  _N - 1>(dims.begin() + 1, _N - 1),
+                     std::span<const size_t,  _N - 1>(dimensions.begin() + 1, _N - 1),
                      std::span<const ssize_t, _N - 1>(strides1.begin() + 1, _N - 1),
                      std::span<const ssize_t, _N - 1>(strides2.begin() + 1, _N - 1));
     reinterpret_cast<char*&>(dst) += strides1[0];

@@ -41,7 +41,7 @@ class TensorAdd<Tensor, _Tp, _Rank, _Tensor1, _Tensor2>
 
  private:
   inline void add(pointer dest, const_pointer src1, const_pointer src2,
-                  std::span<const size_t,  0> dims,
+                  std::span<const size_t,  0> dimensions,
                   std::span<const ssize_t, 0>,
                   std::span<const ssize_t, 0>,
                   std::span<const ssize_t, 0>) const
@@ -50,12 +50,12 @@ class TensorAdd<Tensor, _Tp, _Rank, _Tensor1, _Tensor2>
   }
 
   inline void add(pointer dest, const_pointer src1, const_pointer src2,
-                  std::span<const size_t,  1> dims,
+                  std::span<const size_t,  1> dimensions,
                   std::span<const ssize_t, 1>,
                   std::span<const ssize_t, 1> strides1,
                   std::span<const ssize_t, 1> strides2) const
   {
-    for (size_t i = 0; i < dims[0]; i++)
+    for (size_t i = 0; i < dimensions[0]; i++)
     {
       dest[i] = *src1 + *src2;
       reinterpret_cast<const char*&>(src1) += strides1[0];
@@ -65,16 +65,16 @@ class TensorAdd<Tensor, _Tp, _Rank, _Tensor1, _Tensor2>
 
   template <size_t _N> inline
   void add(pointer dest, const_pointer src1, const_pointer src2,
-           std::span<const size_t,  _N> dims,
+           std::span<const size_t,  _N> dimensions,
            std::span<const ssize_t, _N> strides0,
            std::span<const ssize_t, _N> strides1,
            std::span<const ssize_t, _N> strides2) const
   {
     static_assert(_N != std::dynamic_extent, "dynamic_extent not allowed");
-    for (size_t i = 0; i < dims[0]; i++)
+    for (size_t i = 0; i < dimensions[0]; i++)
     {
       add(dest, src1, src2,
-          std::span<const size_t,  _N - 1>(dims.begin() + 1, _N - 1),
+          std::span<const size_t,  _N - 1>(dimensions.begin() + 1, _N - 1),
           std::span<const ssize_t, _N - 1>(strides0.begin() + 1, _N - 1),
           std::span<const ssize_t, _N - 1>(strides1.begin() + 1, _N - 1),
           std::span<const ssize_t, _N - 1>(strides2.begin() + 1, _N - 1));
@@ -90,13 +90,13 @@ class TensorAdd<Tensor, _Tp, _Rank, _Tensor1, _Tensor2>
   /// operator()() executes the operation and returns a tensor.
   auto operator()() const
   {
-    auto& dims = tensor1_.Dimensions();
-    auto result = Tensor(dims, Uninitialized<value_type>{});
+    auto& dimensions = tensor1_.Dimensions();
+    auto result = Tensor(dimensions, Uninitialized<value_type>{});
 
     add(result.Data(),
         tensor1_.Data(),
         tensor2_.Data(),
-        std::span<const size_t, _Rank>(dims),
+        std::span<const size_t, _Rank>(dimensions),
         std::span<const ssize_t, _Rank>(result.Strides()),
         std::span<const ssize_t, _Rank>(tensor1_.Strides()),
         std::span<const ssize_t, _Rank>(tensor2_.Strides()));

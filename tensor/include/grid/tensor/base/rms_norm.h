@@ -41,12 +41,12 @@ class TensorRmsNorm<Tensor, _Tp, _Rank, _Tensor>
  private:
   inline auto
   SumSquare(const_pointer src,
-            std::span<const size_t,  1> dims,
+            std::span<const size_t,  1> dimensions,
             std::span<const ssize_t, 1> strides) const
   {
     value_type value{0};
-    size_t count = dims[0];
-    for (size_t i = 0; i < dims[0]; i++, reinterpret_cast<const char*&>(src) += strides[0])
+    size_t count = dimensions[0];
+    for (size_t i = 0; i < dimensions[0]; i++, reinterpret_cast<const char*&>(src) += strides[0])
       value += *src * *src;
     return std::tuple{value, count};
   }
@@ -54,16 +54,16 @@ class TensorRmsNorm<Tensor, _Tp, _Rank, _Tensor>
   template <size_t _N>
   inline auto
   SumSquare(const_pointer src,
-            std::span<const size_t,  _N> dims,
+            std::span<const size_t,  _N> dimensions,
             std::span<const ssize_t, _N> strides) const
   {
     static_assert(_N != std::dynamic_extent, "dynamic_extent not allowed");
     value_type value{0};
     size_t count = 0;
-    for (size_t i = 0; i < dims[0]; i++, reinterpret_cast<const char*&>(src) += strides[0])
+    for (size_t i = 0; i < dimensions[0]; i++, reinterpret_cast<const char*&>(src) += strides[0])
     {
       auto [s, c] = SumSquare(src,
-                              std::span<const size_t,  _N - 1>(dims.begin() + 1, _N - 1),
+                              std::span<const size_t,  _N - 1>(dimensions.begin() + 1, _N - 1),
                               std::span<const ssize_t, _N - 1>(strides.begin() + 1, _N - 1));
       value += s;
       count += c;

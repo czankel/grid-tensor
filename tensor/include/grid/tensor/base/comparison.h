@@ -37,11 +37,11 @@ equals(const _Tp* src1, const _Tp* src2,
 template <typename _Tp, size_t>
 inline std::enable_if_t<!std::is_floating_point_v<_Tp>, bool>
 equals(const _Tp* src1, const _Tp* src2,
-       std::span<const size_t,  1> dims,
+       std::span<const size_t,  1> dimensions,
        std::span<const ssize_t, 1> strides1,
        std::span<const ssize_t, 1> strides2)
 {
-  for (size_t i = 0; i < dims[0]; i++)
+  for (size_t i = 0; i < dimensions[0]; i++)
   {
     if (*src1 != *src2)
       return false;
@@ -54,13 +54,13 @@ equals(const _Tp* src1, const _Tp* src2,
 template <typename _Tp, size_t>
 inline std::enable_if_t<std::is_floating_point_v<_Tp>, bool>
 equals(const _Tp* src1, const _Tp* src2,
-       std::span<const size_t,  1> dims,
+       std::span<const size_t,  1> dimensions,
        std::span<const ssize_t, 1> strides1,
        std::span<const ssize_t, 1> strides2)
 {
   constexpr _Tp max_abs_error = std::numeric_limits<_Tp>::epsilon();
 
-  for (size_t i = 0; i < dims[0]; i++)
+  for (size_t i = 0; i < dimensions[0]; i++)
   {
     auto max = std::max(std::abs(*src1), std::abs(*src2));
     if (std::abs(*src1 - *src2) > max * max_abs_error)
@@ -74,15 +74,15 @@ equals(const _Tp* src1, const _Tp* src2,
 template <typename _Tp, size_t _N>
 inline std::enable_if_t<(_N > 1), bool>
 equals(const _Tp* src1, const _Tp* src2,
-       std::span<const size_t,  _N> dims,
+       std::span<const size_t,  _N> dimensions,
        std::span<const ssize_t, _N> strides1,
        std::span<const ssize_t, _N> strides2)
 {
   static_assert(_N != std::dynamic_extent, "dynamic_extent not allowed");
-  for (size_t i = 0; i < dims[0]; i++)
+  for (size_t i = 0; i < dimensions[0]; i++)
   {
     if (!equals<_Tp, _N - 1>(src1, src2,
-                             std::span<const size_t,  _N - 1>(dims.begin() + 1, _N - 1),
+                             std::span<const size_t,  _N - 1>(dimensions.begin() + 1, _N - 1),
                              std::span<const ssize_t, _N - 1>(strides1.begin() + 1, _N - 1),
                              std::span<const ssize_t, _N - 1>(strides2.begin() + 1, _N - 1)))
       return false;

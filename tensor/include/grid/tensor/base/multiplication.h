@@ -39,12 +39,12 @@ class TensorMul<Tensor, _Tp, _Rank, _Tensor1, _Tensor2>
 
  private:
   inline void VecDot(pointer dest, const_pointer src1, const_pointer src2,
-                     std::span<const size_t,  1> dims,
+                     std::span<const size_t,  1> dimensions,
                      std::span<const ssize_t, 1> strides1,
                      std::span<const ssize_t, 1> strides2) const
   {
     value_type sum{0};
-    for (size_t i = 0; i < dims[0]; i++)
+    for (size_t i = 0; i < dimensions[0]; i++)
     {
       sum += *src1 * *src2;
       reinterpret_cast<const char*&>(src1) += strides1[0];
@@ -54,19 +54,19 @@ class TensorMul<Tensor, _Tp, _Rank, _Tensor1, _Tensor2>
   }
 
   inline void MatMul(pointer dest, const_pointer src1, const_pointer src2,
-                     std::span<const size_t,  2> dims,
+                     std::span<const size_t,  2> dimensions,
                      std::span<const ssize_t, 2> strides0,
                      std::span<const ssize_t, 2> strides1,
                      std::span<const ssize_t, 2> strides2) const
   {
-    for (size_t m = 0; m < dims[0]; m++)
+    for (size_t m = 0; m < dimensions[0]; m++)
     {
       pointer destprime = dest;
       const_pointer src2prime = src2;
-      for (size_t n = 0; n < dims[0]; n++)
+      for (size_t n = 0; n < dimensions[0]; n++)
       {
         VecDot(destprime, src1, src2prime,
-               std::span<const size_t,  1>(dims.begin() + 1, dims.end()),
+               std::span<const size_t,  1>(dimensions.begin() + 1, dimensions.end()),
                std::span<const ssize_t, 1>(strides1.begin() + 1, strides1.end()),
                std::span<const ssize_t, 1>(strides2.begin() + 1, strides2.end()));
         reinterpret_cast<char*&>(destprime) += strides0[1];
@@ -78,11 +78,11 @@ class TensorMul<Tensor, _Tp, _Rank, _Tensor1, _Tensor2>
   }
 
   inline void Scale(pointer dest, const_pointer src, const value_type factor,
-                    std::span<const size_t,  1> dims,
+                    std::span<const size_t,  1> dimensions,
                     std::span<const ssize_t, 1> strides0,
                     std::span<const ssize_t, 1> strides1) const
   {
-    for (size_t i = 0; i < dims[0]; i++)
+    for (size_t i = 0; i < dimensions[0]; i++)
     {
       *dest = *src * factor;
       reinterpret_cast<char*&>(dest) += strides0[0];
@@ -92,15 +92,15 @@ class TensorMul<Tensor, _Tp, _Rank, _Tensor1, _Tensor2>
 
   template <size_t _N>
   inline void Scale(pointer dest, const_pointer src, const value_type factor,
-                    std::span<const size_t,  _N> dims,
+                    std::span<const size_t,  _N> dimensions,
                     std::span<const ssize_t, _N> strides0,
                     std::span<const ssize_t, _N> strides1) const
   {
     static_assert(_N != std::dynamic_extent, "dynamic_extent not allowed");
-    for (size_t i = 0; i < dims[0]; i++)
+    for (size_t i = 0; i < dimensions[0]; i++)
     {
       Scale(dest, src, factor,
-          std::span<const size_t,  _N - 1>(dims.begin() + 1, _N - 1),
+          std::span<const size_t,  _N - 1>(dimensions.begin() + 1, _N - 1),
           std::span<const ssize_t, _N - 1>(strides0.begin() + 1, _N - 1),
           std::span<const ssize_t, _N - 1>(strides1.begin() + 1, _N - 1));
       reinterpret_cast<char*&>(dest) += strides0[0];
@@ -113,13 +113,13 @@ class TensorMul<Tensor, _Tp, _Rank, _Tensor1, _Tensor2>
   /// operator()() executes the operation and returns a tensor.
   auto operator()() const requires (_Tensor1::rank == 1 && _Tensor2::rank == 1)
   {
-    auto& dims = tensor1_.Dimensions();
+    auto& dimensions = tensor1_.Dimensions();
     auto result = Tensor(Uninitialized<value_type>{});
 
     VecDot(result.Data(),
            tensor1_.Data(),
            tensor2_.Data(),
-           std::span(dims),
+           std::span(dimensions),
            std::span(tensor1_.Strides()),
            std::span(tensor2_.Strides()));
 
@@ -128,8 +128,8 @@ class TensorMul<Tensor, _Tp, _Rank, _Tensor1, _Tensor2>
 
   auto operator()() const requires (_Tensor1::rank == 2 && _Tensor2::rank == 2)
   {
-    auto& dims = tensor1_.Dimensions();
-    auto result = Tensor({dims[0], dims[0]}, Uninitialized<value_type>{});
+    auto& dimensions = tensor1_.Dimensions();
+    auto result = Tensor({dimensions[0], dimensions[0]}, Uninitialized<value_type>{});
 
     // transpose right matrix
     auto strides = tensor2_.Strides();
@@ -138,7 +138,7 @@ class TensorMul<Tensor, _Tp, _Rank, _Tensor1, _Tensor2>
     MatMul(result.Data(),
            tensor1_.Data(),
            tensor2_.Data(),
-           std::span(dims),
+           std::span(dimensions),
            std::span(result.Strides()),
            std::span(tensor1_.Strides()),
            std::span(strides));
@@ -148,12 +148,12 @@ class TensorMul<Tensor, _Tp, _Rank, _Tensor1, _Tensor2>
 
   auto operator()() const requires (_Tensor2::rank == 0)
   {
-    auto& dims = tensor1_.Dimensions();
-    auto result = Tensor(dims, Uninitialized<value_type>{});
+    auto& dimensions = tensor1_.Dimensions();
+    auto result = Tensor(dimensions, Uninitialized<value_type>{});
     Scale(result.Data(),
           tensor1_.Data(),
           *tensor2_.Data(),
-          std::span(dims),
+          std::span(dimensions),
           std::span(result.Strides()),
           std::span(tensor1_.Strides()));
     return result;
@@ -161,12 +161,12 @@ class TensorMul<Tensor, _Tp, _Rank, _Tensor1, _Tensor2>
 
   auto operator()() const requires (_Tensor1::rank == 0 && _Tensor2::rank != 0)
   {
-    auto& dims = tensor2_.Dimensions();
-    auto result = Tensor(dims, Uninitialized<value_type>{});
+    auto& dimensions = tensor2_.Dimensions();
+    auto result = Tensor(dimensions, Uninitialized<value_type>{});
     Scale(result.Data(),
           tensor2_.Data(),
           *tensor1_.Data(),
-          std::span(dims),
+          std::span(dimensions),
           std::span(result.Strides()),
           std::span(tensor2_.Strides()));
 

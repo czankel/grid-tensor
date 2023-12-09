@@ -199,18 +199,18 @@ class MMapView
 
   /// Array returns an ArrayView of the specified primitive for a memory mapped reagion.
   template <typename T, size_t _Rank>
-  ArrayView<T, _Rank> Array(const size_t(&dims)[_Rank], const ssize_t(&strides)[_Rank])
+  ArrayView<T, _Rank> Array(const size_t(&dimensions)[_Rank], const ssize_t(&strides)[_Rank])
   {
-    auto arr = ArrayView<T, _Rank>(reinterpret_cast<T>(addr_), dims, strides);
+    auto arr = ArrayView<T, _Rank>(reinterpret_cast<T>(addr_), dimensions, strides);
     addr_ += arr.Size();
     return arr;
   }
 
   template <typename T, size_t _Rank>
   ArrayView<T, _Rank>
-  Array(const std::array<size_t, _Rank>& dims, const std::array<ssize_t, _Rank>& strides)
+  Array(const std::array<size_t, _Rank>& dimensions, const std::array<ssize_t, _Rank>& strides)
   {
-    auto arr = ArrayView<T, _Rank>(reinterpret_cast<T*>(addr_), dims, strides);
+    auto arr = ArrayView<T, _Rank>(reinterpret_cast<T*>(addr_), dimensions, strides);
     addr_ += arr.Size();
     return arr;
   }
@@ -218,18 +218,18 @@ class MMapView
   /// Array returns an ArrayView of the specified primitive for a memory mapped reagion.
   template <typename T, size_t _Rank>
   ArrayView<T, _Rank>
-  Array(const size_t(&dims)[_Rank])
+  Array(const size_t(&dimensions)[_Rank])
   {
-    auto arr = ArrayView<T, _Rank>(reinterpret_cast<T*>(addr_), dims);
+    auto arr = ArrayView<T, _Rank>(reinterpret_cast<T*>(addr_), dimensions);
     addr_ += arr.Size();
     return arr;
   }
 
   template <typename T, size_t _Rank>
   ArrayView<T, _Rank>
-  Array(const std::array<size_t, _Rank>& dims)
+  Array(const std::array<size_t, _Rank>& dimensions)
   {
-    auto arr = ArrayView<T, _Rank>(reinterpret_cast<T>(addr_), dims);
+    auto arr = ArrayView<T, _Rank>(reinterpret_cast<T>(addr_), dimensions);
     addr_ += arr.Size();
     return arr;
   }

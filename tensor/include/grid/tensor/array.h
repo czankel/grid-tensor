@@ -22,34 +22,34 @@ class ArrayView
   using const_pointer = const _Tp*;
 
   /// Constructor for an array on a given data buffer with specified dimensions and strides.
-  ArrayView(pointer data, const std::array<size_t, _Rank>&dims, const std::array<ssize_t, _Rank>&strides)
-    : dims_(dims),
+  ArrayView(pointer data, const std::array<size_t, _Rank>&dimensions, const std::array<ssize_t, _Rank>&strides)
+    : dimensions_(dimensions),
       strides_(strides),
-      size_(get_buffer_size(dims_, strides_)),
+      size_(get_buffer_size(dimensions_, strides_)),
       data_(data)
   {}
   /// Constructor for an array on a given data buffer with specified dimensions and strides.
-  ArrayView(pointer data, const size_t(&dims)[_Rank], const ssize_t(&strides)[_Rank])
-    : dims_(get_array<size_t, _Rank>(dims)),
+  ArrayView(pointer data, const size_t(&dimensions)[_Rank], const ssize_t(&strides)[_Rank])
+    : dimensions_(get_array<size_t, _Rank>(dimensions)),
       strides_(get_array<ssize_t, _Rank>(strides)),
-      size_(get_buffer_size(dims_, strides_)),
+      size_(get_buffer_size(dimensions_, strides_)),
       data_(data)
   {}
 
   /// Constructor for an array on a given data buffer with specified dimensions.
-  ArrayView(pointer data, const std::array<size_t, _Rank>& dims)
-    : dims_(dims),
-      strides_(make_strides<value_type>(dims_)),
-      size_(get_buffer_size(dims_, strides_)),
+  ArrayView(pointer data, const std::array<size_t, _Rank>& dimensions)
+    : dimensions_(dimensions),
+      strides_(make_strides<value_type>(dimensions_)),
+      size_(get_buffer_size(dimensions_, strides_)),
       data_(data)
   {}
 
 
   /// Constructor for an array on a given data buffer with specified dimensions.
-  ArrayView(pointer data, const size_t(&dims)[_Rank])
-    : dims_(get_array<size_t, _Rank>(dims)),
-      strides_(make_strides<value_type>(dims_)),
-      size_(get_buffer_size(dims_, strides_)),
+  ArrayView(pointer data, const size_t(&dimensions)[_Rank])
+    : dimensions_(get_array<size_t, _Rank>(dimensions)),
+      strides_(make_strides<value_type>(dimensions_)),
+      size_(get_buffer_size(dimensions_, strides_)),
       data_(data)
   {}
 
@@ -58,7 +58,7 @@ class ArrayView
   constexpr static size_t Rank()                          { return _Rank; }
 
   /// Dimensions returns the dimensions for the axis.
-  const std::array<size_t, _Rank>& Dimensions() const     { return dims_; }
+  const std::array<size_t, _Rank>& Dimensions() const     { return dimensions_; }
 
   /// Strides returns the strides for the axis.
   const std::array<ssize_t, _Rank>& Strides() const       { return strides_; }
@@ -71,7 +71,7 @@ class ArrayView
   const_pointer Data() const                              { return data_; }
 
  private:
-  std::array<size_t, _Rank>   dims_;
+  std::array<size_t, _Rank>   dimensions_;
   std::array<ssize_t, _Rank>  strides_;
   size_t                      size_;
   pointer                     data_;

@@ -177,13 +177,13 @@ TYPED_TEST_P(TensorTestSuite, TensorMMap)
   auto mmap = std::make_shared<grid::MMap>(fd, file_size);
   grid::MMapView view(mmap);
 
-  auto dims1 = view.Read<std::array<size_t, 2>>();
+  auto dimensions1 = view.Read<std::array<size_t, 2>>();
   auto strides1 = view.Read<std::array<size_t, 2>>();
-  typename TypeParam::Tensor tensor1(view.Array<double>(dims1, grid::make_strides<double>(strides1)));
+  typename TypeParam::Tensor tensor1(view.Array<double>(dimensions1, grid::make_strides<double>(strides1)));
 
-  auto dims2 = view.Read<std::array<size_t, 2>>();
+  auto dimensions2 = view.Read<std::array<size_t, 2>>();
   auto strides2 = view.Read<std::array<size_t, 2>>();
-  typename TypeParam::Tensor tensor2(view.Array<double>(dims2, grid::make_strides<double>(strides2)));
+  typename TypeParam::Tensor tensor2(view.Array<double>(dimensions2, grid::make_strides<double>(strides2)));
 
   std::fclose(tmpf);
 }

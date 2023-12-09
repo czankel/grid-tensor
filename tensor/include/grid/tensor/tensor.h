@@ -156,15 +156,15 @@ std::ostream& operator<<(std::ostream& os, const grid::AnyTensor auto& tensor)
   using value_type = typename std::remove_reference_t<decltype(tensor)>::value_type;
   size_t rank = tensor.Rank();
 
-  auto dims = tensor.Dimensions();
+  auto dimensions = tensor.Dimensions();
   auto strides = tensor.Strides();
 
   std::function<void(int, const value_type*&)> print;
-  print = [&os, &dims, &strides, &print, &rank](size_t index, const value_type*& ptr) {
+  print = [&os, &dimensions, &strides, &print, &rank](size_t index, const value_type*& ptr) {
     os << "{ ";
     if (index < rank -1)
     {
-      for (size_t i = dims[index]; i > 0; i--)
+      for (size_t i = dimensions[index]; i > 0; i--)
       {
         print(index + 1, ptr);
         if (i != 1)
@@ -177,7 +177,7 @@ std::ostream& operator<<(std::ostream& os, const grid::AnyTensor auto& tensor)
     else
     {
       auto* p = ptr;
-      for (size_t i = dims[index]; i > 0; i--)
+      for (size_t i = dimensions[index]; i > 0; i--)
       {
         os << *p;
         if (i != 1)
