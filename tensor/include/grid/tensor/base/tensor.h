@@ -26,14 +26,17 @@ template <PrimitiveTensor, size_t> class TensorView;
 
 /// Tensor provides an non-optimized base implementation of tensors.
 /// Note that the implementation implicitly requires that the buffer and strides are aligned to the value type.
-template <typename _Tp, size_t _Rank, typename Allocator=std::allocator<_Tp>>
-class Tensor
+template <typename _Tp, size_t _Rank, typename... _Allocator> class Tensor;
+
+/// Tensor is the default tensor using the standard std::allocator
+template <typename _Tp, size_t _Rank>
+class Tensor<_Tp, _Rank>
 {
   template <PrimitiveTensor T, size_t R> friend class TensorView;
 
  public:
   using value_type = _Tp;
-  using allocator_type = Allocator;
+  using allocator_type = std::allocator<_Tp>;
   using pointer = _Tp*;
   using const_pointer = const _Tp*;
   constexpr static size_t rank = _Rank;

@@ -22,10 +22,11 @@ struct TensorBaseType
 
 struct TensorBaseType
 {
-  template <typename _T, size_t _Rank, typename _Allocator = std::allocator<_T>>
-  class Tensor : public grid::Tensor<_T, _Rank, _Allocator>
+  template <typename T, size_t _Rank, typename... _Allocator>
+  class Tensor : public grid::Tensor<T, _Rank, _Allocator...>
   {
-    using grid::Tensor<_T, _Rank, _Allocator>::Tensor;
+   public:
+    using grid::Tensor<T, _Rank, _Allocator...>::Tensor;
   };
 
   // Rank-0
