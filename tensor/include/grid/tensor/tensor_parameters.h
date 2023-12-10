@@ -11,22 +11,27 @@
 
 namespace grid {
 
-// helper function to extra brace-initializer list
-template <typename _T, size_t _Count>
-inline constexpr std::array<_T, _Count>
-get_array(std::initializer_list<_T>&& init)
+// get_array(iniitlizer_list) returns a std::array initialized from a brace-initializer list.
+template <typename _Tp, size_t... _Ns>
+inline constexpr std::array<_Tp, sizeof...(_Ns)>
+get_array_impl(std::initializer_list<_Tp>&& init, std::index_sequence<_Ns...>)
 {
-  std::array<_T, _Count> arr;
-  std::copy(init.begin(), init.end(), arr.begin());
-  return arr;
+  return std::array<_Tp, sizeof...(_Ns)>{ *(init.begin() + _Ns) ... };
 }
 
-// helper function to initialize the std:array from an initializer list
-template <typename _T, size_t _M, size_t _N>
-inline constexpr std::array<_T, _M * _N>
-get_array(std::initializer_list<std::initializer_list<_T>>&& init)
+template <typename _Tp, size_t _N, typename _Ns = std::make_index_sequence<_N>>
+inline constexpr std::array<_Tp, _N>
+get_array(std::initializer_list<_Tp>&& init)
 {
-  std::array<_T, _M * _N> arr{};
+  return get_array_impl(std::move(init), _Ns{});
+}
+
+// get_array(initializer_list<initializer_list>) returns a std::array from a 2-dimensional initializer list.
+template <typename _Tp, size_t _M, size_t _N>
+inline constexpr std::array<_Tp, _M * _N>
+get_array(std::initializer_list<std::initializer_list<_Tp>>&& init)
+{
+  std::array<_Tp, _M * _N> arr{};
   auto line_it = arr.begin();
   for (auto it : init)
   {
@@ -55,31 +60,34 @@ get_array(std::initializer_list<std::initializer_list<std::initializer_list<_Tp>
   return arr;
 }
 
-template <typename _T, size_t _N>
-inline constexpr std::array<_T, _N>
-get_array(const _T(&init)[_N])
+// get_array(T(&)[]) returns a std::array from a c-array.
+template <typename _Tp, size_t _N>
+inline constexpr std::array<_Tp, _N>
+get_array(const _Tp(&init)[_N])
 {
-  std::array<_T, _N> arr{};
+  std::array<_Tp, _N> arr{};
   std::copy(std::begin(init), std::end(init), arr.begin());
   return arr;
 }
 
-template <typename _T, size_t _N>
-inline constexpr std::array<_T, _N>
-get_array(_T(&&init)[_N])
+// get_array(T(&&)[]) returns a std::array from a c-array (rvalue reference)
+template <typename _Tp, size_t _N>
+inline constexpr std::array<_Tp, _N>
+get_array(_Tp(&&init)[_N])
 {
-  std::array<_T, _N> arr{};
+  std::array<_Tp, _N> arr{};
   std::copy(std::begin(init), std::end(init), arr.begin());
   return arr;
 }
 
-// helper function to return the strides from dimensions. Use: make_strides<TYPE>(std::array)
-template <typename _T, size_t _Rank, size_t... Is>
+// make_strides returns a std::array with the strides calculated from the provided dimensions and
+// the template type parameter (make_strides<TYPE>(...))
+template <typename _Tp, size_t _Rank, size_t... Is>
 constexpr std::array<ssize_t, _Rank>
 make_strides_impl(const std::array<size_t, _Rank>& dimensions, std::index_sequence<Is...>)
 {
   auto multiply = [&dimensions](size_t index) {
-    ssize_t res = sizeof(_T);
+    ssize_t res = sizeof(_Tp);
     for (size_t i = 0; i < _Rank - 1 - index; i++)
       res *= dimensions[_Rank - 1 - i];
     return res;
@@ -87,10 +95,10 @@ make_strides_impl(const std::array<size_t, _Rank>& dimensions, std::index_sequen
   return std::array<ssize_t, _Rank>{multiply(Is)...};
 }
 
-template <typename _T, size_t _Rank, typename Indices = std::make_index_sequence<_Rank>>
+template <typename _Tp, size_t _Rank, typename Indices = std::make_index_sequence<_Rank>>
 std::array<ssize_t, _Rank> make_strides(const std::array<size_t, _Rank>& dimensions)
 {
-  return make_strides_impl<_T>(dimensions, Indices{});
+  return make_strides_impl<_Tp>(dimensions, Indices{});
 }
 
 // get_buffer_size returns the size of the buffer from dimensions and strides.
