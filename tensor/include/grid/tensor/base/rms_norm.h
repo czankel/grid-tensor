@@ -22,6 +22,10 @@ namespace grid {
 template <typename _Tp, size_t _Rank, PrimitiveTensor _Tensor>
 class TensorRmsNorm<Tensor, _Tp, _Rank, _Tensor>
 {
+  template <typename T> struct Eps {};
+  template <> struct Eps<float>  { constexpr static float  default_value = 1e-5f; float  value; };
+  template <> struct Eps<double> { constexpr static double default_value = 1e-5f; double value; };
+
  public:
   using value_type = _Tp;
   using pointer = _Tp*;
@@ -29,7 +33,11 @@ class TensorRmsNorm<Tensor, _Tp, _Rank, _Tensor>
   constexpr static size_t rank = _Rank;
 
   template <ConvertibleTo<Tensor> T1>
-  TensorRmsNorm(T1&& tensor) : tensor_(std::forward<T1>(tensor)) {}
+  TensorRmsNorm(T1&& tensor, value_type eps = Eps<value_type>::default_value)
+  requires (std::is_floating_point_v<value_type> && _Tensor::rank > 0)
+   : tensor_(std::forward<T1>(tensor)) ,
+     eps_(eps)
+  {}
 
   // delete assignment and copy/move constructors
   TensorRmsNorm() = delete;
@@ -73,20 +81,20 @@ class TensorRmsNorm<Tensor, _Tp, _Rank, _Tensor>
 
  public:
 
-  /// operator()() executes the operation and returns a tensor.
-  auto operator()() const requires (std::is_floating_point_v<value_type>)
+  /// operator()() executes and returns a tensor with the RMS norm of the stored vector.
+  auto operator()() const
   {
     auto [value, count] = SumSquare(tensor_.Data(),
                                     std::span(tensor_.Dimensions()),
                                     std::span(tensor_.Strides()));
 
-    constexpr value_type eps = std::numeric_limits<value_type>::epsilon();
-    value_type scale = 1.0/sqrtf(value / count + eps);
+    value_type scale = 1.0f/sqrtf(value / count + eps_);
     return TensorMul(tensor_, Tensor{scale})();
   }
 
  private:
-  _Tensor tensor_;
+  _Tensor    tensor_;
+  value_type eps_;
 };
 
 //
