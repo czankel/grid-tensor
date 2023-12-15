@@ -23,6 +23,28 @@
 
 namespace grid {
 
+namespace {
+
+template <typename _Tp>
+inline void initialize(_Tp* dst, std::span<size_t, 1> dimensions, std::span<ssize_t, 1> strides, _Tp init)
+{
+  for (size_t i = 0; i < dimensions[0]; i++, reinterpret_cast<char*&>(dst) += strides[0])
+    *dst = init;
+}
+
+template <typename _Tp, size_t _N>
+inline void initialize(_Tp* dst, std::span<size_t, _N> dimensions, std::span<ssize_t, _N> strides, _Tp init)
+{
+  for (size_t i = 0; i < dimensions[0]; i++, reinterpret_cast<char*&>(dst) += strides[0])
+    initialize(dst,
+        std::span<size_t, _N - 1>(dimensions.begin() + 1, dimensions.end()),
+        std::span<ssize_t, _N - 1>(strides.begin() + 1, strides.end()),
+        init);
+}
+
+} // end of namespace details
+
+
 /// Tensor provides an non-optimized base implementation of tensors.
 /// Note that the implementation implicitly requires that the buffer and strides are aligned to the value type.
 template <typename _Tp, size_t _Rank, typename... _Allocator> class Tensor;
@@ -39,31 +61,6 @@ class Tensor<_Tp, _Rank>
   using pointer = _Tp*;
   using const_pointer = const _Tp*;
   constexpr static size_t rank = _Rank;
-
- private:
-  inline void
-  initialize(pointer ptr,
-             std::span<size_t, 1> dimensions,
-             std::span<ssize_t, 1> strides,
-             value_type init)
-  {
-    for (size_t i = 0; i < dimensions[0]; i++, ptr = ptr + strides[0]/sizeof(value_type))
-      *ptr = init;
-  }
-
-  template <size_t _N>
-  inline void
-  initialize(pointer ptr,
-             std::span<size_t, _N> dimensions,
-             std::span<ssize_t, _N> strides,
-             value_type init)
-  {
-    for (size_t i = 0; i < dimensions[0]; i++, ptr += strides[0]/sizeof(value_type))
-      initialize(ptr,
-                 std::span<size_t, _N - 1>(dimensions.begin() + 1, dimensions.end()),
-                 std::span<ssize_t, _N - 1>(strides.begin() + 1, strides.end()),
-                 init);
-  }
 
  public:
   /// Constructor for a rank-1 tensor (vector) with a dynamically allocated buffer without padding.
