@@ -30,8 +30,9 @@ equals(const _Tp* src1, const _Tp* src2,
        std::span<const ssize_t, 0>,
        std::span<const ssize_t, 0>)
 {
-  constexpr _Tp max_abs_error = std::numeric_limits<_Tp>::epsilon() * 100;
-  return std::abs(*src1 - *src2) <= max_abs_error;
+  auto max = std::max(std::abs(*src1), std::abs(*src2));
+  _Tp eps = max * std::numeric_limits<_Tp>::epsilon();
+  return std::abs(*src1 - *src2) <= eps;
 }
 
 template <typename _Tp, size_t>
@@ -58,13 +59,14 @@ equals(const _Tp* src1, const _Tp* src2,
        std::span<const ssize_t, 1> strides1,
        std::span<const ssize_t, 1> strides2)
 {
-  constexpr _Tp max_abs_error = std::numeric_limits<_Tp>::epsilon();
-
   for (size_t i = 0; i < dimensions[0]; i++)
   {
     auto max = std::max(std::abs(*src1), std::abs(*src2));
-    if (std::abs(*src1 - *src2) > max * max_abs_error)
+    _Tp eps = max * std::numeric_limits<_Tp>::epsilon();
+
+    if (std::abs(*src1 - *src2) > eps)
       return false;
+
     reinterpret_cast<const char*&>(src1) += strides1[0];
     reinterpret_cast<const char*&>(src2) += strides2[0];
   }

@@ -21,7 +21,7 @@ TYPED_TEST_P(RmsNormTestSuite, TensorNormRmsRank1)
   typename TypeParam::Tensor tensor{ 1.618, 2., 3.14, 5.382, -8.5, 13., -21., 34.77, 55. };
   typename TypeParam::Tensor result = grid::TensorRmsNorm(tensor);
 
-  double scale = 23.47965240478515269729;
+  double scale = 23.47965324677914722429;
   typename TypeParam::Tensor expected{ 1.618 / scale, 2. / scale, 3.14 / scale,
                                        5.382 / scale, -8.5 / scale, 13. / scale,
                                        -21. / scale, 34.77 / scale, 55. / scale };
