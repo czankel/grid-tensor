@@ -141,9 +141,9 @@ class Tensor<_Tp, _Rank>
   {}
 
   /// Constructor for any rank tensor with a dynamically allocated initialized buffer
-  explicit Tensor(const size_t(&dimension)[_Rank], const ssize_t(&stride)[_Rank], value_type init)
-    : dimensions_(get_array<size_t, _Rank>(dimension)),
-      strides_(get_array<ssize_t, _Rank>(stride)),
+  explicit Tensor(const size_t(&dimensions)[_Rank], const ssize_t(&strides)[_Rank], value_type init)
+    : dimensions_(get_array<size_t, _Rank>(dimensions)),
+      strides_(get_array<ssize_t, _Rank>(strides)),
       size_(get_buffer_size(dimensions_, strides_)),
       data_(new value_type[size_ / sizeof(value_type)])
   {
@@ -151,9 +151,9 @@ class Tensor<_Tp, _Rank>
   }
 
   /// Constructor for any rank tensor with a dynamically allocated uninitialized buffer
-  explicit Tensor(const size_t(&dimension)[_Rank], const ssize_t(&stride)[_Rank], Uninitialized<value_type>)
-    : dimensions_(get_array<size_t, _Rank>(dimension)),
-      strides_(get_array<ssize_t, _Rank>(stride)),
+  explicit Tensor(const size_t(&dimensions)[_Rank], const ssize_t(&strides)[_Rank], Uninitialized<value_type>)
+    : dimensions_(get_array<size_t, _Rank>(dimensions)),
+      strides_(get_array<ssize_t, _Rank>(strides)),
       size_(get_buffer_size(dimensions_, strides_)),
       data_(new value_type[size_ / sizeof(value_type)])
   {}

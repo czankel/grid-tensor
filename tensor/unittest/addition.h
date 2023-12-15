@@ -22,7 +22,6 @@ TYPED_TEST_P(AdditionTestSuite, TensorAddRank0)
 {
   typename TypeParam::Tensor tensor1{ 5 };
   typename TypeParam::Tensor tensor2{ 3 };
-
   auto op = grid::TensorAdd(tensor1, tensor2);
   auto res = op();
   EXPECT_EQ(res.Rank(), 0);
@@ -60,19 +59,17 @@ TYPED_TEST_P(AdditionTestSuite, TensorAdd)
 
 TYPED_TEST_P(AdditionTestSuite, TensorAddAdd)
 {
-  typename TypeParam::Tensor t31(4UL, 3UL, 2.1);
-  typename TypeParam::Tensor t32(4UL, 3UL, 1.3);
-  typename TypeParam::Tensor t33(4UL, 3UL, 2.2);
-  typename TypeParam::Tensor v3{ { 5.6, 5.6, 5.6 },
-                                 { 5.6, 5.6, 5.6 },
-                                 { 5.6, 5.6, 5.6 },
-                                 { 5.6, 5.6, 5.6 }};
-
-  auto&& op31 = t31 + t32 + t33;
-  auto res3 = op31();
-  EXPECT_EQ(res3, v3);
+  typename TypeParam::Tensor tensor1(4UL, 3UL, 2.1);
+  typename TypeParam::Tensor tensor2(4UL, 3UL, 1.3);
+  typename TypeParam::Tensor tensor3(4UL, 3UL, 2.2);
+  typename TypeParam::Tensor expected{ { 5.6, 5.6, 5.6 },
+                                       { 5.6, 5.6, 5.6 },
+                                       { 5.6, 5.6, 5.6 },
+                                       { 5.6, 5.6, 5.6 }};
+  auto&& oper = tensor1 + tensor2 + tensor3;
+  auto result = oper();
+  EXPECT_EQ(result, expected);
 }
-
 
 REGISTER_TYPED_TEST_SUITE_P(AdditionTestSuite,
     TensorAddRank0,
