@@ -9,16 +9,18 @@
 #ifndef GRID_TENSOR_TENSOR_BASE_H
 #define GRID_TENSOR_TENSOR_BASE_H
 
-#include <initializer_list>
-#include <type_traits>
-#include <array>
-#include <algorithm>
-
 #include "tensor.h"
+#include "tensor_parameters.h"
+#include "mmap.h"
 
 #include "base/tensor.h"
-#include "base/comparison.h"
+
 #include "base/addition.h"
+#include "base/comparison.h"
 #include "base/multiplication.h"
+#include "base/element_multiplication.h"
+#include "base/rms_norm.h"
+#include "base/softmax.h"
+#include "base/silu.h"
 
 #endif  // GRID_TENSOR_TENSOR_BASE_H

@@ -31,12 +31,14 @@ TYPED_TEST_P(MultiplicationTestSuite, TensorVecDot)
 TYPED_TEST_P(MultiplicationTestSuite, TensorMatMul)
 {
   typename TypeParam::Tensor tensor1{ { 3, 6, 9 },
-                                      { 2, 8, 4 }};
+                                      { 2, 8, 4 },
+                                      { 5, 1, 7 }};
   typename TypeParam::Tensor tensor2{ { 1, 8 },
                                       { 5, 3 },
                                       { 7, 4 } };
-  typename TypeParam::Tensor expected{{ 3 * 1 + 6 * 5 + 9 * 7, 3 * 8 + 6 * 3 + 9 * 4 },
-                                      { 2 * 1 + 8 * 5 + 4 * 7, 2 * 8 + 8 * 3 + 4 * 4 }};
+  typename TypeParam::Tensor expected{{ 3 * 1 + 6 * 5 + 9 * 7, 3 * 8 + 6 * 3 + 9 * 4 }, // 96, 78
+                                      { 2 * 1 + 8 * 5 + 4 * 7, 2 * 8 + 8 * 3 + 4 * 4 }, // 70, 56
+                                      { 5 * 1 + 1 * 5 + 7 * 7, 5 * 8 + 1 * 3 + 7 * 4 }};// 59, 71
 
   auto op = grid::TensorMul(tensor1, tensor2);
   auto res = op();

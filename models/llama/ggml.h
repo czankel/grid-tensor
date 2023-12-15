@@ -1,0 +1,529 @@
+//
+// Copyright (C) Chris Zankel. All rights reserved.
+// This code is subject to U.S. and other copyright laws and
+// intellectual property protections.
+//
+// The contents of this file are confidential and proprietary to Chris Zankel.
+//
+
+#ifndef _GGML_H
+#define _GGML_H
+
+#include <any>
+#include <vector>
+#include <map>
+
+#include <grid/models/llama.h>
+#include <grid/tensor/mmap.h>
+#include <grid/tensor/tensor.h>
+
+#include "llama_vocab.h"
+
+namespace grid {
+
+struct ifstream_helper;
+
+enum GgmlMagic
+{
+  kGgmlMagicGGJT = 0x67676a74u, // 'ggjt'
+  kGgmlMagicGGLA = 0x67676c61u, // 'ggla'
+  kGgmlMagicGGMF = 0x67676d66u, // 'ggmf'
+  kGgmlMagicGGML = 0x67676d6cu, // 'ggml'
+  kGgmlMagicGGSN = 0x6767736eu, // 'ggsn'
+  kGgmlMagicGGUF = 0x46554747u, // 'FUGG' (gguf)
+};
+
+// Note that GgmlType + 1)
+enum GgmlType
+{
+  kGgufTypeU8       = 0,
+  kGgufTypeI8       = 1,
+  kGgufTypeU16      = 2,
+  kGgufTypeI16      = 3,
+  kGgufTypeU32      = 4,
+  kGgufTypeI32      = 5,
+  kGgufTypeFloat32  = 6,
+  kGgufTypeBool     = 7,
+  kGgufTypeString   = 8,
+  kGgufTypeArray    = 9,
+  kGgufTypeU64      = 10,
+  kGgufTypeI64      = 11,
+  kGgufTypeFloat64  = 12,
+};
+
+static constexpr size_t GgmlTypeSize[] =
+{
+  sizeof(uint8_t),
+  sizeof(int8_t),
+  sizeof(uint16_t),
+  sizeof(int16_t),
+  sizeof(uint32_t),
+  sizeof(int32_t),
+  sizeof(float),
+  sizeof(bool), // FIXME
+  0,            // string is invalid
+  0,            // array is invalid
+  sizeof(uint64_t),
+  sizeof(int64_t),
+  sizeof(double),
+};
+
+enum GgmlDataType
+{
+  kGgmlDataTypeInvalid = -1,
+  kGgmlDataTypeF32  =  0,
+  kGgmlDataTypeF16  =  1,
+  kGgmlDataTypeQ4_0 =  2,
+  kGgmlDataTypeQ4_1 =  3,
+  kGgmlDataTypeQ5_0 =  6,
+  kGgmlDataTypeQ5_1 =  7,
+  kGgmlDataTypeQ8_0 =  8,
+  kGgmlDataTypeQ8_1 =  9,
+  kGgmlDataTypeQ2_K = 10,
+  kGgmlDataTypeQ3_K = 11,
+  kGgmlDataTypeQ4_K = 12,
+  kGgmlDataTypeQ5_K = 13,
+  kGgmlDataTypeQ6_K = 14,
+  kGgmlDataTypeQ8_K = 15,
+  kGgmlDataTypeI8,
+  kGgmlDataTypeI16,
+  kGgmlDataTypeI32,
+  kGgmlDataTypeCount,
+};
+
+using float16_t=int16_t;
+
+const size_t kQuantsQ4_0 = 32;
+struct BlockQ4_0
+{
+  float16_t delta;
+  uint8_t qs[kQuantsQ4_0 / 2];
+};
+
+const size_t kQuantsQ4_1 = 32;
+struct BlockQ4_1
+{
+  float16_t delta;
+  float16_t min;
+  uint8_t qs[kQuantsQ4_1 / 2];
+};
+
+const size_t kQuantsQ5_0 = 32;
+struct BlockQ5_0
+{
+  float16_t delta;
+  uint8_t qh[4];          // 5th bit of quants
+  uint8_t qs[kQuantsQ5_0 / 2];
+};
+
+const size_t kQuantsQ5_1 = 32;
+struct BlockQ5_1 {
+  float16_t delta;
+  float16_t min;
+  uint8_t qh[4];          // 5th bit of quants
+  uint8_t qs[kQuantsQ5_0 / 2];
+};
+
+const size_t kQuantsQ8_0 = 32;
+struct BlockQ8_0
+{
+  float16_t delta;
+  uint8_t qs[kQuantsQ8_0];
+};
+
+const size_t kQuantsQ8_1 = 32;
+struct BlockQ8_1 {
+  float16_t delta;
+  float16_t min;
+  uint8_t qs[kQuantsQ8_1];
+};
+
+static const size_t GgmlFileTypeSize[kGgmlDataTypeCount] =
+{
+  /* kF32 */  sizeof(float),
+  /* kF16 */  sizeof(float16_t),
+  /* kQ4_0 */ sizeof(BlockQ4_0),
+  // FIXME: complete table
+};
+
+// Note that UNKNOWN is -1
+static const GgmlDataType GgmlFileToDataType[] =
+{
+  /*  0: ALL_F32     0          */  kGgmlDataTypeF32,
+  /*  1: MOSTLY_F16  1          */  kGgmlDataTypeF16,
+  /*  2: MOSTLY_Q4_0 2          */  kGgmlDataTypeQ4_0,
+  /*  3: MOSTLY_Q4_1 3          */  kGgmlDataTypeQ4_1,
+  /*  4: MOSTLY_Q4_1_SOME_F16 4 */  kGgmlDataTypeInvalid,
+  /*  5: invalid                */  kGgmlDataTypeInvalid,
+  /*  6: invalid                */  kGgmlDataTypeInvalid,
+  /*  7: MOSTLY_Q8_0 7          */  kGgmlDataTypeQ8_0,
+  /*  8: MOSTLY_Q5_0 8          */  kGgmlDataTypeQ5_0,
+  /*  9: MOSTLY_Q5_1 9          */  kGgmlDataTypeQ5_1,
+  /* 10: MOSTLY_Q2_K 10         */  kGgmlDataTypeQ2_K,
+  /* 11: MOSTLY_Q3_K 11         */  kGgmlDataTypeQ3_K,
+  /* 12: MOSTLY_Q4_K 12         */  kGgmlDataTypeQ4_K,
+  /* 13: MOSTLY_Q5_K 13         */  kGgmlDataTypeQ5_K,
+  /* 14: MOSTLY_Q6_K 14         */  kGgmlDataTypeQ6_K,
+};
+
+const size_t kQuantsQK_K = 0;  // not implemented
+static const size_t QuantSize[kGgmlDataTypeCount] =
+{
+  /* kGgmlDataTypeF32           */  1,
+  /* kGgmlDataTypeF16           */  1,
+  /* kGgmlDataTypeQ4_0          */  kQuantsQ4_0,
+  /* kGgmlDataTypeQ4_1          */  kQuantsQ4_1,
+  /* unused                     */  0,
+  /* unused                     */  0,
+  /* kGgmlDataTypeQ5_0          */  kQuantsQ5_0,
+  /* kGgmlDataTypeQ5_1          */  kQuantsQ5_1,
+  /* kGgmlDataTypeQ8_0          */  kQuantsQ8_0,
+  /* kGgmlDataTypeQ8_1          */  kQuantsQ8_1,
+  /* kGgmlDataTypeQ2_K          */  kQuantsQK_K,
+  /* kGgmlDataTypeQ3_K          */  kQuantsQK_K,
+  /* kGgmlDataTypeQ4_K          */  kQuantsQK_K,
+  /* kGgmlDataTypeQ5_K          */  kQuantsQK_K,
+  /* kGgmlDataTypeQ6_K          */  kQuantsQK_K,
+  /* kGgmlDataTypeQ8_K          */  kQuantsQK_K,
+  /* kGgmlDataTypeI8            */  1,
+  /* kGgmlDataTypeI16           */  1,
+  /* kGgmlDataTypeI32           */  1,
+};
+
+
+/// GgmlFile handles file formats generated by the Ggml project:
+class GgmlFile : public LLaMAFile
+{
+  struct GgmlValue
+  {
+    GgmlType  type;
+    ssize_t   size;   // size for arrays, must be -1 otherwise.
+    std::any  value;
+  };
+
+  struct GgmlTensor
+  {
+    GgmlType  type;
+    size_t    offset;
+    size_t    size;
+  };
+
+ public:
+  GgmlFile(std::string_view path) : path_(path) {}
+  virtual ~GgmlFile() = default;
+
+  // LLaMAFile::
+  virtual void Load();
+  virtual const std::type_info& DataType() const;
+  virtual void GetParameters(LLaMAModel::Parameters& p) const      { p = parameters_; }
+  virtual void GetTokenizer(LLaMAVocab&) const;
+  virtual MMap MapTensors() const;
+
+ protected:
+  // LLaMAFile::
+  virtual std::tuple<size_t, size_t> GetTensorOffset(TensorType, size_t num_indices, ...) const;
+
+  // ReadKeyValue reads the next key/value pair from the stream.
+  std::tuple<std::string, GgmlValue> ReadKeyValue(ifstream_helper& is);
+
+  // ReadArray reads and returns a value for an array
+  GgmlValue ReadArray(ifstream_helper& is);
+
+  // GetValue looks up and returns the value for the provide key.
+  // It throws an exception if the key cannot be found.
+  template <typename T> const T& GetValue(std::string key) const;
+
+  // GetTensor looks up and returns the tensor of the provided name.
+  // It throws an exception if the tensor cannot be found.
+  const GgmlTensor& GetTensor(std::string key) const;
+
+ private:
+  LLaMAModel::Parameters  parameters_;
+
+  std::string     path_;
+  std::string     model_arch_;
+  GgmlDataType    ftype_;
+
+  size_t          file_size_;
+  size_t          data_offset_;
+
+  uint32_t        magic_;
+  uint32_t        version_;
+  uint64_t        n_tensors_;
+  uint64_t        n_kv_;
+
+  std::unordered_map<std::string, GgmlValue> kv_map_;
+  std::unordered_map<std::string, GgmlTensor> tensor_map_;
+};
+
+} // end of namespace grid
+
+#endif // _GGML_H
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////
+#if 0
+
+  // FIXME GgmlDataType    ftype_;
+  GgmlModelParams ggml_params;
+  MMapView view(model.mmap_);
+
+  view.Read(model.magic_);
+  view.Read(model.version_);
+  view.Read(model.ggml_params);
+
+  if (ggml_params.ftype_ != kGgmlDataTypeInvalid && ggml_params.ftype_ < kGgmlDataTypeCount)
+    ggml_params.ftype_ = GgmlFileToDataType[ggml_params.ftype_];
+  model.ftype_ = ggml_params.ftype_;
+
+  // params_.data_type_ = GetDataType(ggml_params.dtype_); // FIXME: convert to dtype?
+  model.params_.vocab_size_ = ggml_params.vocab_size_;
+  model.params_.hidden_size_ = ggml_params.hidden_size_;
+  model.params_.num_hidden_layers_ = ggml_params.num_hidden_layers_;
+  model.params_.num_attention_heads_ = ggml_params.num_attention_heads_;
+
+  // read vocabs
+  vocab_.token_.resize(params_.vocab_size_);
+  for (uint32_t i = 0; i < params_.vocab_size_; i++)
+  {
+    std::string word = view.ReadString();
+    float score = 0.0f;
+    //if (file_vesion >= 1)
+      score = view.Read<float>();
+    vocab_.id_[word] = i;
+    vocab_.token_[i] = LLaMAVocab::Score{std::move(word), score};
+  }
+
+  // read metadata
+  while (view.Remaining() > 0)
+  {
+    // FIXME: move this to separate function? LoadTensor()?
+    uint32_t rank = view.Read<uint32_t>();
+    if (rank < 1 || rank > kMaxTensorRank)
+        throw std::runtime_error("invalid dimension");
+
+    uint32_t namelen = view.Read<uint32_t>();
+    GgmlDataType shard_dtype = static_cast<GgmlDataType>(view.Read<uint32_t>());
+    // FIXME: file-type differs for quantisized tensors
+
+    uint32_t shape[kMaxTensorRank];
+    view.Read(shape, sizeof(shape[0]) * rank);
+
+    std::string name = view.ReadString(namelen);
+
+    auto it = tensors_.find(name);
+    if (it != tensors_.end())
+    {
+      GgmlFileTensor& tensor = it->second;
+
+      // shards need to match
+      if (shard_dtype != tensor.dtype_)
+        throw std::runtime_error("shard types don't match"); // "inconsistent shard type in '%s'", name.c_str());
+      if (rank != tensor.rank_)
+        throw std::runtime_error("shard dimensions don't match");
+      if (!std::equal(std::begin(tensor.shape_), std::end(tensor.shape_), std::begin(shape)))
+          throw std::runtime_error("inconsistens shard shape"); // '%s' in '%s': first shard was '%s'");
+    }
+    else
+    {
+      GgmlFileTensor tensor(DataType(shard_dtype));
+      bool is_added;
+
+      tensor.rank_ = rank;
+      //tensor.dtype_ = shard_dtype;
+      std::copy(std::begin(shape), std::end(shape), std::begin(tensor.shape_));
+
+      if (name.find("tok_embeddings") == 0 ||  // 0 here??
+          name.find(".attention.wo.weight") != std::string::npos ||
+          name.find(".feed_forward.w2.weight") != std::string::npos) // split  by columns
+        tensor.transposed_ = true;
+      std::tie(it, is_added) = tensors_.emplace(name, tensor);
+      // FIXME: why could it fail?
+    }
+
+    // if version >= GGJT_V1
+    view.Align(32);
+
+    GgmlFileTensor& tensor = it->second;
+    TensorShard& shard = tensor.shards_[tensor.shard_count_++];
+    shard.address_ = (char*)view.Address() + view.Offset();  // FIXME
+
+    shard.size_ = TypeDataSize[shard_dtype];
+    for (uint32_t i = 0; i < rank; i++)
+      shard.size_ = MulOvflw(shard.size_, static_cast<size_t>(shape[i]));
+    shard.size_ = shard.size_ / QuantSize[shard_dtype];
+
+    view.SeekCurrent(shard.size_);
+  }
+
+
+{
+  LLaMAFile file = grid::LLaMAFile::Open(path);
+  std::unique_ptr<LLamAModel> model;
+  if (file.Type() == kDataTypeFp16)
+    model = std::make_unique_ptr<grid::LaMAModel>(grid::LLaMAModel<fp16_t>);
+  else
+    exit(1);
+
+  model->Load();
+  std::cout << model->PrintParameters();
+  // model->Start("...");
+  // signal
+  //
+  while(true)
+    model->Eval("Are electric sheeps dreaming?");
+}
+
+// GgmlFile handles files generated with the ggml conversion tool.
+class GgmlFile : public LLaMAFile
+{
+  const std::type_info& DataType(GgmlDataType dtype);
+
+ private:
+  GgmlFile(MMap&& mmap) : mmap_(mmap) {}
+  void Load();
+
+ private:
+  uint32_t        magic_;
+  uint32_t        version_;
+  /// FIXME ?? GgmlDataType    ftype_;
+  MMap            mmap_;
+
+  LLaMAModel::Parameters  params_;
+  LLaMAVocab              vocab_;
+
+  std::unordered_map<std::string, GgmlFileTensor> tensors_;
+};
+
+  std::vector<GgmlFileTensor> tensors_;
+  std::unordered_map<std::string, size_t> tensor_idx_;
+// being refactored out
+enum GgmlFileType
+{
+  kAllF32              = 0,
+  kMostlyF16           = 1,
+  kMostlyQ4_0          = 2,
+  kMostlyQ4_1          = 3,
+  kMostlyQ4_1SomeF16   = 4, // tok_embeddings.weight and output.weight are f16
+  kMostlyQ8_0          = 7,
+  kMostlyQ5_0          = 8,
+  kMostlyQ5_1          = 9,
+  kMostlyQ2_k          = 10,
+  kMostlyQ3_k_s        = 11,
+  kMostlyQ3_k_m        = 12,
+  kMostlyQ3_k_l        = 13,
+  kMostlyQ4_k_s        = 14,
+  kMostlyQ4_k_m        = 15,
+  kMostlyQ5_k_s        = 16,
+  kMostlyQ5_k_m        = 17,
+  kMostlyQ6_k          = 18,
+};
+union GgmlNumber
+{
+  uint8_t   uint8;
+  int8_t    int8;
+  uint16_t  uint16;
+  int16_t   int16;
+  uint32_t  uint32;
+  int32_t   int32;
+  float     float32;
+  bool      bool_;
+  uint64_t  uint64;
+  int64_t   int64;
+  double    float64;
+};
+
+  /// FIXME: drop?
+  template <typename T> using GgmlArray = std::vector<T>;
+struct GgmlArrayValue
+{
+  GgmlNumber  number;
+  std::string string;
+};
+using GgmlArray = std::vector<GgmlArrayValue>;
+
+//template<typename T> GgmlValueT(GgmlType, T) -> GgmlValueT<T>;
+
+struct GgmlValue
+{
+  GgmlType    type;
+
+  template <typename T>
+  GetValue(T& value)
+  {
+    static_cast<GgmlValueT<T>>(*this).GetValue(value);
+  }
+};
+
+template <typename T>
+struct GgmlValueT : public GgmlValue
+{
+  T number;
+  void GetValue(std::string& value) { value = number; }
+};
+
+template <>
+struct GgmlValueT<std::string> : GgmlValue
+{
+  std::string string;
+  void GetValue(std::string& value)  { value = string; }
+};
+
+template <typename T>
+struct GgmlValueT<std::vector<T>> : GgmlValue
+{
+  str::vector<T> array;
+  void GetValue(std::vector& value) { value = array; }
+};
+
+// GgmlModelParams is included in the ggml file and holds model information.
+struct GgmlParameters
+{
+  uint32_t n_vocab;
+  uint32_t n_embd;
+  uint32_t n_layer;
+  uint32_t n_ctx;
+  uint32_t n_ff;
+  uint32_t n_head;
+  uint32_t n_head_kv;
+  float    f_norm_eps;
+};
+
+
+
+// FIXME: FileTensor is internal... should have way to get actual tensor? Make this virtual protected and provide actual GetTensor<TYPE>?
+/// FileTensor describes a particular tensor array in the file.
+///
+/// Tensors are 'sharded' in different files or section for larger models.
+/// The smaller tensors are duplicated in each section.
+struct GgmlFileTensor
+{
+  GgmlFileTensor(const std::type_info& type_info)
+    : type_info_(type_info),
+      transposed_(false),
+      rank_(0),
+      shard_count_(0)
+  {}
+
+  const std::type_info& type_info_;
+
+  bool        transposed_;
+  uint32_t    rank_;
+  uint32_t    dims_[kMaxTensorRank];
+  uint32_t    shard_count_;
+  TensorShard shards_[kMaxTensorShards];
+  // FIXME GgmlDataType dtype_;
+};
+/// TensorShard is one shard with pointer and size.
+struct TensorShard
+{
+  void*  address_;
+  size_t size_;
+};
+#endif
+
+
+

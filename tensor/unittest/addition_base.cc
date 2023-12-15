@@ -7,6 +7,7 @@
 //
 
 #include <grid/tensor/tensor.h>
+#include <grid/tensor/tensor_parameters.h>
 #include <grid/tensor/base/tensor.h>
 #include <grid/tensor/base/comparison.h>
 #include <grid/tensor/base/addition.h>

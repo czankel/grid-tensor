@@ -14,14 +14,28 @@ abstraction layer for models that can be mostly agnostic to the underlying imple
 with optimizations for CPUs and accelerators.
 
 ```
-using Tensor = TensorFastCpu...
+template <typename _T, size_t _Rank, auto... _Args>
+using Tensor = grid::TensorSlowCpu<_T, _Rank, _Args...>;
 
 Tensor t1{1.0, 2.0, 3.0};
 Tensor t2{3.2, 4.1, 2.3};
 auto res = t1 + t2 * 3;
 ```
-(Note that the Tensor alias (using Tensor = ) requires additional template statements removed
-for brevity)
+
+Note: CLANG does not yet support alias... instead, you should 
+
+```
+template <typename Tensor>
+class MyModel
+{
+  void Forward()
+  {
+    Tensor t1{1.0, 2.0, 3.0};
+  }
+};
+
+MyModel<TensorSlowCpu> model;
+
 
 Using C++ templates also has it's disadvantages when it comes to compiler errors and debugging.
 More details will be provided in a developer's guide.
