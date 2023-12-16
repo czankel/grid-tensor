@@ -11,7 +11,7 @@ using testing::ElementsAre;
 // helper to get the size of a type of (optional) array of COUNT elements or the TYPE:
 //  size_t bytes = size<TYPE>(COUNT)
 namespace {
-template <typename _T> constexpr size_t size(size_t count = 1) { return sizeof(_T) * count; }
+template <typename T> constexpr size_t size(size_t count = 1) { return sizeof(T) * count; }
 }
 
 // Use Google's Type-Parameterized Tests so these tests can be re-used for other device implementations.

@@ -9,7 +9,7 @@
 using testing::ElementsAre;
 
 namespace {
-template <typename _T> constexpr size_t size(size_t count) { return sizeof(_T) * count; }
+template <typename T> constexpr size_t size(size_t count) { return sizeof(T) * count; }
 }
 
 template <typename T> class RmsNormTestSuite : public testing::Test {};

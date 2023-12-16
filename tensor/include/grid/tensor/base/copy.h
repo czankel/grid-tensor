@@ -16,9 +16,9 @@
 namespace grid {
 
 // copy copies the data between buffers accordig to dimensions and strides.
-template <typename _Tp, size_t>
+template <typename T, size_t>
 inline void
-copy(_Tp* dst, const _Tp* src,
+copy(T* dst, const T* src,
      std::span<const size_t,  0>,
      std::span<const ssize_t, 0>,
      std::span<const ssize_t, 0>)
@@ -26,9 +26,9 @@ copy(_Tp* dst, const _Tp* src,
   return *dst = *src;
 }
 
-template <typename _Tp, size_t>
+template <typename T, size_t>
 inline void
-copy(_Tp* dst, const _Tp* src,
+copy(T* dst, const T* src,
      std::span<const size_t,  1> dimensions,
      std::span<const ssize_t, 1> strides1,
      std::span<const ssize_t, 1> strides2)
@@ -41,20 +41,20 @@ copy(_Tp* dst, const _Tp* src,
   }
 }
 
-template <typename _Tp, size_t _N>
-inline std::enable_if_t<(_N > 1), void>
-copy(_Tp* dst, const _Tp* src,
-       std::span<const size_t,  _N> dimensions,
-       std::span<const ssize_t, _N> strides1,
-       std::span<const ssize_t, _N> strides2)
+template <typename T, size_t N>
+inline std::enable_if_t<(N > 1), void>
+copy(T* dst, const T* src,
+       std::span<const size_t,  N> dimensions,
+       std::span<const ssize_t, N> strides1,
+       std::span<const ssize_t, N> strides2)
 {
-  static_assert(_N != std::dynamic_extent, "dynamic_extent not allowed");
+  static_assert(N != std::dynamic_extent, "dynamic_extent not allowed");
   for (size_t i = 0; i < dimensions[0]; i++)
   {
-    copy<_Tp, _N - 1>(dst, src,
-                     std::span<const size_t,  _N - 1>(dimensions.begin() + 1, _N - 1),
-                     std::span<const ssize_t, _N - 1>(strides1.begin() + 1, _N - 1),
-                     std::span<const ssize_t, _N - 1>(strides2.begin() + 1, _N - 1));
+    copy<T, N - 1>(dst, src,
+                     std::span<const size_t,  N - 1>(dimensions.begin() + 1, N - 1),
+                     std::span<const ssize_t, N - 1>(strides1.begin() + 1, N - 1),
+                     std::span<const ssize_t, N - 1>(strides2.begin() + 1, N - 1));
     reinterpret_cast<char*&>(dst) += strides1[0];
     reinterpret_cast<const char*&>(src) += strides2[0];
   }

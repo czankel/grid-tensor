@@ -198,38 +198,38 @@ class MMapView
   }
 
   /// Array returns an ArrayView of the specified primitive for a memory mapped reagion.
-  template <typename T, size_t _Rank>
-  ArrayView<T, _Rank> Array(const size_t(&dimensions)[_Rank], const ssize_t(&strides)[_Rank])
+  template <typename T, size_t TRank>
+  ArrayView<T, TRank> Array(const size_t(&dimensions)[TRank], const ssize_t(&strides)[TRank])
   {
-    auto arr = ArrayView<T, _Rank>(reinterpret_cast<T>(addr_), dimensions, strides);
+    auto arr = ArrayView<T, TRank>(reinterpret_cast<T>(addr_), dimensions, strides);
     addr_ += arr.Size();
     return arr;
   }
 
-  template <typename T, size_t _Rank>
-  ArrayView<T, _Rank>
-  Array(const std::array<size_t, _Rank>& dimensions, const std::array<ssize_t, _Rank>& strides)
+  template <typename T, size_t TRank>
+  ArrayView<T, TRank>
+  Array(const std::array<size_t, TRank>& dimensions, const std::array<ssize_t, TRank>& strides)
   {
-    auto arr = ArrayView<T, _Rank>(reinterpret_cast<T*>(addr_), dimensions, strides);
+    auto arr = ArrayView<T, TRank>(reinterpret_cast<T*>(addr_), dimensions, strides);
     addr_ += arr.Size();
     return arr;
   }
 
   /// Array returns an ArrayView of the specified primitive for a memory mapped reagion.
-  template <typename T, size_t _Rank>
-  ArrayView<T, _Rank>
-  Array(const size_t(&dimensions)[_Rank])
+  template <typename T, size_t TRank>
+  ArrayView<T, TRank>
+  Array(const size_t(&dimensions)[TRank])
   {
-    auto arr = ArrayView<T, _Rank>(reinterpret_cast<T*>(addr_), dimensions);
+    auto arr = ArrayView<T, TRank>(reinterpret_cast<T*>(addr_), dimensions);
     addr_ += arr.Size();
     return arr;
   }
 
-  template <typename T, size_t _Rank>
-  ArrayView<T, _Rank>
-  Array(const std::array<size_t, _Rank>& dimensions)
+  template <typename T, size_t TRank>
+  ArrayView<T, TRank>
+  Array(const std::array<size_t, TRank>& dimensions)
   {
-    auto arr = ArrayView<T, _Rank>(reinterpret_cast<T>(addr_), dimensions);
+    auto arr = ArrayView<T, TRank>(reinterpret_cast<T>(addr_), dimensions);
     addr_ += arr.Size();
     return arr;
   }

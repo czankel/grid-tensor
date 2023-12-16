@@ -19,22 +19,22 @@
 namespace grid {
 
 /// TensorRmsNorm<Tensor> implements RMS norm.
-template <typename _Tp, size_t _Rank, PrimitiveTensor _Tensor>
-class TensorRmsNorm<Tensor, _Tp, _Rank, _Tensor>
+template <typename T, size_t TRank, PrimitiveTensor TTensor>
+class TensorRmsNorm<Tensor, T, TRank, TTensor>
 {
-  template <typename T> struct Eps {};
+  template <typename> struct Eps {};
   template <> struct Eps<float>  { constexpr static float  default_value = 1e-5f; float  value; };
   template <> struct Eps<double> { constexpr static double default_value = 1e-5f; double value; };
 
  public:
-  using value_type = _Tp;
-  using pointer = _Tp*;
-  using const_pointer = const _Tp*;
-  constexpr static size_t rank = _Rank;
+  using value_type = T;
+  using pointer = T*;
+  using const_pointer = const T*;
+  constexpr static size_t rank = TRank;
 
   template <ConvertibleTo<Tensor> T1>
   TensorRmsNorm(T1&& tensor, value_type eps = Eps<value_type>::default_value)
-  requires (std::is_floating_point_v<value_type> && _Tensor::rank > 0)
+  requires (std::is_floating_point_v<value_type> && TTensor::rank > 0)
    : tensor_(std::forward<T1>(tensor)) ,
      eps_(eps)
   {}
@@ -59,20 +59,20 @@ class TensorRmsNorm<Tensor, _Tp, _Rank, _Tensor>
     return std::tuple{value, count};
   }
 
-  template <size_t _N>
+  template <size_t N>
   inline auto
   SumSquare(const_pointer src,
-            std::span<const size_t,  _N> dimensions,
-            std::span<const ssize_t, _N> strides) const
+            std::span<const size_t,  N> dimensions,
+            std::span<const ssize_t, N> strides) const
   {
-    static_assert(_N != std::dynamic_extent, "dynamic_extent not allowed");
+    static_assert(N != std::dynamic_extent, "dynamic_extent not allowed");
     value_type value{0};
     size_t count = 0;
     for (size_t i = 0; i < dimensions[0]; i++, reinterpret_cast<const char*&>(src) += strides[0])
     {
       auto [s, c] = SumSquare(src,
-                              std::span<const size_t,  _N - 1>(dimensions.begin() + 1, _N - 1),
-                              std::span<const ssize_t, _N - 1>(strides.begin() + 1, _N - 1));
+                              std::span<const size_t,  N - 1>(dimensions.begin() + 1, N - 1),
+                              std::span<const ssize_t, N - 1>(strides.begin() + 1, N - 1));
       value += s;
       count += c;
     }
@@ -93,7 +93,7 @@ class TensorRmsNorm<Tensor, _Tp, _Rank, _Tensor>
   }
 
  private:
-  _Tensor    tensor_;
+  TTensor    tensor_;
   value_type eps_;
 };
 
@@ -101,9 +101,9 @@ class TensorRmsNorm<Tensor, _Tp, _Rank, _Tensor>
 // CTAD
 //
 
-template <ConvertibleTo<Tensor> _Tensor>
-TensorRmsNorm(_Tensor)
-  -> TensorRmsNorm<Tensor, typename _Tensor::value_type, _Tensor::rank, typename to_tensor<_Tensor>::type>;
+template <ConvertibleTo<Tensor> TTensor>
+TensorRmsNorm(TTensor)
+  -> TensorRmsNorm<Tensor, typename TTensor::value_type, TTensor::rank, typename to_tensor<TTensor>::type>;
 
 } // end of namespace grid
 

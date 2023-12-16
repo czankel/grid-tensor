@@ -11,7 +11,7 @@ using testing::ElementsAre;
 // helper to get the size of a type of (optional) array of COUNT elements or the TYPE:
 //  size_t bytes = size<TYPE>(COUNT)
 namespace {
-template <typename _T> constexpr size_t size(size_t count) { return sizeof(_T) * count; }
+template <typename T> constexpr size_t size(size_t count) { return sizeof(T) * count; }
 }
 
 template <typename T> class AdditionTestSuite : public testing::Test {};
@@ -75,7 +75,7 @@ TYPED_TEST_P(AdditionTestSuite, TensorAddMatVecBroadcast)
 {
   typename TypeParam::Tensor tensor1(4UL, 1.1);
   typename TypeParam::Tensor tensor2(4UL, 5UL, 4.4);
-  typename TypeParam::Tensor result = tensor2 + tensor1.Rearrange({0, grid::Broadcast});
+  typename TypeParam::Tensor result = tensor2 + tensor1.View({0, grid::Broadcast});
   typename TypeParam::Tensor expected(4UL, 5UL, 5.5);
   EXPECT_EQ(result, expected);
 }

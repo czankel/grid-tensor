@@ -18,14 +18,14 @@ namespace grid {
 /// TensorView<Tensor, Rank> implements a view of a tensor.
 ///
 /// Note that a view cannot be created from a temporary rval; it will return a tensor.
-template <PrimitiveTensor _Tensor, size_t _Rank>
+template <PrimitiveTensor TTensor, size_t TRank>
 class TensorView
 {
  public:
-  using value_type = typename _Tensor::value_type;
-  using pointer = typename _Tensor::pointer;
-  using const_pointer = typename _Tensor::const_pointer;
-  constexpr static size_t rank = _Rank;
+  using value_type = typename TTensor::value_type;
+  using pointer = typename TTensor::pointer;
+  using const_pointer = typename TTensor::const_pointer;
+  constexpr static size_t rank = TRank;
 
  private:
   // pointer_cast provides a (value) const-qualified pointer cast
@@ -45,17 +45,17 @@ class TensorView
   TensorView() = delete;
 
   /// Constructor
-  template <size_t _TensorRank>
-  explicit TensorView(_Tensor& tensor, const ssize_t(& axes)[_Rank], const ssize_t(& offsets)[_TensorRank])
+  template <size_t TTensorRank>
+  explicit TensorView(TTensor& tensor, const ssize_t(& axes)[TRank], const ssize_t(& offsets)[TTensorRank])
     : size_(0UL)
   {
-    std::bitset<_TensorRank> handled = false;
+    std::bitset<TTensorRank> handled = false;
     auto strides = tensor.Strides();
     auto dimensions    = tensor.Dimensions();
 
-    for (ssize_t i = static_cast<ssize_t>(_Rank) - 1; i >= 0; i--)
+    for (ssize_t i = static_cast<ssize_t>(TRank) - 1; i >= 0; i--)
     {
-      if (axes[i] >= 0 && axes[i] < static_cast<ssize_t>(_TensorRank))
+      if (axes[i] >= 0 && axes[i] < static_cast<ssize_t>(TTensorRank))
       {
         if (handled[axes[i]])
           throw std::runtime_error("axis can only be used once");
@@ -75,7 +75,7 @@ class TensorView
     }
 
     size_t offset = 0UL;
-    for (size_t i = 0; i < _TensorRank; i++)
+    for (size_t i = 0; i < TTensorRank; i++)
     {
       if (offsets[i] > static_cast<ssize_t>(tensor.dimensions_[i] * tensor.strides_[i]))
         throw std::runtime_error("Offset exceeds dimension");
@@ -87,21 +87,21 @@ class TensorView
 
 
   /// operator=(Tensor) copies data from the rhs tensor (or view) into the view of the dependent tensor.
-  template <AnyTensor _FromTensor> requires (_FromTensor::rank == _Rank)
-  auto operator=(const _FromTensor& rhs)
+  template <AnyTensor TFromTensor> requires (TFromTensor::rank == TRank)
+  auto operator=(const TFromTensor& rhs)
   {
-    copy<value_type, _Rank>(data_, rhs.Data(), dimensions_, strides_, rhs.Strides());
+    copy<value_type, TRank>(data_, rhs.Data(), dimensions_, strides_, rhs.Strides());
   }
 
 
   /// Rank returns the rank of the tensor.
-  constexpr static size_t Rank()                          { return _Rank; }
+  constexpr static size_t Rank()                          { return TRank; }
 
   /// Dimensions returns the dimensions of the tensor.
-  const std::array<size_t, _Rank>& Dimensions() const     { return dimensions_; }
+  const std::array<size_t, TRank>& Dimensions() const     { return dimensions_; }
 
   /// Strides returns the strides of the tensor.
-  const std::array<ssize_t, _Rank>& Strides() const       { return strides_; }
+  const std::array<ssize_t, TRank>& Strides() const       { return strides_; }
 
   /// Size returns the data buffer size.
   size_t Size() const                                     { return size_; }
@@ -111,8 +111,8 @@ class TensorView
   const_pointer Data() const                              { return data_; }
 
  private:
-  std::array<size_t, _Rank>   dimensions_;
-  std::array<ssize_t, _Rank>  strides_;
+  std::array<size_t, TRank>   dimensions_;
+  std::array<ssize_t, TRank>  strides_;
   size_t                      size_;
   pointer                     data_;
 };

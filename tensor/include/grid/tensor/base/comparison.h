@@ -13,9 +13,9 @@
 
 namespace grid {
 
-template <typename _Tp, size_t>
-inline std::enable_if_t<!std::is_floating_point_v<_Tp>, bool>
-equals(const _Tp* src1, const _Tp* src2,
+template <typename T, size_t>
+inline std::enable_if_t<!std::is_floating_point_v<T>, bool>
+equals(const T* src1, const T* src2,
        std::span<const size_t,  0>,
        std::span<const ssize_t, 0>,
        std::span<const ssize_t, 0>)
@@ -23,21 +23,21 @@ equals(const _Tp* src1, const _Tp* src2,
   return *src1 == *src2;
 }
 
-template <typename _Tp, size_t>
-inline std::enable_if_t<std::is_floating_point_v<_Tp>, bool>
-equals(const _Tp* src1, const _Tp* src2,
+template <typename T, size_t>
+inline std::enable_if_t<std::is_floating_point_v<T>, bool>
+equals(const T* src1, const T* src2,
        std::span<const size_t,  0>,
        std::span<const ssize_t, 0>,
        std::span<const ssize_t, 0>)
 {
   auto max = std::max(std::abs(*src1), std::abs(*src2));
-  _Tp eps = max * std::numeric_limits<_Tp>::epsilon();
+  T eps = max * std::numeric_limits<T>::epsilon();
   return std::abs(*src1 - *src2) <= eps;
 }
 
-template <typename _Tp, size_t>
-inline std::enable_if_t<!std::is_floating_point_v<_Tp>, bool>
-equals(const _Tp* src1, const _Tp* src2,
+template <typename T, size_t>
+inline std::enable_if_t<!std::is_floating_point_v<T>, bool>
+equals(const T* src1, const T* src2,
        std::span<const size_t,  1> dimensions,
        std::span<const ssize_t, 1> strides1,
        std::span<const ssize_t, 1> strides2)
@@ -52,9 +52,9 @@ equals(const _Tp* src1, const _Tp* src2,
   return true;
 }
 
-template <typename _Tp, size_t>
-inline std::enable_if_t<std::is_floating_point_v<_Tp>, bool>
-equals(const _Tp* src1, const _Tp* src2,
+template <typename T, size_t>
+inline std::enable_if_t<std::is_floating_point_v<T>, bool>
+equals(const T* src1, const T* src2,
        std::span<const size_t,  1> dimensions,
        std::span<const ssize_t, 1> strides1,
        std::span<const ssize_t, 1> strides2)
@@ -62,7 +62,7 @@ equals(const _Tp* src1, const _Tp* src2,
   for (size_t i = 0; i < dimensions[0]; i++)
   {
     auto max = std::max(std::abs(*src1), std::abs(*src2));
-    _Tp eps = max * std::numeric_limits<_Tp>::epsilon();
+    T eps = max * std::numeric_limits<T>::epsilon();
 
     if (std::abs(*src1 - *src2) > eps)
       return false;
@@ -73,20 +73,20 @@ equals(const _Tp* src1, const _Tp* src2,
   return true;
 }
 
-template <typename _Tp, size_t _N>
-inline std::enable_if_t<(_N > 1), bool>
-equals(const _Tp* src1, const _Tp* src2,
-       std::span<const size_t,  _N> dimensions,
-       std::span<const ssize_t, _N> strides1,
-       std::span<const ssize_t, _N> strides2)
+template <typename T, size_t N>
+inline std::enable_if_t<(N > 1), bool>
+equals(const T* src1, const T* src2,
+       std::span<const size_t,  N> dimensions,
+       std::span<const ssize_t, N> strides1,
+       std::span<const ssize_t, N> strides2)
 {
-  static_assert(_N != std::dynamic_extent, "dynamic_extent not allowed");
+  static_assert(N != std::dynamic_extent, "dynamic_extent not allowed");
   for (size_t i = 0; i < dimensions[0]; i++)
   {
-    if (!equals<_Tp, _N - 1>(src1, src2,
-                             std::span<const size_t,  _N - 1>(dimensions.begin() + 1, _N - 1),
-                             std::span<const ssize_t, _N - 1>(strides1.begin() + 1, _N - 1),
-                             std::span<const ssize_t, _N - 1>(strides2.begin() + 1, _N - 1)))
+    if (!equals<T, N - 1>(src1, src2,
+                             std::span<const size_t,  N - 1>(dimensions.begin() + 1, N - 1),
+                             std::span<const ssize_t, N - 1>(strides1.begin() + 1, N - 1),
+                             std::span<const ssize_t, N - 1>(strides2.begin() + 1, N - 1)))
       return false;
 
     reinterpret_cast<const char*&>(src1) += strides1[0];
@@ -96,14 +96,14 @@ equals(const _Tp* src1, const _Tp* src2,
 }
 
 // TODO: will https://open-std.org/JTC1/SC22/WG21/docs/papers/2019/p1045r1.html help for using tensor.Rank() as constexpr?
-template <PrimitiveTensor  _Tensor1, PrimitiveTensor _Tensor2>
-bool operator==(_Tensor1&& tensor1, _Tensor2&& tensor2)
+template <PrimitiveTensor  TTensor1, PrimitiveTensor TTensor2>
+bool operator==(TTensor1&& tensor1, TTensor2&& tensor2)
 {
   constexpr size_t _Rank = std::remove_cvref_t<decltype(tensor1)>::rank;
   static_assert(_Rank == std::remove_cvref_t<decltype(tensor2)>::rank,
                 "ranks mismatch between tensors");
 
-  return equals<typename std::remove_cvref_t<_Tensor1>::value_type, _Rank>(
+  return equals<typename std::remove_cvref_t<TTensor1>::value_type, _Rank>(
                       tensor1.Data(),
                       tensor2.Data(),
                       std::span(tensor1.Dimensions()),
