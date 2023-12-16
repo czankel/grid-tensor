@@ -533,19 +533,16 @@ class Tensor<T, TRank, NoAllocator>
 
   explicit Tensor() {}
 
-  explicit Tensor(const ArrayView<value_type, TRank>& arr)
-    : dimensions_(arr.dimensions_),
-      strides_(arr.Strides()),
-      size_(arr.Size()),
-      data_(arr.Data())
-  {}
-
-  explicit Tensor(ArrayView<value_type, TRank>&& arr)
-    : dimensions_(std::move(arr.Dimensions())),
-      strides_(std::move(arr.Strides())),
-      size_(arr.Size()),
-      data_(std::move(arr.Data()))
-  {}
+  explicit Tensor(const size_t(&& dimensions)[TRank], std::tuple<pointer, size_t>&& array)
+    : dimensions_(std::to_array(dimensions)),
+      strides_{make_strides<value_type>(dimensions_)},
+      size_(dimensions_[0] * strides_[0]),
+      data_(std::get<0>(array))
+  {
+    if (size_ > std::get<1>(array))
+      throw std::runtime_error("dimensions exceed allotted size: " + std::to_string(size_) + " > " +
+          std::to_string(std::get<1>(array)));
+  }
 
 
   /// View returns a "view" of the tensor, which can be a "sub-tensor" or add "broadcastable" axes.
@@ -570,7 +567,8 @@ class Tensor<T, TRank, NoAllocator>
   size_t Size()                                           { return size_; }
 
   /// Data returns a pointer to the data buffer.
-  char* Data() const                                      { return data_; }
+  pointer Data()                                          { return data_; }
+  const_pointer Data() const                              { return data_; }
 
  private:
   std::array<size_t, TRank>   dimensions_;
@@ -692,14 +690,11 @@ template <template <template <typename, size_t, typename...> typename, typename,
           template <typename, size_t, typename...> typename TTensor, typename T, size_t TRank, typename... TTensors>
 Tensor(const TOperator<TTensor, T,  TRank, TTensors...>&) -> Tensor<T, TRank>;
 
-// Tensor with "NoAllocator" - ArrayView
-
-// Tensor<ArrayView> -> Rank-N tensor for an externally managed buffer
-template <typename T, size_t N>
-explicit Tensor(const ArrayView<T, N>&) -> Tensor<T, N, NoAllocator>;
-template <typename T, size_t N>
-explicit Tensor(ArrayView<T, N>&&) -> Tensor<T, N, NoAllocator>;
-
+// Tensor<Tuple,NoAllocator> -> Rank-N tensor for an externally managed buffer
+template <Scalar T, size_t N>
+explicit Tensor(const size_t(&)[N], std::tuple<T*, size_t>&) -> Tensor<T, N, NoAllocator>;
+template <Scalar T, size_t N>
+explicit Tensor(const size_t(&)[N], std::tuple<T*, size_t>&&) -> Tensor<T, N, NoAllocator>;
 
 } // end of namespace grid
 

@@ -77,9 +77,11 @@ struct TensorBaseType
   template <typename T, size_t N>
   explicit Tensor(std::array<size_t, N>, std::array<ssize_t, N>, grid::Uninitialized<T>) -> Tensor<T, N>;
 
-  // array-view tensors
-  template <typename T, size_t N>
-  explicit Tensor(grid::ArrayView<T, N>) -> Tensor<T, N, grid::NoAllocator>;
+  // memory-mapped tensors
+  template <grid::Scalar T, size_t N>
+  explicit Tensor(const size_t(&)[N], std::tuple<T*, size_t>&) -> Tensor<T, N, grid::NoAllocator>;
+  template <grid::Scalar T, size_t N>
+  explicit Tensor(const size_t(&)[N], std::tuple<T*, size_t>&&) -> Tensor<T, N, grid::NoAllocator>;
 
   // copy & move constructors
   template <typename T, size_t N, typename TAllocator>
