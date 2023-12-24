@@ -15,6 +15,24 @@
 
 namespace grid {
 
+namespace {
+
+// pointer_cast provides a (value) const-qualified pointer cast
+template <typename T, typename S> requires (std::is_const_v<std::remove_pointer_t<S>>)
+const std::remove_pointer_t<T>* pointer_cast(S pointer)
+{
+  return reinterpret_cast<const std::remove_pointer_t<T>*>(pointer);
+}
+
+template <typename T, typename S> requires (!std::is_const_v<std::remove_pointer_t<S>>)
+std::remove_pointer_t<T>* pointer_cast(S pointer)
+{
+  return reinterpret_cast<std::remove_pointer_t<T>*>(pointer);
+}
+
+} // end of namespace
+
+
 /// TensorView<Tensor, Rank> implements a view of a tensor.
 ///
 /// Note that a view cannot be created from a temporary rval; it will return a tensor.
@@ -26,19 +44,6 @@ class TensorView
   using pointer = typename TTensor::pointer;
   using const_pointer = typename TTensor::const_pointer;
   constexpr static size_t rank = TRank;
-
- private:
-  // pointer_cast provides a (value) const-qualified pointer cast
-  template <typename T, typename S> requires (std::is_const_v<std::remove_pointer_t<S>>)
-  const std::remove_pointer_t<T>* pointer_cast(S pointer)
-  {
-    return reinterpret_cast<const std::remove_pointer_t<T>*>(pointer);
-  }
-  template <typename T, typename S> requires (!std::is_const_v<std::remove_pointer_t<S>>)
-  std::remove_pointer_t<T>* pointer_cast(S pointer)
-  {
-    return reinterpret_cast<std::remove_pointer_t<T>*>(pointer);
-  }
 
  public:
   // TensorView must be in the same scope and lifetime as the underlying tensor.
