@@ -107,7 +107,7 @@ class TensorView
   size_t Size() const                                     { return size_; }
 
   /// Data returns a pointer to the data buffer.
-  pointer Data()                                          { return &data_; }
+  pointer Data()                                          { return data_; }
   const_pointer Data() const                              { return data_; }
 
  private:
