@@ -283,18 +283,33 @@ class Tensor<T, TRank>
   }
 
 
-  /// View returns a "view" of the tensor, which can be a "sub-tensor" or add "broadcastable" axes.
-  /// It requires that the underlying tensor's lifetime is ...
-  template <size_t TViewRank>
-  auto View(const ssize_t(& axes)[TViewRank], const ssize_t(& offsets)[TRank] = {0})
+  /// View returns a view of the proivded tensor.
+  template <typename... Ts>
+  auto View(Ts&&... slices)
   {
-    return TensorView(*this, axes, offsets);
+    return view::View(*this, std::forward<Ts>(slices)...);
+  }
+
+  template <typename... Ts>
+  auto View(Ts&&... slices) const
+  {
+    return view::View(*this, std::forward<Ts>(slices)...);
+  }
+
+  /// Reshape returns a view of the tensor with a different shape (axes, dimensions, strides)
+  /// of the underlying array.
+  template <size_t TViewRank>
+  auto Reshape(const std::array<size_t, TViewRank>& dimensions,
+               const std::array<ssize_t, TViewRank>& strides)
+  {
+    return view::Reshape(*this, std::to_array(dimensions), std::to_array(strides));
   }
 
   template <size_t TViewRank>
-  auto View(const ssize_t(& axes)[TViewRank], const ssize_t(& offsets)[TRank] = {0}) const
+  auto Reshape(const std::array<size_t, TViewRank>& dimensions,
+               const std::array<ssize_t, TViewRank>& strides) const
   {
-    return TensorView(*this, axes, offsets);
+    return view::Reshape(*this, std::to_array(dimensions), std::to_array(strides));
   }
 
 
@@ -386,12 +401,33 @@ class Tensor<T, 1, StaticAllocator<N>>
   {}
 
 
-  /// View returns a "view" of the tensor, which can be a "sub-tensor" or add "broadcastable" axes.
-  /// It requires that the underlying tensor's lifetime is ...
-  template <size_t TViewRank>
-  auto View(const ssize_t(& axes)[TViewRank], const ssize_t(& offsets)[1]) const &
+  /// View returns a view of the proivded tensor.
+  template <typename... Ts>
+  auto View(Ts&&... slices)
   {
-    return TensorView(*this, axes, offsets);
+    return view::View(*this, std::forward<Ts>(slices)...);
+  }
+
+  template <typename... Ts>
+  auto View(Ts&&... slices) const
+  {
+    return view::View(*this, std::forward<Ts>(slices)...);
+  }
+
+  /// Reshape returns a view of the tensor with a different shape (axes, dimensions, strides)
+  /// of the underlying array.
+  template <size_t TViewRank>
+  auto Reshape(const std::array<size_t, TViewRank>& dimensions,
+               const std::array<ssize_t, TViewRank>& strides)
+  {
+    return view::Reshape(*this, std::to_array(dimensions), std::to_array(strides));
+  }
+
+  template <size_t TViewRank>
+  auto Reshape(const std::array<size_t, TViewRank>& dimensions,
+               const std::array<ssize_t, TViewRank>& strides) const
+  {
+    return view::Reshape(*this, std::to_array(dimensions), std::to_array(strides));
   }
 
 
@@ -436,12 +472,33 @@ class Tensor<T, 2, StaticAllocator<M, N>>
   {}
 
 
-  /// View returns a "view" of the tensor, which can be a "sub-tensor" or add "broadcastable" axes.
-  /// It requires that the underlying tensor's lifetime is ...
-  template <size_t TViewRank>
-  auto View(const ssize_t(& axes)[TViewRank], const ssize_t(& offsets)[2]) const &
+  /// View returns a view of the proivded tensor.
+  template <typename... Ts>
+  auto View(Ts&&... slices)
   {
-    return TensorView(*this, axes, offsets);
+    return view::View(*this, std::forward<Ts>(slices)...);
+  }
+
+  template <typename... Ts>
+  auto View(Ts&&... slices) const
+  {
+    return view::View(*this, std::forward<Ts>(slices)...);
+  }
+
+  /// Reshape returns a view of the tensor with a different shape (axes, dimensions, strides)
+  /// of the underlying array.
+  template <size_t TViewRank>
+  auto Reshape(const std::array<size_t, TViewRank>& dimensions,
+               const std::array<ssize_t, TViewRank>& strides)
+  {
+    return view::Reshape(*this, std::to_array(dimensions), std::to_array(strides));
+  }
+
+  template <size_t TViewRank>
+  auto Reshape(const std::array<size_t, TViewRank>& dimensions,
+               const std::array<ssize_t, TViewRank>& strides) const
+  {
+    return view::Reshape(*this, std::to_array(dimensions), std::to_array(strides));
   }
 
 
@@ -486,16 +543,35 @@ class Tensor<T, 3, StaticAllocator<C, M, N>>
       array_(get_array<value_type, C, M, N>(std::move(init)))
   {}
 
-  /// View returns a "view" of the tensor, which can be a "sub-tensor" or add "broadcastable" axes.
-  /// It requires that the underlying tensor's lifetime is ...
-  template <size_t TViewRank>
-  auto View(const ssize_t(& axes)[TViewRank], const ssize_t(& offsets)[3]) const &
+
+  /// View returns a view of the proivded tensor.
+  template <typename... Ts>
+  auto View(Ts&&... slices)
   {
-    return TensorView(*this, axes, offsets);
+    return view::View(*this, std::forward<Ts>(slices)...);
+  }
+
+  template <typename... Ts>
+  auto View(Ts&&... slices) const
+  {
+    return view::View(*this, std::forward<Ts>(slices)...);
+  }
+
+  /// Reshape returns a view of the tensor with a different shape (axes, dimensions, strides)
+  /// of the underlying array.
+  template <size_t TViewRank>
+  auto Reshape(const std::array<size_t, TViewRank>& dimensions,
+               const std::array<ssize_t, TViewRank>& strides)
+  {
+    return view::Reshape(*this, std::to_array(dimensions), std::to_array(strides));
   }
 
   template <size_t TViewRank>
-  auto View(const ssize_t(& axes)[TViewRank], const ssize_t(& offsets)[3]) && = delete;
+  auto Reshape(const std::array<size_t, TViewRank>& dimensions,
+               const std::array<ssize_t, TViewRank>& strides) const
+  {
+    return view::Reshape(*this, std::to_array(dimensions), std::to_array(strides));
+  }
 
 
   /// Rank returns the rank of the tensor.
@@ -545,13 +621,35 @@ class Tensor<T, TRank, NoAllocator>
   }
 
 
-  /// View returns a "view" of the tensor, which can be a "sub-tensor" or add "broadcastable" axes.
-  /// It requires that the underlying tensor's lifetime is ...
-  template <size_t TViewRank>
-  auto View(const ssize_t(& axes)[TViewRank], const ssize_t(& offsets)[TRank]) const &
+  /// View returns a view of the proivded tensor.
+  template <typename... Ts>
+  auto View(Ts&&... slices)
   {
-    return TensorView(*this, axes, offsets);
+    return view::View(*this, std::forward<Ts>(slices)...);
   }
+
+  template <typename... Ts>
+  auto View(Ts&&... slices) const
+  {
+    return view::View(*this, std::forward<Ts>(slices)...);
+  }
+
+  /// Reshape returns a view of the tensor with a different shape (axes, dimensions, strides)
+  /// of the underlying array.
+  template <size_t TViewRank>
+  auto Reshape(const std::array<size_t, TViewRank>& dimensions,
+               const std::array<ssize_t, TViewRank>& strides)
+  {
+    return view::Reshape(*this, std::to_array(dimensions), std::to_array(strides));
+  }
+
+  template <size_t TViewRank>
+  auto Reshape(const std::array<size_t, TViewRank>& dimensions,
+               const std::array<ssize_t, TViewRank>& strides) const
+  {
+    return view::Reshape(*this, std::to_array(dimensions), std::to_array(strides));
+  }
+
 
 
   /// Rank returns the rank of the tensor.

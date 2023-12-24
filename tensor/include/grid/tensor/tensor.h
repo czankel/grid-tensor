@@ -22,8 +22,6 @@ template <size_t...> struct StaticAllocator {};
 /// NoAllocator is a spcial "allocator" for an externally managed buffer.
 struct NoAllocator {};
 
-/// Broadcast defines to set the dimension to 1 ("broadcastable") in the axes argument of Tensor::View.
-inline constexpr ssize_t Broadcast = -1;
 
 /// Placeholder for specifying that a buffer allocation does not need to be initialized.
 template <typename> struct Uninitialized {};

@@ -75,7 +75,7 @@ TYPED_TEST_P(AdditionTestSuite, TensorAddMatVecBroadcast)
 {
   typename TypeParam::Tensor tensor1(4UL, 1.1);
   typename TypeParam::Tensor tensor2(4UL, 5UL, 4.4);
-  typename TypeParam::Tensor result = tensor2 + tensor1.View({0, grid::Broadcast});
+  typename TypeParam::Tensor result = tensor2 + tensor1.View(grid::view::Slice{}, grid::view::NewAxis);
   typename TypeParam::Tensor expected(4UL, 5UL, 5.5);
   EXPECT_EQ(result, expected);
 }
