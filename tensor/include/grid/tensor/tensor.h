@@ -26,10 +26,6 @@ struct NoAllocator {};
 /// Placeholder for specifying that a buffer allocation does not need to be initialized.
 template <typename> struct Uninitialized {};
 
-/// Scalar defines an arithmetic type, such as integer, float, etc.
-template <typename T>
-concept Scalar = std::is_arithmetic_v<T>;
-
 //
 // Tensor Traits
 //
@@ -104,6 +100,10 @@ struct tensor_is_primitive : tensor_is_primitive_helper<std::remove_reference_t<
 //
 // Concepts
 //
+
+/// Arithmetic defines an arithmetic type, such as integer, float, etc.
+template <typename T>
+concept Arithmetic = std::is_arithmetic_v<T>;
 
 /// AnyTensor requires that the provided argument is a tensor.
 template <typename TTensor>

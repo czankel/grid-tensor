@@ -34,7 +34,7 @@ class TensorMul<Tensor, T, TRank, TTensor1, TTensor2>
         throw std::runtime_error("dimensions don't match");
   }
 
-  template <ConvertibleTo<Tensor> T1, Scalar S>
+  template <ConvertibleTo<Tensor> T1, Arithmetic S>
   TensorMul(T1&& tensor1, S scalar)
    : tensor1_(std::forward<T1>(tensor1)),
      tensor2_(scalar)
@@ -243,8 +243,8 @@ TensorMul(TTensor1, TTensor2)
   -> TensorMul<Tensor, typename TTensor2::value_type, std::max(TTensor1::rank, TTensor2::rank),
                typename to_tensor<TTensor1>::type, typename to_tensor<TTensor2>::type>;
 
-template <ConvertibleTo<Tensor> TTensor, Scalar TScalar>
-TensorMul(TTensor, TScalar)
+template <ConvertibleTo<Tensor> TTensor, Arithmetic T>
+TensorMul(TTensor, T)
   -> TensorMul<Tensor, typename TTensor::value_type, TTensor::rank,
                typename to_tensor<TTensor>::type, Tensor<typename TTensor::value_type, 0>>;
 
