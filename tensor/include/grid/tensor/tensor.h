@@ -117,7 +117,7 @@ concept ConvertibleTo = std::is_class_v<std::remove_cvref_t<TFrom>> && tensor_is
 //
 
 template <template <typename, size_t, typename...> typename, typename, size_t, typename... > class TensorAdd;
-template <template <typename, size_t, typename...> typename, typename, size_t, typename... > class TensorMul;
+template <template <typename, size_t, typename...> typename, typename, size_t, typename... > class TensorMatMul;
 template <template <typename, size_t, typename...> typename, typename, size_t, typename... > class TensorRmsNorm;
 
 //
@@ -135,7 +135,7 @@ auto operator+(TTensor1&& tensor1, TTensor2&& tensor2)
 template <TensorConvertible TTensor1, TensorConvertible TTensor2>
 auto operator*(TTensor1&& tensor1, TTensor2&& tensor2)
 {
-  return TensorMul(std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
+  return TensorMatMul(std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
 }
 
 } // end of namespace grid
@@ -150,7 +150,7 @@ std::ostream& operator<<(std::ostream& os, const grid::AnyTensor auto& tensor)
   auto strides = tensor.Strides();
 
   std::function<void(int, const value_type*&)> print;
-  print = [&os, &dimensions, &strides, &print, &rank](size_t index, const value_type*& ptr) {
+  print = [&os, &dimensions, &strides, &print, &rank](size_t index, const value_type* ptr) {
     os << "{ ";
     if (index < rank -1)
     {

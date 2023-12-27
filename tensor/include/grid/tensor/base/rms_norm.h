@@ -14,7 +14,7 @@
 #include <math.h>
 #include <tuple>
 
-#include "multiplication.h"
+#include "matmul.h"
 
 namespace grid {
 
@@ -89,7 +89,7 @@ class TensorRmsNorm<Tensor, T, TRank, TTensor>
                                     std::span(tensor_.Strides()));
 
     value_type scale = 1.0f/sqrtf(value / count + eps_);
-    return TensorMul(tensor_, Tensor{scale})();
+    return TensorMatMul(tensor_, Tensor{scale})();
   }
 
  private:

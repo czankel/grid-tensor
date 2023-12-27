@@ -8,15 +8,15 @@
 
 // DO NOT INCLUDE THIS FILE DIRECTLY
 
-#ifndef GRID_TENSOR_BASE_MULTIPLY_H
-#define GRID_TENSOR_BASE_MULTIPLY_H
+#ifndef GRID_TENSOR_BASE_MATMULH
+#define GRID_TENSOR_BASE_MATMULH
 
 namespace grid {
 
-/// TensorMul<Tensor> implements tensor multiplication operation for tensors of the same and
+/// TensorMatMul<Tensor> implements tensor multiplication operation for tensors of the same and
 /// different ranks, such as matrix multiplication (MatMul) and vector dot-product (VecDot).
 template <typename T, size_t TRank, PrimitiveTensor TTensor1, PrimitiveTensor TTensor2>
-class TensorMul<Tensor, T, TRank, TTensor1, TTensor2>
+class TensorMatMul<Tensor, T, TRank, TTensor1, TTensor2>
 {
  public:
   using value_type = T;
@@ -25,7 +25,7 @@ class TensorMul<Tensor, T, TRank, TTensor1, TTensor2>
   constexpr static size_t rank = TRank;
 
   template <ConvertibleTo<Tensor> T1, ConvertibleTo<Tensor> T2>
-  TensorMul(T1&& tensor1, T2&& tensor2)
+  TensorMatMul(T1&& tensor1, T2&& tensor2)
    : tensor1_(std::forward<T1>(tensor1)),
      tensor2_(std::forward<T2>(tensor2))
   {
@@ -35,18 +35,18 @@ class TensorMul<Tensor, T, TRank, TTensor1, TTensor2>
   }
 
   template <ConvertibleTo<Tensor> T1, Arithmetic S>
-  TensorMul(T1&& tensor1, S scalar)
+  TensorMatMul(T1&& tensor1, S scalar)
    : tensor1_(std::forward<T1>(tensor1)),
      tensor2_(scalar)
   {}
 
 
   // delete assignment and copy/move constructors
-  TensorMul() = delete;
-  TensorMul(const TensorMul& other) = delete;
-  TensorMul(TensorMul&& other) = delete;
-  TensorMul& operator=(const TensorMul& other) = delete;
-  TensorMul& operator=(TensorMul&& other) = delete;
+  TensorMatMul() = delete;
+  TensorMatMul(const TensorMatMul& other) = delete;
+  TensorMatMul(TensorMatMul&& other) = delete;
+  TensorMatMul& operator=(const TensorMatMul& other) = delete;
+  TensorMatMul& operator=(TensorMatMul&& other) = delete;
 
  private:
   inline void VecDot(pointer dest, const_pointer src1, const_pointer src2,
@@ -239,15 +239,15 @@ class TensorMul<Tensor, T, TRank, TTensor1, TTensor2>
 //
 
 template <ConvertibleTo<Tensor> TTensor1, ConvertibleTo<Tensor> TTensor2>
-TensorMul(TTensor1, TTensor2)
-  -> TensorMul<Tensor, typename TTensor2::value_type, std::max(TTensor1::rank, TTensor2::rank),
+TensorMatMul(TTensor1, TTensor2)
+  -> TensorMatMul<Tensor, typename TTensor2::value_type, std::max(TTensor1::rank, TTensor2::rank),
                typename to_tensor<TTensor1>::type, typename to_tensor<TTensor2>::type>;
 
 template <ConvertibleTo<Tensor> TTensor, Arithmetic T>
-TensorMul(TTensor, T)
-  -> TensorMul<Tensor, typename TTensor::value_type, TTensor::rank,
+TensorMatMul(TTensor, T)
+  -> TensorMatMul<Tensor, typename TTensor::value_type, TTensor::rank,
                typename to_tensor<TTensor>::type, Tensor<typename TTensor::value_type, 0>>;
 
 } // end of namespace grid
 
-#endif  // GRID_TENSOR_BASE_MULTIPLY_H
+#endif  // GRID_TENSOR_BASE_MATMULH

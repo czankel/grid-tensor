@@ -9,7 +9,7 @@
 #include <grid/tensor/tensor.h>
 #include <grid/tensor/base/tensor.h>
 #include <grid/tensor/base/comparison.h>
-#include <grid/tensor/base/multiplication.h>
+#include <grid/tensor/base/matmul.h>
 
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
