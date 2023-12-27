@@ -208,45 +208,75 @@ TYPED_TEST_P(TensorTestSuite, TensorViewBraceInitializationTensor)
                                         { 331, 332, 333, 334, 335 },
                                         { 341, 342, 343, 344, 345 } } };
 
-  auto view_row = tensor1.View(1, 2, Slice());
-  EXPECT_EQ(view_row.Rank(), 1);
-  EXPECT_THAT(view_row.Dimensions(), ElementsAre(5));
-  EXPECT_THAT(view_row.Strides(), ElementsAre(size<int>(1)));
-  typename TypeParam::Tensor expected{231, 232, 233, 234, 235};
-  EXPECT_EQ(view_row, expected);
+  {
+    auto view_row = tensor1.View(1, 2, Slice());
+    EXPECT_EQ(view_row.Rank(), 1);
+    EXPECT_THAT(view_row.Dimensions(), ElementsAre(5));
+    EXPECT_THAT(view_row.Strides(), ElementsAre(size<int>(1)));
+    typename TypeParam::Tensor expected{231, 232, 233, 234, 235};
+    EXPECT_EQ(view_row, expected);
+  }
 }
 
 TYPED_TEST_P(TensorTestSuite, TensorViewAllocInitializationTensor)
 {
   typename TypeParam::Tensor tensor(4UL, 5UL, 1.1);
+  auto data = tensor.Data();
+
+  // tensor[:,1]
   tensor.View(Slice(), 1) = typename TypeParam::Tensor{2.1, 3.2, 4.3, 5.4, 6.5};
-  typename TypeParam::Tensor expected{ { 1.1, 2.1, 1.1, 1.1, 1.1},
-                                       { 1.1, 3.2, 1.1, 1.1, 1.1},
-                                       { 1.1, 4.3, 1.1, 1.1, 1.1},
-                                       { 1.1, 5.4, 1.1, 1.1, 1.1} };
+  typename TypeParam::Tensor expected
+  { { 1.1, 2.1, 1.1, 1.1, 1.1},
+    { 1.1, 3.2, 1.1, 1.1, 1.1},
+    { 1.1, 4.3, 1.1, 1.1, 1.1},
+    { 1.1, 5.4, 1.1, 1.1, 1.1} };
 
   EXPECT_THAT(tensor.Dimensions(), ElementsAre(4, 5));
   EXPECT_THAT(tensor.Strides(), ElementsAre(size<double>(5 * 1), size<double>(1)));
   EXPECT_EQ(tensor, expected);
+
+  // tensor[2]-> (5)
+  auto view_index = tensor.View(2);
+  EXPECT_EQ(view_index.Rank(), 1);
+  EXPECT_THAT(view_index.Dimensions(), ElementsAre(5UL));
+  EXPECT_THAT(view_index.Strides(), ElementsAre(size<double>(1)));
+  EXPECT_EQ(view_index.Data(), data + 2 * 5);
+
+  // tensor[2:] -> (2, 5)
+  auto view_span = tensor.View(Slice(2));
+  EXPECT_EQ(view_span.Rank(), 2);
+  EXPECT_THAT(view_span.Dimensions(), ElementsAre(2UL, 5UL));
+  EXPECT_THAT(view_span.Strides(), ElementsAre(size<double>(5), size<double>(1)));
+  EXPECT_EQ(view_span.Data(), data + 2 * 5);
 }
 
-TYPED_TEST_P(TensorTestSuite, TensorBroadcast1to2)
+TYPED_TEST_P(TensorTestSuite, TensorBroadcast)
 {
-  typename TypeParam::Tensor tensor(4UL, 1.1);
-  auto broadcast1 = tensor.View(Slice(), NewAxis);
-  EXPECT_EQ(broadcast1.Rank(), 2);
-  EXPECT_THAT(broadcast1.Dimensions(), ElementsAre(4, 1));
-  EXPECT_THAT(broadcast1.Strides(), ElementsAre(size<double>(1), size<double>(0)));
+  typename TypeParam::Tensor tensor(4UL, 5UL, 1.1);
 
-  typename TypeParam::Tensor tensor2 = broadcast1;
-  auto broadcast2 = tensor2.View(NewAxis, Slice(), Slice(), NewAxis);
-  EXPECT_EQ(broadcast2.Rank(), 4);
-  EXPECT_THAT(broadcast2.Dimensions(), ElementsAre(1, 4, 1, 1));
-  EXPECT_THAT(broadcast2.Strides(), ElementsAre(
-        size<double>(0),
-        size<double>(1),
-        size<double>(0),
-        size<double>(0)));
+  // tensor[newaxis] -> (1, 5, 4)
+  auto view_newaxis_0 = tensor.View(NewAxis);
+  EXPECT_EQ(view_newaxis_0.Rank(), 3);
+  EXPECT_THAT(view_newaxis_0.Dimensions(), ElementsAre(1UL, 4UL, 5UL));
+  EXPECT_THAT(view_newaxis_0.Strides(), ElementsAre(size<double>(0), size<double>(5), size<double>(1)));
+
+  // tensor[:,newaxis] -> (4, 1, 5)
+  auto view_newaxis_1 = tensor.View(Slice(), NewAxis);
+  EXPECT_EQ(view_newaxis_1.Rank(), 3);
+  EXPECT_THAT(view_newaxis_1.Dimensions(), ElementsAre(4UL, 1UL, 5UL));
+  EXPECT_THAT(view_newaxis_1.Strides(), ElementsAre(size<double>(5), size<double>(0), size<double>(1)));
+
+  // tensor[:,:,newaxis] -> (4, 5, 1)
+  auto view_newaxis_2 = tensor.View(Slice(), Slice(), NewAxis);
+  EXPECT_EQ(view_newaxis_2.Rank(), 3);
+  EXPECT_THAT(view_newaxis_2.Dimensions(), ElementsAre(4UL, 5UL, 1UL));
+  EXPECT_THAT(view_newaxis_2.Strides(), ElementsAre(size<double>(5), size<double>(1), size<double>(0)));
+
+  // tensor[:,:1:0] -> (4, 1)
+  auto view_change_to_broadcast = tensor.View(Slice(), Slice(0, 1, 0));
+  EXPECT_EQ(view_change_to_broadcast.Rank(), 2);
+  EXPECT_THAT(view_change_to_broadcast.Dimensions(), ElementsAre(4UL, 1UL));
+  EXPECT_THAT(view_change_to_broadcast.Strides(), ElementsAre(size<double>(5), size<double>(0)));
 }
 
 
@@ -265,4 +295,4 @@ REGISTER_TYPED_TEST_SUITE_P(TensorTestSuite,
     TensorMMap,
     TensorViewBraceInitializationTensor,
     TensorViewAllocInitializationTensor,
-    TensorBroadcast1to2);
+    TensorBroadcast);
