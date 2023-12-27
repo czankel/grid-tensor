@@ -54,10 +54,12 @@ struct to_tensor<TTensor>
   using type = TTensor;
 };
 
-template <typename TOperator> requires is_operator_v<TOperator>
-struct to_tensor<TOperator>
+template <template <template <typename, size_t, typename...> typename, typename, size_t, typename...> typename TOperator,
+          template <typename, size_t, typename...> typename TTensor,
+          typename T, size_t TRank, typename... TTensors>
+struct to_tensor<TOperator<TTensor, T, TRank, TTensors...>>
 {
-  using type = typename std::invoke_result<decltype(&TOperator::operator()), TOperator>::type;
+  using type = decltype(std::declval<TOperator<TTensor, T, TRank, TTensors...>>().operator()());
 };
 
 
@@ -66,24 +68,6 @@ template <typename, template <typename, size_t, typename...> typename> struct is
 
 template <template <typename, size_t, typename...> typename TTensor, typename T, size_t TRank, typename... TAllocator>
 struct is_same_tensor_as<TTensor<T, TRank, TAllocator...>, TTensor> : std::true_type {};
-
-
-// tensor_is_convertible_to<FROM,TO> check if TO = FROM is a valid assignment.
-template <typename, template <typename, size_t, typename...> typename> struct tensor_is_convertible_to;
-
-template <template <typename, size_t, typename...> typename TTensor1,
-          template <typename, size_t, typename...> typename TTensor2,
-          typename T, size_t TRank, typename... TAllocator>
-struct tensor_is_convertible_to<TTensor1<T, TRank, TAllocator...>, TTensor2>
- : std::is_assignable<TTensor2<T, TRank>, TTensor1<T, TRank, TAllocator...>>
-{};
-
-template <template <template <typename, size_t, typename...> typename, typename, size_t, typename...> typename TOperator,
-          template <typename, size_t, typename...> typename TTensor,
-          typename T, size_t TRank, typename... TTensors>
-struct tensor_is_convertible_to<TOperator<TTensor, T, TRank, TTensors...>, TTensor>
- : std::is_assignable<TTensor<T, TRank>, TOperator<TTensor, T, TRank, TTensors...>>
-{};
 
 
 // tensor_is_primitive checks if a tensor includes a Data() member function thatJ returns an
@@ -121,8 +105,12 @@ concept AnyOperator = is_operator_v<TOperator>;
 template <typename TTensor>
 concept TensorConvertible = is_tensor_v<TTensor> || is_operator_v<TTensor>;
 
-template <typename T1, template <typename, size_t, typename...> typename T2>
-concept ConvertibleTo = tensor_is_convertible_to<std::remove_cvref_t<T1>, T2>::value;
+// TODO: does this work for View?
+template <typename TFrom, template <typename, size_t, typename...> typename TTensor>
+struct tensor_is_convertible_to : std::is_assignable<TTensor<typename TFrom::value_type, TFrom::rank>, TFrom> {};
+
+template <typename TFrom, template <typename, size_t, typename...> typename TTensor>
+concept ConvertibleTo = std::is_class_v<std::remove_cvref_t<TFrom>> && tensor_is_convertible_to<std::remove_cvref_t<TFrom>, TTensor>::value;
 
 //
 // Tensor basic arithmetic operations
