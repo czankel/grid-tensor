@@ -118,7 +118,7 @@ struct Slice
 {
   constexpr static ssize_t max_stop = std::numeric_limits<ssize_t>::max();
   constexpr Slice () : start_(0), stop_(max_stop), step_(1) {}
-  constexpr Slice (ssize_t start) : start_(start), stop_(0), step_(1) {}
+  constexpr Slice (ssize_t start) : start_(start), stop_(max_stop), step_(1) {}
   constexpr Slice (ssize_t start, ssize_t stop) : start_(start), stop_(stop), step_(1) {}
   constexpr Slice (ssize_t start, ssize_t stop, size_t step) : start_(start), stop_(stop), step_(step) {}
   constexpr Slice (ssize_t start, NullType&&) : start_(start), stop_(max_stop), step_(1) {}
