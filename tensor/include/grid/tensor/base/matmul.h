@@ -30,8 +30,12 @@ class TensorMatMul<Tensor, T, TRank, TTensor1, TTensor2>
      tensor2_(std::forward<T2>(tensor2))
   {
     if constexpr (TTensor1::rank > 0 && TTensor2::rank > 0)
-      if (tensor1_.Dimensions()[TTensor1::rank - 1] != tensor2_.Dimensions()[0])
+    {
+      // matmul: dim-m (rank-2) and dim-n (rank-1) have to match; vectors have only one dim
+      size_t dim_n = TTensor1::rank > 1 ? TTensor1::rank - 2 : 0;
+      if (tensor1_.Dimensions()[TTensor1::rank-1] != tensor2_.Dimensions()[dim_n])
         throw std::runtime_error("dimensions don't match");
+    }
   }
 
   template <ConvertibleTo<Tensor> T1, Arithmetic S>
@@ -238,9 +242,20 @@ class TensorMatMul<Tensor, T, TRank, TTensor1, TTensor2>
 // CTAD
 //
 
+namespace {
+template <typename TTensor1, typename TTensor2>
+struct matmul_rank
+{
+  constexpr static size_t value =
+    (TTensor1::rank == 0 ? TTensor2::rank :
+     TTensor2::rank == 0 ? TTensor1::rank :
+     std::min(TTensor1::rank, TTensor2::rank));
+};
+}
+
 template <ConvertibleTo<Tensor> TTensor1, ConvertibleTo<Tensor> TTensor2>
 TensorMatMul(TTensor1, TTensor2)
-  -> TensorMatMul<Tensor, typename TTensor2::value_type, std::max(TTensor1::rank, TTensor2::rank),
+  -> TensorMatMul<Tensor, typename TTensor2::value_type, matmul_rank<TTensor1, TTensor2>::value,
                typename to_tensor<TTensor1>::type, typename to_tensor<TTensor2>::type>;
 
 template <ConvertibleTo<Tensor> TTensor, Arithmetic T>
