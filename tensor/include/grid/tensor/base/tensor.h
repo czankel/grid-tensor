@@ -285,6 +285,12 @@ class Tensor<T, TRank>
     return operator=(std::forward<TOperator>(oper)());
   }
 
+  template <AnyOperator TOperator>
+  Tensor& operator+=(TOperator&& oper)
+  {
+    return operator=(TensorAdd(*this, std::forward<TOperator>(oper)()));
+  }
+
 
   /// View returns a view of the proivded tensor.
   template <typename... Ts>
