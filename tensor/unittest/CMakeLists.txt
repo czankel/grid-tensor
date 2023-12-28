@@ -3,4 +3,5 @@ grid_add_sources(gridtensor_test
   addition_base.cc
   multiplication_base.cc
   rms_norm_base.cc
+  softmax_base.cc
 )

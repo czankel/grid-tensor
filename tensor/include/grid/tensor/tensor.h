@@ -116,10 +116,14 @@ concept ConvertibleTo = std::is_class_v<std::remove_cvref_t<TFrom>> && tensor_is
 // Tensor basic arithmetic operations
 //
 
+// The arithmetic declaraions must be specialized for different tensor types, which supports
+// specializations for accelerators.
+
 template <template <typename, size_t, typename...> typename, typename, size_t, typename... > class TensorAdd;
 template <template <typename, size_t, typename...> typename, typename, size_t, typename... > class TensorMatMul;
 template <template <typename, size_t, typename...> typename, typename, size_t, typename... > class TensorElemMul;
 template <template <typename, size_t, typename...> typename, typename, size_t, typename... > class TensorRmsNorm;
+template <template <typename, size_t, typename...> typename, typename, size_t, typename... > class TensorSoftMax;
 
 //
 // Operator overloading
