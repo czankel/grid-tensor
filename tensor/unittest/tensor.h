@@ -159,14 +159,14 @@ TYPED_TEST_P(TensorTestSuite, TensorMMap)
 {
   std::FILE* tmpf = std::tmpfile();
 
-  std::array<size_t, 4> ds1 = {2, 3, 2, 4};
+  std::array<size_t, 4> ds1 = {2, 4, size<double>(4), size<double>(1)};
   std::fwrite(ds1.data(), sizeof ds1[0], ds1.size(), tmpf);
 
-  std::array<double, 4> row1 = {1.2, 2.3, 3.4, 0.0};
+  std::array<double, 4> row1 = {1.2, 2.3, 3.4, 4.5};
   std::fwrite(row1.data(), sizeof row1[0], row1.size(), tmpf);
   std::fwrite(row1.data(), sizeof row1[0], row1.size(), tmpf);
 
-  std::array<size_t, 4> ds2 = {2, 3, 2, 3};
+  std::array<size_t, 4> ds2 = {2, 3, size<double>(3), size<double>(1)};
   std::fwrite(ds2.data(), sizeof ds2[0], ds2.size(), tmpf);
 
   std::array<double, 3> row2 = {4.3, 3.2, 2.1};
@@ -179,16 +179,28 @@ TYPED_TEST_P(TensorTestSuite, TensorMMap)
   std::rewind(tmpf);
 
   int fd = fileno(tmpf);
-  auto mmap = std::make_shared<grid::MMap>(fd, file_size);
-  grid::MMapView view(mmap);
+  auto mmap = std::shared_ptr<grid::MMap>(grid::MMap::MMapFile(fd, file_size));
+  close(fd);
 
+  grid::MMapView view(std::move(mmap));
   auto dimensions1 = view.Read<std::array<size_t, 2>>();
-  auto strides1 = view.Read<std::array<size_t, 2>>();
-  typename TypeParam::Tensor tensor1(view.Array<double>(dimensions1, grid::make_strides<double>(strides1)));
+  auto strides1 = view.Read<std::array<ssize_t, 2>>();
+  auto size1 = grid::get_buffer_size(dimensions1, strides1);
+  double* addr1 = reinterpret_cast<double*>(view.Address());
+  typename TypeParam::Tensor tensor1(dimensions1, std::make_tuple(addr1, size1));
 
+  typename TypeParam::Tensor result1{{1.2, 2.3, 3.4, 4.5}, {1.2, 2.3, 3.4, 4.5}};
+  EXPECT_EQ(tensor1, result1);
+
+  view.Seek(size1);
   auto dimensions2 = view.Read<std::array<size_t, 2>>();
-  auto strides2 = view.Read<std::array<size_t, 2>>();
-  typename TypeParam::Tensor tensor2(view.Array<double>(dimensions2, grid::make_strides<double>(strides2)));
+  auto strides2 = view.Read<std::array<ssize_t, 2>>();
+  auto size2 = grid::get_buffer_size(dimensions2, strides2);
+  double* addr2 = reinterpret_cast<double*>(view.Address());
+  typename TypeParam::Tensor tensor2(dimensions2, std::make_tuple(addr2, size2));
+
+  typename TypeParam::Tensor result2{{4.3, 3.2, 2.1}, {4.3, 3.2, 2.1}};
+  EXPECT_EQ(tensor2, result2);
 
   std::fclose(tmpf);
 }

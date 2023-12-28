@@ -611,8 +611,19 @@ class Tensor<T, TRank, NoAllocator>
 
   explicit Tensor() {}
 
-  explicit Tensor(const size_t(&& dimensions)[TRank], std::tuple<pointer, size_t>&& array)
+  explicit Tensor(const size_t(&& dimensions)[TRank], const std::tuple<pointer, size_t>& array)
     : dimensions_(std::to_array(dimensions)),
+      strides_{make_strides<value_type>(dimensions_)},
+      size_(dimensions_[0] * strides_[0]),
+      data_(std::get<0>(array))
+  {
+    if (size_ > std::get<1>(array))
+      throw std::runtime_error("dimensions exceed allotted size: " + std::to_string(size_) + " > " +
+          std::to_string(std::get<1>(array)));
+  }
+
+  explicit Tensor(const std::array<size_t, TRank>& dimensions, const std::tuple<pointer, size_t>& array)
+    : dimensions_(dimensions),
       strides_{make_strides<value_type>(dimensions_)},
       size_(dimensions_[0] * strides_[0]),
       data_(std::get<0>(array))
@@ -792,9 +803,9 @@ Tensor(const TOperator<TTensor, T,  TRank, TTensors...>&) -> Tensor<T, TRank>;
 
 // Tensor with "NoAllocator"
 template <Arithmetic T, size_t N>
-explicit Tensor(const size_t(&)[N], std::tuple<T*, size_t>&) -> Tensor<T, N, NoAllocator>;
+explicit Tensor(const size_t(&)[N], const std::tuple<T*, size_t>&) -> Tensor<T, N, NoAllocator>;
 template <Arithmetic T, size_t N>
-explicit Tensor(const size_t(&)[N], std::tuple<T*, size_t>&&) -> Tensor<T, N, NoAllocator>;
+explicit Tensor(const std::array<size_t, N>&, const std::tuple<T*, size_t>&) -> Tensor<T, N, grid::NoAllocator>;
 
 
 } // end of namespace grid

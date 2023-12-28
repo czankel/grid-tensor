@@ -79,9 +79,9 @@ struct TensorBaseType
 
   // memory-mapped tensors
   template <grid::Arithmetic T, size_t N>
-  explicit Tensor(const size_t(&)[N], std::tuple<T*, size_t>&) -> Tensor<T, N, grid::NoAllocator>;
+  explicit Tensor(const size_t(&)[N], const std::tuple<T*, size_t>&) -> Tensor<T, N, grid::NoAllocator>;
   template <grid::Arithmetic T, size_t N>
-  explicit Tensor(const size_t(&)[N], std::tuple<T*, size_t>&&) -> Tensor<T, N, grid::NoAllocator>;
+  explicit Tensor(const std::array<size_t, N>&, const std::tuple<T*, size_t>&) -> Tensor<T, N, grid::NoAllocator>;
 
   // copy & move constructors
   template <typename T, size_t N, typename TAllocator>
