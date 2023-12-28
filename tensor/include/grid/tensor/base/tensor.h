@@ -639,6 +639,42 @@ class Tensor<T, TRank, NoAllocator>
   }
 
 
+  Tensor& operator=(Tensor&& other)
+  {
+    dimensions_ = other.dimensions_;
+    strides_ = other.strides_;
+    size_ = other.size_;
+    data_ = other.data_;
+    return *this;
+  }
+
+  Tensor& operator=(Tensor& other)
+  {
+    dimensions_ = other.dimensions_;
+    strides_ = other.strides_;
+    size_ = other.size_;
+    data_ = other.data_;
+    return *this;
+  }
+
+  Tensor(Tensor& other)
+    : dimensions_(other.dimensions_),
+      strides_(other.strides_),
+      size_(other.size_),
+      data_(other.data_)
+  {
+  }
+
+  Tensor(Tensor&& other)
+    : dimensions_(other.dimensions_),
+      strides_(other.strides_),
+      size_(other.size_),
+      data_(other.data_)
+  {
+    other.data_ = nullptr;
+  }
+
+
   /// View returns a view of the proivded tensor.
   template <typename... Ts>
   auto View(Ts&&... slices)
