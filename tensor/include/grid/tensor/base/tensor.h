@@ -14,6 +14,7 @@
 #include <array>
 #include <bitset>
 #include <initializer_list>
+#include <tuple>
 
 #include "../array.h"
 #include "../tensor_parameters.h"
@@ -271,7 +272,9 @@ class Tensor<T, TRank>
     size_ = strides_[0] * dimensions_[0];
     if (data_ != nullptr)
       delete[] data_;
-    data_ = other.Data();
+    data_ = other.data_;
+    other.data_ = nullptr;
+
     return *this;
   }
 
@@ -327,6 +330,8 @@ class Tensor<T, TRank>
 
   /// Data returns a pointer to the data buffer.
   pointer Data()                                          { return data_; }
+
+  /// Data returns a pointer to the data buffer.
   const_pointer Data() const                              { return data_; }
 
  private:
@@ -679,6 +684,8 @@ class Tensor<T, TRank, NoAllocator>
 
   /// Data returns a pointer to the data buffer.
   pointer Data()                                          { return data_; }
+
+  /// Data returns a pointer to the data buffer.
   const_pointer Data() const                              { return data_; }
 
  private:
