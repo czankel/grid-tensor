@@ -22,61 +22,40 @@
 #include <stdexcept>
 #include <string>
 
-#include "array.h"
-
 namespace grid {
 
 /// MMap represents a memory-maped file.
 class MMap
 {
+ protected:
+  MMap(char* addr, size_t file_size) : addr_(addr), file_size_(file_size) {}
+
  public:
-  MMap() : fd_(-1), addr_(nullptr), file_size_(0) {}
+  MMap() : addr_(nullptr), file_size_(0) {}
 
-  /// Constructor for memory-mapped file specified by the file name/path.
-  MMap(const std::string& name);
-
-  /// Constructor for memory-mapped file specified by file-descriptor and memory-mapped size.
-  MMap(int fd, size_t file_size)
+  ~MMap()
   {
-    Map(fd, file_size);
-  }
-
-  /// Copy constructor.
-  MMap(const MMap& other)
-  {
-    Map(other.fd_, other.file_size_);
+    if (addr_ != nullptr && file_size_ > 0)
+      munmap(addr_, file_size_);
   }
 
   /// Move constructor.
-  MMap(MMap&& other) : fd_(other.fd_), addr_(other.addr_), file_size_(other.Size())
-  {
-    other.addr_= nullptr;
-    other.fd_ = -1;
-    other.file_size_ = 0;
-  }
+  MMap(MMap&& other) : addr_(other.addr_), file_size_(other.file_size_) {}
 
-  /// Destructor.
-  ~MMap()
-  {
-    Close();
-  }
-
+  /// Move assignment operator.
   MMap& operator=(MMap&& other)
   {
-    Close();
-    fd_ = other.fd_;
-    file_size_ = other.file_size_;
+    if (addr_ != nullptr && file_size_ != 0)
+      munmap(addr_, file_size_);
+
     addr_ = other.addr_;
-
+    file_size_ = other.file_size_;
     return *this;
   }
 
-
-  MMap& operator=(const MMap& other)
-  {
-    Map(dup(other.fd_), other.file_size_);
-    return *this;
-  }
+  // Copy constructor and assignments arenot permissible
+  MMap(const MMap& other) = delete;
+  MMap& operator=(const MMap& other) = delete;
 
 
   // Size returns the size of the mmaped file
@@ -88,27 +67,14 @@ class MMap
   // End of the mmaped region
   void* End() const                                       { return addr_ + file_size_; }
 
- private:
-  void Close()
-  {
-    if (addr_ != nullptr && file_size_ > 0)
-      munmap(addr_, file_size_);
-    if (fd_ != -1)
-      close(fd_);
-  }
 
-  void Map(int fd, size_t file_size)
-  {
-    fd_ = fd;
-    addr_ = static_cast<char*>(mmap(NULL, file_size, PROT_READ, MAP_FILE | MAP_SHARED, fd, 0));
-    file_size_ = file_size;
+  /// Static function for creating a memory-mapped file specified by the file name/path.
+  static MMap* MMapFile(const std::string& name);
 
-    if (addr_ == MAP_FAILED)
-      throw("mmap failed");
-  }
+  /// Static function for creating a memory-mapped file specified by file-descriptor and memory-mapped size.
+  static MMap* MMapFile(int fd, size_t file_size);
 
  protected:
-  int     fd_;
   char*   addr_;
   size_t  file_size_;
 };
@@ -116,10 +82,12 @@ class MMap
 
 /// MMapView provides a "view" into a memory-mmaped file and includes a current position for
 /// sequential "read" operations.
+
+// TODO: consider removing the View
 class MMapView
 {
  public:
-  MMapView(std::shared_ptr<MMap> mmap, size_t offset = 0UL)
+  MMapView(const std::shared_ptr<MMap>& mmap, size_t offset = 0UL)
     : mmap_(mmap),
       base_(static_cast<char*>(mmap->Address()) + offset),
       addr_(static_cast<char*>(mmap->Address()) + offset),
@@ -195,43 +163,6 @@ class MMapView
     char* str = addr_;
     addr_ += len;
     return std::string(str, len);
-  }
-
-  /// Array returns an ArrayView of the specified primitive for a memory mapped reagion.
-  template <typename T, size_t TRank>
-  ArrayView<T, TRank> Array(const size_t(&dimensions)[TRank], const ssize_t(&strides)[TRank])
-  {
-    auto arr = ArrayView<T, TRank>(reinterpret_cast<T>(addr_), dimensions, strides);
-    addr_ += arr.Size();
-    return arr;
-  }
-
-  template <typename T, size_t TRank>
-  ArrayView<T, TRank>
-  Array(const std::array<size_t, TRank>& dimensions, const std::array<ssize_t, TRank>& strides)
-  {
-    auto arr = ArrayView<T, TRank>(reinterpret_cast<T*>(addr_), dimensions, strides);
-    addr_ += arr.Size();
-    return arr;
-  }
-
-  /// Array returns an ArrayView of the specified primitive for a memory mapped reagion.
-  template <typename T, size_t TRank>
-  ArrayView<T, TRank>
-  Array(const size_t(&dimensions)[TRank])
-  {
-    auto arr = ArrayView<T, TRank>(reinterpret_cast<T*>(addr_), dimensions);
-    addr_ += arr.Size();
-    return arr;
-  }
-
-  template <typename T, size_t TRank>
-  ArrayView<T, TRank>
-  Array(const std::array<size_t, TRank>& dimensions)
-  {
-    auto arr = ArrayView<T, TRank>(reinterpret_cast<T>(addr_), dimensions);
-    addr_ += arr.Size();
-    return arr;
   }
 
 
