@@ -124,6 +124,7 @@ template <template <typename, size_t, typename...> typename, typename, size_t, t
 template <template <typename, size_t, typename...> typename, typename, size_t, typename... > class TensorElemMul;
 template <template <typename, size_t, typename...> typename, typename, size_t, typename... > class TensorRmsNorm;
 template <template <typename, size_t, typename...> typename, typename, size_t, typename... > class TensorSoftMax;
+template <template <typename, size_t, typename...> typename, typename, size_t, typename... > class TensorSilu;
 
 //
 // Operator overloading
