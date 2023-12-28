@@ -17,8 +17,8 @@
 
 #include "base/addition.h"
 #include "base/comparison.h"
-#include "base/multiplication.h"
-#include "base/element_multiplication.h"
+#include "base/matmul.h"
+#include "base/elemmul.h"
 #include "base/rms_norm.h"
 #include "base/softmax.h"
 #include "base/silu.h"

@@ -118,6 +118,7 @@ concept ConvertibleTo = std::is_class_v<std::remove_cvref_t<TFrom>> && tensor_is
 
 template <template <typename, size_t, typename...> typename, typename, size_t, typename... > class TensorAdd;
 template <template <typename, size_t, typename...> typename, typename, size_t, typename... > class TensorMatMul;
+template <template <typename, size_t, typename...> typename, typename, size_t, typename... > class TensorElemMul;
 template <template <typename, size_t, typename...> typename, typename, size_t, typename... > class TensorRmsNorm;
 
 //
