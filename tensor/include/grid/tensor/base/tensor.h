@@ -467,7 +467,7 @@ class Tensor<T, 2, StaticAllocator<M, N>>
   /// Constructor for a rank-2 (matrix) brace initialization.
   explicit Tensor(std::initializer_list<std::initializer_list<value_type>>&& init)
     : dimensions_{M, N},
-      strides_{ sizeof(value_type) * N, sizeof(value_type)},
+      strides_{ M != 1 ? sizeof(value_type) * N : 0, sizeof(value_type)},
       array_(get_array<value_type, M, N>(std::move(init)))
   {}
 
@@ -539,7 +539,9 @@ class Tensor<T, 3, StaticAllocator<C, M, N>>
   /// Constructor for a rank-2 (matrix) brace initialization.
   explicit Tensor(std::initializer_list<std::initializer_list<std::initializer_list<value_type>>>&& init)
     : dimensions_{C, M, N},
-      strides_{ sizeof(value_type) * M * N, sizeof(value_type) * N, sizeof(value_type)},
+      strides_{ C != 1 ? sizeof(value_type) * M * N : 0,
+                M != 1 ? sizeof(value_type) * N : 0,
+                N != 1 ? sizeof(value_type) : 0},
       array_(get_array<value_type, C, M, N>(std::move(init)))
   {}
 

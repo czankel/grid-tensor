@@ -143,7 +143,7 @@ TYPED_TEST_P(TensorTestSuite, TensorAllocInitializedRank3Double)
 TYPED_TEST_P(TensorTestSuite, TensorAllocUninitializedRank3Double)
 {
   typename TypeParam::Tensor t33({3, 2, 1}, grid::Uninitialized<double>{});
-  EXPECT_THAT(t33.Strides(), ElementsAre(size<double>(2 * 1), size<double>(1), size<double>(1)));
+  EXPECT_THAT(t33.Strides(), ElementsAre(size<double>(2 * 1), size<double>(1), size<double>(0)));
 }
 
 TYPED_TEST_P(TensorTestSuite, TensorAllocUninitializedPattedRank3Double)

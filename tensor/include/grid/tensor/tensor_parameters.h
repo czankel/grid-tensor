@@ -82,23 +82,17 @@ get_array(T(&&init)[N])
 
 // make_strides returns a std::array with the strides calculated from the provided dimensions and
 // the template type parameter (make_strides<TYPE>(...))
-template <typename T, size_t TRank, size_t... Is>
-constexpr std::array<ssize_t, TRank>
-make_strides_impl(const std::array<size_t, TRank>& dimensions, std::index_sequence<Is...>)
-{
-  auto multiply = [&dimensions](size_t index) {
-    ssize_t res = sizeof(T);
-    for (size_t i = 0; i < TRank - 1 - index; i++)
-      res *= dimensions[TRank - 1 - i];
-    return res;
-  };
-  return std::array<ssize_t, TRank>{multiply(Is)...};
-}
-
 template <typename T, size_t TRank, typename Indices = std::make_index_sequence<TRank>>
 std::array<ssize_t, TRank> make_strides(const std::array<size_t, TRank>& dimensions)
 {
-  return make_strides_impl<T>(dimensions, Indices{});
+  std::array<ssize_t, TRank> strides;
+  ssize_t stride = sizeof(T);
+  for (int i = static_cast<int>(TRank) - 1; i >= 0; i--)
+  {
+    strides[i] = dimensions[i] != 1 ? stride : 0;
+    stride *= dimensions[i];
+  }
+  return strides;
 }
 
 // get_buffer_size returns the size of the buffer from dimensions and strides.
