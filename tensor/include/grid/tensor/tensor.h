@@ -127,7 +127,7 @@ template <template <typename, size_t, typename...> typename, typename, size_t, t
 template <template <typename, size_t, typename...> typename, typename, size_t, typename... > class TensorSilu;
 
 //
-// Operator overloading
+// Arithmentic operator overloading
 //
 
 // operator+ (TensorType, TensorType)
@@ -137,20 +137,43 @@ auto operator+(TTensor1&& tensor1, TTensor2&& tensor2)
   return TensorAdd(std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
 }
 
-// operator* (TensorType, TensorType)
+// operator* (TensorType, TensorType) -> ElemMul, requires same rank
 template <TensorConvertible TTensor1, TensorConvertible TTensor2>
 auto operator*(TTensor1&& tensor1, TTensor2&& tensor2)
+requires (std::decay_t<TTensor1>::rank == std::decay_t<TTensor2>::rank)
+{
+  return TensorElemMul(std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
+}
+
+// operator* (TensorType, TensorType) -> Scale, if one Tensor has rank0
+template <TensorConvertible TTensor1, TensorConvertible TTensor2>
+auto operator*(TTensor1&& tensor1, TTensor2&& tensor2)
+requires (std::decay_t<TTensor1>::rank == 0 || std::decay_t<TTensor2>::rank == 0)
 {
   return TensorMatMul(std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
 }
 
+// operator* (TensorType, arithmetic)
+template <TensorConvertible TTensor, Arithmetic T>
+auto operator*(TTensor&& tensor, T scalar) // FIXME requires TTensor::value_type == _Scalar
+{
+  return TensorMatMul(std::forward<TTensor>(tensor), scalar);
+}
+
+// operator* (arithmetic, TensorType)
+template <Arithmetic T, TensorConvertible TTensor>
+auto operator*(T scalar, TTensor&& tensor)
+{
+  return TensorMatMul(scalar, std::forward<TTensor>(tensor));
+}
+
 } // end of namespace grid
 
-/// operator<< outputs the tensor buffer.
+/// operator<<(TENSOR) overloads the output operator for tensors.
 std::ostream& operator<<(std::ostream& os, const grid::AnyTensor auto& tensor)
 {
   using value_type = typename std::remove_reference_t<decltype(tensor)>::value_type;
-  size_t rank = tensor.Rank();
+  size_t rank = std::remove_reference_t<decltype(tensor)>::rank;
 
   auto dimensions = tensor.Dimensions();
   auto strides = tensor.Strides();
