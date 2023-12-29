@@ -196,6 +196,7 @@ if(NOT MSVC)
   endif()
   string(APPEND CMAKE_CXX_FLAGS_DEBUG " -fno-omit-frame-pointer -g -O0")
   string(APPEND CMAKE_LINKER_FLAGS_DEBUG " -fno-omit-frame-pointer -O0")
+  # -ldflags="-X github.com/czankel//config.CneVersion=${VERSION}" FIXME.. or --defsym? -X is not default??
   check_cxx_compiler_flag_and_append("-fno-math-errno")
   check_cxx_compiler_flag_and_append("-fno-trapping-math")
   check_cxx_compiler_flag_and_append("-Werror=format")
@@ -230,6 +231,8 @@ add_subdirectory(tensor)
 
 set(gridtensor_HEADER_DIRS
   "tensor/include"
+  "models/include"	# FIXME
+  "util/include"	# FIXME
 )
 
 ##
@@ -253,6 +256,14 @@ endif()
 target_include_directories(gridtensor PUBLIC ${gridtensor_HEADER_DIRS})
 
 ##
+## Target Tools
+##
+
+add_executable(llama tools/llama.cc models/llama/llama.cc models/llama/karpathy.cc models/llama/ggml.cc)
+target_include_directories(llama PUBLIC ${gridtensor_HEADER_DIRS})
+target_link_libraries(llama gridtensor)
+
+##
 ## Install libraries and header files
 ##
 
@@ -268,9 +279,13 @@ foreach(dir ${gridtensor_HEADER_DIRS})
   install(DIRECTORY ${dir}/ DESTINATION include)
 endforeach()
 
-##
-## Tools
-##
+# FIXME: use forach(... ${gridtensor_TOOLS})
+install(TARGETS llama DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
+
+#FIXME
+#set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "bin/")
+#include_directories("${CMAKE_INSTALL_PREFIX}/include")
+#link_directories("${CMAKE_INSTALL_PREFIX}/lib")
 
 ##
 ## Android Project

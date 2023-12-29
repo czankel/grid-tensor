@@ -1,0 +1,261 @@
+//
+// Copyright (C) Chris Zankel. All rights reserved.
+// This code is subject to U.S. and other copyright laws and
+// intellectual property protections.
+//
+// The contents of this file are confidential and proprietary to Chris Zankel.
+//
+
+#ifndef _GGML_H
+#define _GGML_H
+
+#include <any>
+#include <vector>
+#include <map>
+
+#include <grid/models/llama.h>
+#include <grid/tensor/mmap.h>
+#include <grid/tensor/tensor.h>
+
+#include "llama_vocab.h"
+
+namespace grid {
+
+struct ifstream_helper;
+
+enum GgmlMagic
+{
+  kGgmlMagicGGJT = 0x67676a74u, // 'ggjt'
+  kGgmlMagicGGLA = 0x67676c61u, // 'ggla'
+  kGgmlMagicGGMF = 0x67676d66u, // 'ggmf'
+  kGgmlMagicGGML = 0x67676d6cu, // 'ggml'
+  kGgmlMagicGGSN = 0x6767736eu, // 'ggsn'
+  kGgmlMagicGGUF = 0x46554747u, // 'FUGG' (gguf)
+};
+
+// Note that GgmlType + 1)
+enum GgmlType
+{
+  kGgufTypeU8       = 0,
+  kGgufTypeI8       = 1,
+  kGgufTypeU16      = 2,
+  kGgufTypeI16      = 3,
+  kGgufTypeU32      = 4,
+  kGgufTypeI32      = 5,
+  kGgufTypeFloat32  = 6,
+  kGgufTypeBool     = 7,
+  kGgufTypeString   = 8,
+  kGgufTypeArray    = 9,
+  kGgufTypeU64      = 10,
+  kGgufTypeI64      = 11,
+  kGgufTypeFloat64  = 12,
+};
+
+static constexpr size_t GgmlTypeSize[] =
+{
+  sizeof(uint8_t),
+  sizeof(int8_t),
+  sizeof(uint16_t),
+  sizeof(int16_t),
+  sizeof(uint32_t),
+  sizeof(int32_t),
+  sizeof(float),
+  sizeof(bool),
+  0,  // string is invalid
+  0,  // array is invalid
+  sizeof(uint64_t),
+  sizeof(int64_t),
+  sizeof(double),
+};
+
+enum GgmlDataType
+{
+  kGgmlDataTypeInvalid = -1,
+  kGgmlDataTypeF32  =  0,
+  kGgmlDataTypeF16  =  1,
+  kGgmlDataTypeQ4_0 =  2,
+  kGgmlDataTypeQ4_1 =  3,
+  kGgmlDataTypeQ5_0 =  6,
+  kGgmlDataTypeQ5_1 =  7,
+  kGgmlDataTypeQ8_0 =  8,
+  kGgmlDataTypeQ8_1 =  9,
+  kGgmlDataTypeQ2_K = 10,
+  kGgmlDataTypeQ3_K = 11,
+  kGgmlDataTypeQ4_K = 12,
+  kGgmlDataTypeQ5_K = 13,
+  kGgmlDataTypeQ6_K = 14,
+  kGgmlDataTypeQ8_K = 15,
+  kGgmlDataTypeI8,
+  kGgmlDataTypeI16,
+  kGgmlDataTypeI32,
+  kGgmlDataTypeCount,
+};
+
+using float16_t=int16_t;
+
+const size_t kQuantsQ4_0 = 32;
+struct BlockQ4_0
+{
+  float16_t delta;
+  uint8_t qs[kQuantsQ4_0 / 2];
+};
+
+const size_t kQuantsQ4_1 = 32;
+struct BlockQ4_1
+{
+  float16_t delta;
+  float16_t min;
+  uint8_t qs[kQuantsQ4_1 / 2];
+};
+
+const size_t kQuantsQ5_0 = 32;
+struct BlockQ5_0
+{
+  float16_t delta;
+  uint8_t qh[4];          // 5th bit of quants
+  uint8_t qs[kQuantsQ5_0 / 2];
+};
+
+const size_t kQuantsQ5_1 = 32;
+struct BlockQ5_1 {
+  float16_t delta;
+  float16_t min;
+  uint8_t qh[4];          // 5th bit of quants
+  uint8_t qs[kQuantsQ5_0 / 2];
+};
+
+const size_t kQuantsQ8_0 = 32;
+struct BlockQ8_0
+{
+  float16_t delta;
+  uint8_t qs[kQuantsQ8_0];
+};
+
+const size_t kQuantsQ8_1 = 32;
+struct BlockQ8_1 {
+  float16_t delta;
+  float16_t min;
+  uint8_t qs[kQuantsQ8_1];
+};
+
+static const size_t GgmlFileTypeSize[kGgmlDataTypeCount] =
+{
+  /* kF32 */  sizeof(float),
+  /* kF16 */  sizeof(float16_t),
+  /* kQ4_0 */ sizeof(BlockQ4_0),
+  // TODO: complete table
+};
+
+// Note that UNKNOWN is -1
+static const GgmlDataType GgmlFileToDataType[] =
+{
+  /*  0: ALL_F32     0          */  kGgmlDataTypeF32,
+  /*  1: MOSTLY_F16  1          */  kGgmlDataTypeF16,
+  /*  2: MOSTLY_Q4_0 2          */  kGgmlDataTypeQ4_0,
+  /*  3: MOSTLY_Q4_1 3          */  kGgmlDataTypeQ4_1,
+  /*  4: MOSTLY_Q4_1_SOME_F16 4 */  kGgmlDataTypeInvalid,
+  /*  5: invalid                */  kGgmlDataTypeInvalid,
+  /*  6: invalid                */  kGgmlDataTypeInvalid,
+  /*  7: MOSTLY_Q8_0 7          */  kGgmlDataTypeQ8_0,
+  /*  8: MOSTLY_Q5_0 8          */  kGgmlDataTypeQ5_0,
+  /*  9: MOSTLY_Q5_1 9          */  kGgmlDataTypeQ5_1,
+  /* 10: MOSTLY_Q2_K 10         */  kGgmlDataTypeQ2_K,
+  /* 11: MOSTLY_Q3_K 11         */  kGgmlDataTypeQ3_K,
+  /* 12: MOSTLY_Q4_K 12         */  kGgmlDataTypeQ4_K,
+  /* 13: MOSTLY_Q5_K 13         */  kGgmlDataTypeQ5_K,
+  /* 14: MOSTLY_Q6_K 14         */  kGgmlDataTypeQ6_K,
+};
+
+const size_t kQuantsQK_K = 0;  // not implemented
+static const size_t QuantSize[kGgmlDataTypeCount] =
+{
+  /* kGgmlDataTypeF32           */  1,
+  /* kGgmlDataTypeF16           */  1,
+  /* kGgmlDataTypeQ4_0          */  kQuantsQ4_0,
+  /* kGgmlDataTypeQ4_1          */  kQuantsQ4_1,
+  /* unused                     */  0,
+  /* unused                     */  0,
+  /* kGgmlDataTypeQ5_0          */  kQuantsQ5_0,
+  /* kGgmlDataTypeQ5_1          */  kQuantsQ5_1,
+  /* kGgmlDataTypeQ8_0          */  kQuantsQ8_0,
+  /* kGgmlDataTypeQ8_1          */  kQuantsQ8_1,
+  /* kGgmlDataTypeQ2_K          */  kQuantsQK_K,
+  /* kGgmlDataTypeQ3_K          */  kQuantsQK_K,
+  /* kGgmlDataTypeQ4_K          */  kQuantsQK_K,
+  /* kGgmlDataTypeQ5_K          */  kQuantsQK_K,
+  /* kGgmlDataTypeQ6_K          */  kQuantsQK_K,
+  /* kGgmlDataTypeQ8_K          */  kQuantsQK_K,
+  /* kGgmlDataTypeI8            */  1,
+  /* kGgmlDataTypeI16           */  1,
+  /* kGgmlDataTypeI32           */  1,
+};
+
+
+/// GgmlFile handles file formats generated by the Ggml project:
+class GgmlFile : public LLaMAFile
+{
+  struct GgmlValue
+  {
+    GgmlType  type;
+    ssize_t   size;   // size for arrays, must be -1 otherwise.
+    std::any  value;
+  };
+
+  struct GgmlTensor
+  {
+    GgmlType  type;
+    size_t    offset;
+    size_t    size;
+  };
+
+ public:
+  GgmlFile(std::string_view path) : path_(path) {}
+  virtual ~GgmlFile() = default;
+
+  // LLaMAFile::
+  virtual void Load();
+  virtual const std::type_info& DataType() const;
+  virtual void GetParameters(LLaMAModel::Parameters& p) const      { p = parameters_; }
+  virtual void GetTokenizer(LLaMAVocab&) const;
+  virtual MMap* MapTensors() const;
+
+ protected:
+  // LLaMAFile::
+  virtual std::tuple<size_t, size_t> GetTensorOffset(TensorType, size_t num_indices, ...) const;
+
+  // ReadKeyValue reads the next key/value pair from the stream.
+  std::tuple<std::string, GgmlValue> ReadKeyValue(ifstream_helper& is);
+
+  // ReadArray reads and returns a value for an array
+  GgmlValue ReadArray(ifstream_helper& is);
+
+  // GetValue looks up and returns the value for the provide key.
+  // It throws an exception if the key cannot be found.
+  template <typename T> const T& GetValue(std::string key) const;
+
+  // GetTensor looks up and returns the tensor of the provided name.
+  // It throws an exception if the tensor cannot be found.
+  const GgmlTensor& GetTensor(std::string key) const;
+
+ private:
+  LLaMAModel::Parameters  parameters_;
+
+  std::string     path_;
+  std::string     model_arch_;
+  GgmlDataType    ftype_;
+
+  size_t          file_size_;
+  size_t          data_offset_;
+
+  uint32_t        magic_;
+  uint32_t        version_;
+  uint64_t        n_tensors_;
+  uint64_t        n_kv_;
+
+  std::unordered_map<std::string, GgmlValue> kv_map_;
+  std::unordered_map<std::string, GgmlTensor> tensor_map_;
+};
+
+} // end of namespace grid
+
+#endif // _GGML_H
