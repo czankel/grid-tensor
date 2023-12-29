@@ -9,9 +9,7 @@
 #ifndef GRID_TENSOR_TENSOR_H
 #define GRID_TENSOR_TENSOR_H
 
-#include <concepts>
 #include <functional>
-#include <iomanip>
 #include <iostream>
 
 namespace grid {
@@ -24,7 +22,7 @@ struct NoAllocator {};
 
 
 /// Placeholder for specifying that a buffer allocation does not need to be initialized.
-template <typename> struct Uninitialized {};
+template <typename T> struct Uninitialized { using value_type = T; };
 
 //
 // Tensor Traits
@@ -105,7 +103,7 @@ concept AnyOperator = is_operator_v<TOperator>;
 template <typename TTensor>
 concept TensorConvertible = is_tensor_v<TTensor> || is_operator_v<TTensor>;
 
-// TODO: does this work for View?
+// FIXME doesn't work for Views directly, assuming it converts View to Tensor before??
 template <typename TFrom, template <typename, size_t, typename...> typename TTensor>
 struct tensor_is_convertible_to : std::is_assignable<TTensor<typename TFrom::value_type, TFrom::rank>, TFrom> {};
 
@@ -155,7 +153,7 @@ requires (std::decay_t<TTensor1>::rank == 0 || std::decay_t<TTensor2>::rank == 0
 
 // operator* (TensorType, arithmetic)
 template <TensorConvertible TTensor, Arithmetic T>
-auto operator*(TTensor&& tensor, T scalar) // FIXME requires TTensor::value_type == _Scalar
+auto operator*(TTensor&& tensor, T scalar)
 {
   return TensorMatMul(std::forward<TTensor>(tensor), scalar);
 }

@@ -46,11 +46,32 @@ inline void initialize(T* dst, std::span<size_t, N> dimensions, std::span<ssize_
 } // end of namespace details
 
 
-/// Tensor provides an non-optimized base implementation of tensors.
-/// Note that the implementation implicitly requires that the buffer and strides are aligned to the value type.
+/// Tensor implements an "AI Tensor" that follows more typical AI implementations rather than
+/// mathematical or physical definition.
+///
+/// @tparam T           Integral type
+/// @tparam TRank       Rank of the tensor with 0: scalar, 1: vector, 2: matrix, etc.
+///
+/// Tensors define these member types and constexpr variables:
+///
+///   rank              TRank
+///   value_type        T
+///   allocator_type    TAllocator
+///   pointer           Pointer type; depends on the implementation
+///   const_pointer     Constant pointer type; depends on the implementation
+///
+/// Tensors also provide the following member methods:
+///
+///   constexpr size_t           Rank()
+///   std::array<size_t, Rank>   Dimensions() const
+///   std::array<ssize_t, Rank>  Strides() const
+///   pointer                    Data()
+///   const_pointer              Data() const
 template <typename T, size_t TRank, typename... TAllocator> class Tensor;
 
-/// Tensor is the default tensor using the standard std::allocator
+/// Tensor<T,TRank> provides an non-optimized base implementation of tensors using the standard
+/// std:allocator (new/delete).
+/// Note that the implementation implicitly requires that the buffer and strides are aligned to the value type.
 template <typename T, size_t TRank>
 class Tensor<T, TRank>
 {
