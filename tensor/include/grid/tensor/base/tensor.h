@@ -64,6 +64,8 @@ class Tensor<T, TRank>
   constexpr static size_t rank = TRank;
 
  public:
+  Tensor() = default;
+
   /// Constructor for a rank-1 tensor (vector) with a dynamically allocated buffer without padding.
   explicit Tensor(size_t dimension, value_type init)
     : dimensions_{dimension},
