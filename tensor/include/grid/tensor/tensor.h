@@ -42,14 +42,13 @@ inline constexpr bool is_tensor_v =
 template <typename TOperator>
 inline constexpr bool is_operator_v = requires (const TOperator& t) { t.operator()(); };
 
-
 // to_tensor provides the type of the tensor or the type of the tensor resulting from a  tensor operation
 template <typename> struct to_tensor;
 
 template <typename TTensor> requires (is_tensor_v<TTensor> && !is_operator_v<TTensor>)
 struct to_tensor<TTensor>
 {
-  using type = TTensor;
+  using type = std::remove_cvref_t<TTensor>;
 };
 
 template <template <template <typename, size_t, typename...> typename, typename, size_t, typename...> typename TOperator,
