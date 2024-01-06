@@ -95,13 +95,15 @@ std::array<ssize_t, TRank> make_strides(const std::array<size_t, TRank>& dimensi
   return strides;
 }
 
-// get_buffer_size returns the size of the buffer from dimensions and strides.
-template<size_t TRank>
-size_t get_buffer_size(const std::array<size_t, TRank>& dimensions, const std::array<ssize_t, TRank>& strides)
+// get_buffer_size returns the required size for the given dimensions and strides.
+template <typename U, typename V>
+size_t get_buffer_size(U&& dimensions, V&& strides)
 {
   size_t size = 0;
-  for (size_t i = 0; i < TRank; i++)
-    size = std::max(size, dimensions[i] * strides[i]);
+  auto di = std::forward<U>(dimensions).begin();
+  auto si = std::forward<V>(strides).begin();
+  for (; di != dimensions.end() && si != strides.end(); ++di, ++si)
+    size = std::max(size, *di * *si);
   return size;
 }
 
