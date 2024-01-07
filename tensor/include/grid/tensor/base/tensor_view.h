@@ -188,37 +188,40 @@ inline auto View(TTensor& tensor, Ts&&... ts)
     ssize_t start = 0;
     size_t extent = 1;
 
-    if constexpr (is_arithmetic)
-    {
-      start = value;
-    }
-    else if constexpr (is_slice)
-    {
-      // TODO: if extent <= 0 should return an empty (rank-0) tensor
-      start = value.start_;
-      extent = std::max(0L, value.stop_ - start);
-
-      if (start < 0)
-        start += tensor_dims[tensor_index];
-      start = std::min<ssize_t>(start, (tensor_dims[tensor_index]));
-      extent = std::min(extent, tensor_dims[tensor_index] - start);
-
-      view_dims[view_index] = extent;
-      view_strides[view_index] = tensor_strides[tensor_index] * value.step_;
-      view_index++;
-    }
-    else if constexpr (is_newaxis)
+    if constexpr (is_newaxis)
     {
       view_dims[view_index] = 1;
       view_strides[view_index] = 0;
       view_index++;
     }
+    else
+    {
+      if constexpr (is_arithmetic)
+      {
+        start = value;
+      }
+      else if constexpr (is_slice)
+      {
+        // TODO: if extent <= 0 should return an empty (rank-0) tensor
+        start = value.start_;
+        extent = std::max(0L, value.stop_ - start);
 
-    view_size = std::max(view_size, extent * tensor_strides[tensor_index]);
-    view_offset += start * tensor_strides[tensor_index];
+        if (start < 0)
+          start += tensor_dims[tensor_index];
+        start = std::min<ssize_t>(start, (tensor_dims[tensor_index]));
+        extent = std::min(extent, tensor_dims[tensor_index] - start);
 
-    if (!is_newaxis && ++tensor_index > tensor.Rank())
+        view_dims[view_index] = extent;
+        view_strides[view_index] = tensor_strides[tensor_index] * value.step_;
+        view_index++;
+      }
+
+      view_size = std::max(view_size, extent * tensor_strides[tensor_index]);
+      view_offset += start * tensor_strides[tensor_index];
+
+      if (++tensor_index > tensor.Rank())
         throw std::runtime_error("index exceeds tensor rank");
+    }
   };
 
   (apply(std::forward<Ts>(ts)),...);

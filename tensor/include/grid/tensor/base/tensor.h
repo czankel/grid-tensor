@@ -14,6 +14,7 @@
 #include <array>
 #include <bitset>
 #include <initializer_list>
+#include <iterator>
 #include <numeric>
 #include <tuple>
 
@@ -54,9 +55,90 @@ class Array
   using const_pointer = const value_type*;
 
  public:
-  Array() = default;
+  struct Iterator
+  {
+    using iterator_category = std::bidirectional_iterator_tag;
+    using difference_type   = std::ptrdiff_t;
+    using value_type        = Array::value_type;
+    using pointer           = value_type*;
+    using reference         = value_type&;
 
-  Array(size_t size) : size_(size), data_(new value_type[size / sizeof(value_type)]) {}
+    Iterator() = default;
+
+    Iterator(pointer ptr) : ptr_(ptr)               {}
+    reference operator*() const                     { return *ptr_; }
+    pointer operator->()                            { return ptr_; }
+
+    Iterator& operator++()                          { ptr_++; return *this; }
+    Iterator& operator--()                          { ptr_--; return *this; }
+    Iterator operator++(int)                        { Iterator tmp = *this; ++(*this); return tmp; }
+    Iterator operator--(int)                        { Iterator tmp = *this; --(*this); return tmp; }
+    Iterator operator+(int dist)                    { ptr_ += dist; return *this; }
+    Iterator operator-(int dist)                    { ptr_ -= dist; return *this; }
+
+    friend bool operator== (const Iterator& a, const Iterator& b) { return a.ptr_ == b.ptr_; }
+
+    pointer ptr_;
+  };
+
+  // FIXME: cannot be default for copy constructor...
+  Array() = default;
+  Array(Array&& other)
+    : size_(other.size_),
+      data_(std::move(other.data_))
+  {
+    other.data_ = nullptr;
+  }
+
+  // FIXME: cannot copy an array (doesn't know the structure)
+  /*
+  Array(const Array& other)
+    : size_(other.size_),
+      data_(static_cast<pointer>(operator new[](size_, std::align_val_t(16))))
+      //data_(new(std::align_val_t(16)) value_type[size_ / sizeof(value_type)])
+  {
+    //copy<value_type, TRank>(data_, other.Data(), dimensions_, strides_, other.Strides());
+  }
+  */
+
+  Array(size_t size)
+    : size_(size),
+      data_(static_cast<pointer>(operator new[](size_, std::align_val_t(16))))
+  {}
+
+  ~Array()
+  {
+    if (data_ != nullptr)
+      operator delete[](data_, std::align_val_t(16));
+  }
+
+  Array& operator=(Array&& other)
+  {
+    if (data_ != nullptr)
+      operator delete[](data_, std::align_val_t(16));
+
+    size_ = other.size_;
+    data_ = std::move(other.data_);
+    other.data_ = nullptr;
+
+    return *this;
+  }
+
+    /*
+  Array& operator=(const Array& other) = delete
+  {
+    if (data_ != nullptr)
+      operator delete[](data_, std::align_val_t(16));
+    size_ = other.size_;
+    data_ = new(std::align_val_t(16)) value_type[size_ / sizeof(value_type)];
+    // FIXME copy
+    return *this;
+  }
+  */
+
+
+  Iterator begin()                                        { return Iterator(data_); }
+  Iterator end()                                          { return Iterator(data_ + size_/sizeof(value_type)); }
 
   /// Size returns the size of the entire buffer.
   size_t Size() const                                     { return size_; }
@@ -70,8 +152,28 @@ class Array
  protected:
   size_t  size_;
   pointer data_;
-
 };
+
+
+struct FillFunc
+{
+  template<typename T, std::output_iterator<const T&> O, std::sentinel_for<O> S>
+  constexpr O operator()(O first, S last, const T& value) const
+  {
+    while (first != last)
+      *first++ = value;
+
+    return first;
+  }
+
+  template<typename T, std::ranges::output_range<const T&> R>
+  constexpr std::ranges::borrowed_iterator_t<R> operator()(R&& r, const T& value) const
+  {
+    return (*this)(std::ranges::begin(r), std::ranges::end(r), value);
+  }
+};
+
+inline constexpr FillFunc Fill;
 
 
 /// Tensor implements an "AI Tensor" that follows more typical AI implementations rather than
@@ -106,7 +208,6 @@ class Tensor<T, TRank> : public Array<T>
   template <PrimitiveTensor P, size_t R> friend class TensorView;
 
   // TODO: accessing Array's variables directly for now.
-  using Array<T>::size_;
   using Array<T>::data_;
 
  public:
@@ -125,7 +226,8 @@ class Tensor<T, TRank> : public Array<T>
       dimensions_{dimension},
       strides_{make_strides<value_type>(dimensions_)}
   {
-    initialize(data_, std::span{dimensions_}, std::span{strides_}, init);
+    Fill(*this, init); //, std::span{dimensions_}, std::span{strides_}, init);
+    //initialize(data_, std::span{dimensions_}, std::span{strides_}, init);
   }
 
   /// Constructor for a rank-1 tensor (vector) with a dynamically allocated uninitialized buffer.
@@ -154,7 +256,7 @@ class Tensor<T, TRank> : public Array<T>
   /// Constructor for any rank tensor with a dynamically allocated initialized buffer
   explicit Tensor(std::initializer_list<size_t>&& dimensions, value_type init)
     : Array<value_type>(std::accumulate(
-          begin(dimensions), end(dimensions), 1, std::multiplies<size_t>()) * sizeof(value_type)),
+          begin(dimensions), end(dimensions), sizeof(value_type), std::multiplies<size_t>())),
       dimensions_(get_array<size_t, TRank>(std::move(dimensions))),
       strides_{make_strides<value_type>(dimensions_)}
   {
@@ -165,7 +267,7 @@ class Tensor<T, TRank> : public Array<T>
   /// Constructor for any rank tensor with a dynamically allocated initialized buffer
   explicit Tensor(std::initializer_list<size_t>&& dimensions, Uninitialized<value_type>)
     : Array<value_type>(std::accumulate(
-          begin(dimensions), end(dimensions), 1, std::multiplies<size_t>()) * sizeof(value_type)),
+          begin(dimensions), end(dimensions), sizeof(value_type), std::multiplies<size_t>())),
       dimensions_(get_array<size_t, TRank>(std::move(dimensions))),
       strides_{make_strides<value_type>(dimensions_)}
   {}
@@ -209,7 +311,8 @@ class Tensor<T, TRank> : public Array<T>
 
   /// Constructor for any rank tensor with a dynamically allocated initialized buffer.
   explicit Tensor(std::array<size_t, TRank> dimensions, value_type init)
-    : Array<value_type>(get_buffer_size(dimensions) * sizeof(value_type)),
+    : Array<value_type>(std::accumulate(
+          begin(dimensions), end(dimensions), sizeof(value_type), std::multiplies<size_t>())),
       dimensions_(dimensions),
       strides_(make_strides<value_type>(dimensions))
   {
@@ -230,7 +333,8 @@ class Tensor<T, TRank> : public Array<T>
   /// Constructor for any rank tensor with a dynamically allocated uninitialized buffer.
   /// Note: assumes strides are type-aligned.
   explicit Tensor(std::array<size_t, TRank> dimensions, Uninitialized<value_type>)
-    : Array<value_type>(dimensions[0] * sizeof(value_type)),
+    : Array<value_type>(std::accumulate(
+          begin(dimensions), end(dimensions), sizeof(value_type), std::multiplies<size_t>())),
       dimensions_{dimensions},
       strides_{make_strides<value_type>(dimensions)}
   {}
@@ -246,21 +350,26 @@ class Tensor<T, TRank> : public Array<T>
 
   /// Constructor from a 'trivially copyable' tensor.
   /// Note: assumes strides are type-aligned.
+  //FIXME: need to copy, why not 'flatten' it at the same time? what about views? isn't thi what this is abouit? better to actually treat views special?
+#if 0 
   template <PrimitiveTensor TTensor>
   Tensor(const TTensor& other)
-    : Array<value_type>(static_cast<const Array<value_type>&>(other)),
+    : Array<value_type>(static_cast<const Array<value_type>&>(other)),  // FIXME cannot copy an array
       dimensions_(other.Dimensions()),
       strides_(other.Strides())
   {
     copy<value_type, TRank>(data_, other.Data(), dimensions_, strides_, other.Strides());
   }
-
+#endif
   /// Copy constructor
+  //FIXME: need to copy, why not 'flatten' it at the same time?
   Tensor(const Tensor& other)
-    : Array<value_type>(static_cast<const Array<value_type>&>(other)),
+    //: Array<value_type>(othstatic_cast<const Array<value_type>&>(other)),  // FIXME: cannot copy an array
+    : Array<value_type>(other.size_),
       dimensions_{other.Dimensions()},
       strides_{other.Strides()}
   {
+    printf("COPY 1\n");
     copy<value_type, TRank>(data_, other.Data(), dimensions_, strides_, other.Strides());
   }
 
@@ -269,9 +378,7 @@ class Tensor<T, TRank> : public Array<T>
     : Array<value_type>(std::move(static_cast<Array<value_type>&&>(other))),
       dimensions_{std::move(other.dimensions_)},
       strides_{std::move(other.strides_)}
-  {
-    other.data_ = nullptr;
-  }
+  {}
 
   // Constructors for converting from a tensor operator.
   template <AnyOperator TOperator>
@@ -281,25 +388,20 @@ class Tensor<T, TRank> : public Array<T>
   Tensor(const TOperator& functor) : Tensor{functor()} {};
 
 
-  /// Destructor
-  ~Tensor()
-  {
-    if (data_ != nullptr)
-      delete[] data_;
-  }
-
-
   /// Assign operator
   template <PrimitiveTensor TTensor>
   Tensor& operator=(const TTensor& other)
   {
     dimensions_ = other.Dimensions();
     strides_ = make_strides<value_type>(dimensions_);
+    /*
     size_ = strides_[0] * dimensions_[0];
     if (data_ != nullptr)
       delete[] data_;
     data_ = new value_type[size_ / sizeof(value_type)];
     copy<value_type, TRank>(data_, other.Data(), dimensions_, strides_, other.Strides());
+    */
+    //Array<value_type>::operator=(other);
     return *this;
   }
 
@@ -308,12 +410,14 @@ class Tensor<T, TRank> : public Array<T>
   {
     dimensions_ = other.Dimensions();
     strides_ = make_strides<value_type>(dimensions_);
+    /*
     size_ = strides_[0] * dimensions_[0];
     if (data_ != nullptr)
       delete[] data_;
     data_ = other.data_;
     other.data_ = nullptr;
-
+    */
+    Array<value_type>::operator=(std::move(other));
     return *this;
   }
 
