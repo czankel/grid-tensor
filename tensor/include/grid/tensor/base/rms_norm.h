@@ -37,8 +37,8 @@ class TensorRmsNorm<Tensor, T, TRank, TTensor>
 
   template <ConvertibleTo<Tensor> T1>
   TensorRmsNorm(T1&& tensor, value_type eps = Eps<value_type>::default_value)
-  requires (std::is_floating_point_v<value_type> && TTensor::rank > 0)
-   : tensor_(std::forward<T1>(tensor)) ,
+  requires (std::is_floating_point_v<value_type> && rank > 0)
+   : tensor_{std::forward<T1>(tensor)},
      eps_(eps)
   {}
 
@@ -105,8 +105,11 @@ class TensorRmsNorm<Tensor, T, TRank, TTensor>
 //
 
 template <ConvertibleTo<Tensor> TTensor>
-TensorRmsNorm(TTensor)
-  -> TensorRmsNorm<Tensor, typename TTensor::value_type, TTensor::rank, typename to_tensor<TTensor>::type>;
+TensorRmsNorm(TTensor&&)
+  -> TensorRmsNorm<Tensor,
+                   typename std::remove_reference_t<TTensor>::value_type,
+                   std::remove_reference_t<TTensor>::rank,
+                   TTensor&&>;
 
 } // end of namespace grid
 

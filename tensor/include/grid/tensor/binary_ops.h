@@ -40,7 +40,9 @@ class BinaryOp
   using value_type = T;
   using pointer = T*;
   using const_pointer = const T*;
-  constexpr static size_t rank = std::max(TTensor1::rank, TTensor2::rank);
+  using tensor1_type = std::remove_reference_t<TTensor1>;
+  using tensor2_type = std::remove_reference_t<TTensor2>;
+  constexpr static size_t rank = std::max(tensor1_type::rank, tensor2_type::rank);
 
   template <ConvertibleTo<Tensor> T1, ConvertibleTo<Tensor> T2>
   BinaryOp(T1&& tensor1, T2&& tensor2)
@@ -59,11 +61,11 @@ class BinaryOp
 
  private:
   // Broadcast expands dimensions ("broadcasting") of the tensors to make them the same rank.
-  inline auto Broadcast(const TTensor1& tensor1, const TTensor2& tensor2) const
+  inline auto Broadcast(const tensor1_type& tensor1, const tensor2_type& tensor2) const
   {
     std::array<size_t, rank> dimensions;
 
-    constexpr int delta = static_cast<int>(TTensor1::rank) - static_cast<int>(TTensor2::rank);
+    constexpr int delta = static_cast<int>(tensor1_type::rank) - static_cast<int>(tensor2_type::rank);
     if constexpr (delta == 0)
     {
       BroadcastDimensions(dimensions, tensor1, tensor2);

@@ -48,7 +48,7 @@ template <typename> struct to_tensor;
 template <typename TTensor> requires (is_tensor_v<TTensor> && !is_operator_v<TTensor>)
 struct to_tensor<TTensor>
 {
-  using type = std::remove_cvref_t<TTensor>;
+  using type = TTensor;
 };
 
 template <template <template <typename, size_t, typename...> typename, typename, size_t, typename...> typename TOperator,
