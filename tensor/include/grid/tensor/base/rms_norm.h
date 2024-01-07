@@ -18,13 +18,16 @@
 
 namespace grid {
 
+namespace {
+  template <typename> struct Eps {};
+  template <> struct Eps<float>  { constexpr static float  default_value = 1e-5f; float  value; };
+  template <> struct Eps<double> { constexpr static double default_value = 1e-5f; double value; };
+}
+
 /// TensorRmsNorm<Tensor> implements RMS norm.
 template <typename T, size_t TRank, PrimitiveTensor TTensor>
 class TensorRmsNorm<Tensor, T, TRank, TTensor>
 {
-  template <typename> struct Eps {};
-  template <> struct Eps<float>  { constexpr static float  default_value = 1e-5f; float  value; };
-  template <> struct Eps<double> { constexpr static double default_value = 1e-5f; double value; };
 
  public:
   using value_type = T;
