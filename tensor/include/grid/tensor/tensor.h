@@ -170,15 +170,15 @@ auto operator*(T scalar, TTensor&& tensor)
 std::ostream& operator<<(std::ostream& os, const grid::AnyTensor auto& tensor)
 {
   using value_type = typename std::remove_reference_t<decltype(tensor)>::value_type;
-  size_t rank = std::remove_reference_t<decltype(tensor)>::rank;
+  size_t rank = tensor.Rank();
 
   auto dimensions = tensor.Dimensions();
   auto strides = tensor.Strides();
 
-  std::function<void(int, const value_type*&)> print;
+  std::function<void(int, const value_type*)> print;
   print = [&os, &dimensions, &strides, &print, &rank](size_t index, const value_type* ptr) {
     os << "{ ";
-    if (index < rank -1)
+    if (index < rank - 1)
     {
       for (size_t i = dimensions[index]; i > 0; i--)
       {
@@ -187,20 +187,19 @@ std::ostream& operator<<(std::ostream& os, const grid::AnyTensor auto& tensor)
           os << ", ";
         else
           os << " }";
-        ptr += strides[index] / sizeof(*ptr);
+        reinterpret_cast<const char*&>(ptr) += strides[index];
       }
     }
     else
     {
-      auto* p = ptr;
-      for (size_t i = dimensions[index]; i > 0; i--)
+      for (size_t i = dimensions[rank-1]; i > 0; i--)
       {
-        os << *p;
+        os << *ptr;
         if (i != 1)
           os << ", ";
         else
           os << " }";
-        p += strides[index] / sizeof(*ptr);
+        reinterpret_cast<const char*&>(ptr) += strides[rank-1];
       }
     }
   };
