@@ -14,6 +14,7 @@
 #include <algorithm>
 
 #include "copy.h"
+#include "iterator.h"
 
 namespace grid {
 
@@ -44,7 +45,9 @@ class TensorView
  public:
   using value_type = typename TTensor::value_type;
   using pointer = typename TTensor::pointer;
+  using reference = typename TTensor::reference;
   using const_pointer = typename TTensor::const_pointer;
+  using const_reference = typename TTensor::const_reference;
   constexpr static size_t rank = TViewRank;
 
   /// Default constructor
@@ -77,6 +80,8 @@ class TensorView
     return this->operator=(oper());
   }
 
+  auto begin() const                             { return details::Iterator(this, data_); }
+  auto end() const                               { return details::Iterator(this, data_, Dimensions()); }
 
   /// Rank returns the rank of the tensor.
   constexpr static size_t Rank()                          { return TViewRank; }

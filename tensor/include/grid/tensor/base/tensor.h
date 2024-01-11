@@ -14,12 +14,14 @@
 #include <array>
 #include <bitset>
 #include <initializer_list>
+#include <iterator>
 #include <numeric>
 #include <tuple>
 
 #include "../array.h"
 #include "../tensor_parameters.h"
 #include "tensor_view.h"
+#include "iterator.h"
 
 #include "copy.h"
 
@@ -28,19 +30,19 @@ namespace grid {
 namespace {
 
 template <typename T>
-inline void initialize(T* dst, std::span<size_t, 1> dimensions, std::span<ssize_t, 1> strides, T init)
+inline void initialize(T* dst, std::span<const size_t, 1> dimensions, std::span<const ssize_t, 1> strides, const T& init)
 {
   for (size_t i = 0; i < dimensions[0]; i++, reinterpret_cast<char*&>(dst) += strides[0])
     *dst = init;
 }
 
 template <typename T, size_t N>
-inline void initialize(T* dst, std::span<size_t, N> dimensions, std::span<ssize_t, N> strides, T init)
+inline void initialize(T* dst, std::span<const size_t, N> dimensions, std::span<const ssize_t, N> strides, const T& init)
 {
   for (size_t i = 0; i < dimensions[0]; i++, reinterpret_cast<char*&>(dst) += strides[0])
     initialize(dst,
-        std::span<size_t, N - 1>(dimensions.begin() + 1, dimensions.end()),
-        std::span<ssize_t, N - 1>(strides.begin() + 1, strides.end()),
+        std::span<const size_t, N - 1>(dimensions.begin() + 1, dimensions.end()),
+        std::span<const ssize_t, N - 1>(strides.begin() + 1, strides.end()),
         init);
 }
 
@@ -115,8 +117,68 @@ class Array
  protected:
   size_t  size_;
   pointer data_;
-
 };
+
+
+// TODO: move to an appropriate file
+// FIXME: the coordinates of the first tensor must be added to the
+struct FillFunc
+{
+  template<typename T, std::output_iterator<const T&> O, std::sentinel_for<O> S>
+  constexpr O operator()(O first, S last, const T& value) const
+  {
+    constexpr size_t rank = O::rank;
+
+    // TODO, identify if first is {0} and skip loop
+    auto dimensions = last.Coordinates();
+    auto& subtrahend = first.Coordinates();
+    for (size_t i = 0; i < rank; i++)
+      dimensions[i] -= subtrahend[i];
+
+    initialize(&*first, std::span<const size_t, rank>{dimensions}, std::span{first.Strides()}, value);
+    return first;
+  }
+
+  template<typename T, std::ranges::output_range<const T&> R>
+  constexpr std::ranges::borrowed_iterator_t<R> operator()(R&& r, const T& value) const
+  {
+    return (*this)(std::ranges::begin(r), std::ranges::end(r), value);
+  }
+};
+
+inline constexpr FillFunc Fill;
+
+
+struct CopyFunc
+{
+  template<std::input_iterator I, std::sentinel_for<I> S, std::weakly_incrementable O>
+  requires std::indirectly_copyable<I, O>
+  constexpr std::ranges::copy_result<I, O> operator()(I first, S last, O result) const
+  {
+    constexpr size_t rank = O::rank;
+
+    // TODO, identify if first is {0} and skip loop
+    auto dimensions = last.Coordinates();
+    auto& subtrahend = first.Coordinates();
+    for (size_t i = 0; i < rank; i++)
+      dimensions[i] -= subtrahend[i];
+
+    copy<typename O::value_type, rank>(&*result, &*first, dimensions, first.Strides(), result.Strides());
+    first += dimensions;
+    result += dimensions;
+    return {std::move(first), std::move(result)};
+  }
+
+  template<std::ranges::input_range R, std::weakly_incrementable O>
+  requires std::indirectly_copyable<std::ranges::iterator_t<R>, O>
+  constexpr std::ranges::copy_result<std::ranges::borrowed_iterator_t<R>, O>
+  operator()(R&& r, O result) const
+  {
+    return (*this)(std::ranges::begin(r), std::ranges::end(r), std::move(result));
+  }
+};
+
+inline constexpr CopyFunc Copy;
 
 
 /// Tensor implements an "AI Tensor" that follows more typical AI implementations rather than
@@ -150,16 +212,20 @@ class Tensor<T, TRank> : public Array<T>
 {
   template <PrimitiveTensor P, size_t R> friend class TensorView;
 
-  // TODO: accessing Array's variables directly for now.
-  using Array<T>::size_;
-  using Array<T>::data_;
-
  public:
   using value_type = T;
   using allocator_type = std::allocator<T>;
-  using pointer = T*;
-  using const_pointer = const T*;
+  using pointer = value_type*;
+  using reference = value_type&;
+  using const_pointer = const value_type*;
+  using const_reference = const value_type&;
+  using array_type = Array<value_type>;
   constexpr static size_t rank = TRank;
+
+
+  auto begin() const                  { return details::Iterator(this, array_type::data_); }
+  auto end() const                    { return details::Iterator(this, array_type::data_, Dimensions()); }
+
 
  public:
   Tensor() = default;
@@ -170,7 +236,7 @@ class Tensor<T, TRank> : public Array<T>
       dimensions_{dimension},
       strides_{make_strides<value_type>(dimensions_)}
   {
-    initialize(data_, std::span{dimensions_}, std::span{strides_}, init);
+    Fill(*this, init);
   }
 
   /// Constructor for a rank-1 tensor (vector) with a dynamically allocated uninitialized buffer.
@@ -186,7 +252,7 @@ class Tensor<T, TRank> : public Array<T>
       dimensions_{dim_m, dim_n},
       strides_{make_strides<value_type>(dimensions_)}
   {
-    initialize(data_, std::span{dimensions_}, std::span{strides_}, init);
+    Fill(*this, init);
   }
 
   /// Constructor for a rank-2 tensor (matrix) with a dynamically allocated uninitialized buffer.
@@ -203,7 +269,7 @@ class Tensor<T, TRank> : public Array<T>
       dimensions_(get_array<size_t, TRank>(std::move(dimensions))),
       strides_{make_strides<value_type>(dimensions_)}
   {
-    initialize(data_, std::span{dimensions_}, std::span{strides_}, init);
+    Fill(*this, init);
   }
 
 
@@ -223,7 +289,7 @@ class Tensor<T, TRank> : public Array<T>
       dimensions_(get_array<size_t, TRank>(std::move(dimensions))),
       strides_(get_array<ssize_t, TRank>(std::move(strides)))
   {
-    initialize(data_, std::span{dimensions_}, std::span{strides_}, init);
+    Fill(*this, init);
   }
 
   /// Constructor for any rank tensor with a dynamically allocated uninitialized buffer with strides.
@@ -241,7 +307,7 @@ class Tensor<T, TRank> : public Array<T>
       dimensions_(get_array<size_t, TRank>(dimensions)),
       strides_(get_array<ssize_t, TRank>(strides))
   {
-    initialize(data_, std::span{dimensions_}, std::span{strides_}, init);
+    Fill(*this, init);
   }
 
   /// Constructor for any rank tensor with a dynamically allocated uninitialized buffer
@@ -254,11 +320,12 @@ class Tensor<T, TRank> : public Array<T>
 
   /// Constructor for any rank tensor with a dynamically allocated initialized buffer.
   explicit Tensor(std::array<size_t, TRank> dimensions, value_type init)
-    : Array<value_type>(get_buffer_size(dimensions) * sizeof(value_type)),
+    : Array<value_type>(std::accumulate(
+          begin(dimensions), end(dimensions), sizeof(value_type), std::multiplies<size_t>())),
       dimensions_(dimensions),
       strides_(make_strides<value_type>(dimensions))
   {
-    initialize<TRank>(data_, dimensions_, strides_, init);
+    Fill(*this, init);
   }
 
   /// Constructor for any rank tensor with a dynamically allocated initialized buffer with padding.
@@ -269,7 +336,7 @@ class Tensor<T, TRank> : public Array<T>
       dimensions_{dimensions},
       strides_{strides}
   {
-    initialize<TRank>(data_, dimensions_, strides_, init);
+    Fill(*this, init);
   }
 
   /// Constructor for any rank tensor with a dynamically allocated uninitialized buffer.
@@ -290,14 +357,14 @@ class Tensor<T, TRank> : public Array<T>
       strides_{strides}
   {}
 
-
   /// Copy constructor
+  // TODO: "flatten" new array?
   Tensor(const Tensor& other)
     : Array<value_type>(other.size_),
       dimensions_{other.Dimensions()},
       strides_{other.Strides()}
   {
-    copy<value_type, TRank>(data_, other.Data(), dimensions_, strides_, other.Strides());
+    Copy(other, this->begin());
   }
 
   /// Move constructor
@@ -319,11 +386,11 @@ class Tensor<T, TRank> : public Array<T>
   template <PrimitiveTensor TTensor>
   Tensor& operator=(const TTensor& other)
   {
-    Array<value_type>::Realloc(other.Size());
+    array_type::Realloc(other.Size());
 
     dimensions_ = other.Dimensions();
     strides_ = other.Strides();
-    copy<value_type, TRank>(data_, other.Data(), dimensions_, strides_, other.Strides());
+    Copy(other, this->begin());
 
     return *this;
   }
@@ -402,8 +469,10 @@ class Tensor<T, 0>
  public:
   using value_type = T;
   using allocator_type = StaticAllocator<1>;
-  using pointer = T*;
-  using const_pointer = const T*;
+  using pointer = value_type*;
+  using reference = value_type&;
+  using const_pointer = const value_type*;
+  using const_reference = const value_type&;
   constexpr static size_t rank = 0UL;
 
   /// Constructor for a rank-1 tensor (vector) with brace initialization.
@@ -448,8 +517,10 @@ class Tensor<T, 1, StaticAllocator<N>>
  public:
   using value_type = T;
   using allocator_type = StaticAllocator<N>;
-  using pointer = const T*;
-  using const_pointer = const T*;
+  using pointer = const value_type*;
+  using reference = const value_type&;
+  using const_pointer = const value_type*;
+  using const_reference = const value_type&;
   constexpr static size_t rank = 1UL;
 
   /// Constructor for a rank-1 tensor (vector) with brace initialization.
@@ -506,9 +577,9 @@ class Tensor<T, 1, StaticAllocator<N>>
   const_pointer Data() const                              { return array_.data(); }
 
  private:
-  std::array<size_t, 1>       dimensions_;
-  std::array<ssize_t, 1>      strides_;
-  std::array<value_type, N>  array_;
+  std::array<size_t, 1>     dimensions_;
+  std::array<ssize_t, 1>    strides_;
+  std::array<value_type, N> array_;
 };
 
 
@@ -519,8 +590,10 @@ class Tensor<T, 2, StaticAllocator<M, N>>
 {
  public:
   using value_type = T;
-  using pointer = const T*;
-  using const_pointer = const T*;
+  using pointer = const value_type*;
+  using reference = const value_type&;
+  using const_pointer = const value_type*;
+  using const_reference = const value_type&;
   constexpr static size_t rank = 2UL;
 
   /// Constructor for a rank-2 (matrix) brace initialization.
@@ -591,8 +664,10 @@ class Tensor<T, 3, StaticAllocator<C, M, N>>
  public:
   using value_type = T;
   using allocator_type = StaticAllocator<C, M, N>;
-  using pointer = const T*;
-  using const_pointer = const T*;
+  using pointer = const value_type*;
+  using reference = const value_type&;
+  using const_pointer = const value_type*;
+  using const_reference = const value_type&;
   constexpr static size_t rank = 3UL;
 
   /// Constructor for a rank-2 (matrix) brace initialization.
@@ -664,8 +739,10 @@ class Tensor<T, TRank, NoAllocator>
  public:
   using value_type = T;
   using allocator_type = NoAllocator;
-  using pointer = const T*;
-  using const_pointer = const T*;
+  using pointer = const value_type*;
+  using reference = const value_type&;
+  using const_pointer = const value_type*;
+  using const_reference = const value_type&;
   constexpr static size_t rank = TRank;
 
   explicit Tensor() {}
