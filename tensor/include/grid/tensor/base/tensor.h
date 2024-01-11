@@ -56,7 +56,52 @@ class Array
  public:
   Array() = default;
 
-  Array(size_t size) : size_(size), data_(new value_type[size / sizeof(value_type)]) {}
+  // Explicity disallow copy construction as Array isn't fully aware of any buffer structure.
+  Array(const Array& other) = delete;
+
+  // @brief Move constructor.
+  Array(Array&& other) : size_(other.size_), data_(std::move(other.data_)) { other.data_ = nullptr; }
+
+  // @brief Allocates a buffer of the provided size.
+  Array(size_t size)
+    : size_(size),
+      data_(static_cast<pointer>(operator new[](size_, std::align_val_t(16))))
+  {}
+
+  ~Array()
+  {
+    if (data_ != nullptr)
+      operator delete[](data_, std::align_val_t(16));
+  }
+
+  Array& operator=(Array&& other)
+  {
+    if (data_ != nullptr)
+      operator delete[](data_, std::align_val_t(16));
+
+    size_ = other.size_;
+    data_ = std::move(other.data_);
+    other.data_ = nullptr;
+
+    return *this;
+  }
+
+  Array& operator=(const Array& other) = delete;
+
+
+  /// Resize resizes the buffer of the Array. This will destroy
+  Array& Realloc(size_t size)
+  {
+    if (size != size_)
+    {
+      if (data_ != nullptr)
+        operator delete[](data_, std::align_val_t(16));
+      data_ = static_cast<pointer>(operator new[](size_, std::align_val_t(16)));
+    }
+
+    return *this;
+  }
+
 
   /// Size returns the size of the entire buffer.
   size_t Size() const                                     { return size_; }
@@ -154,7 +199,7 @@ class Tensor<T, TRank> : public Array<T>
   /// Constructor for any rank tensor with a dynamically allocated initialized buffer
   explicit Tensor(std::initializer_list<size_t>&& dimensions, value_type init)
     : Array<value_type>(std::accumulate(
-          begin(dimensions), end(dimensions), 1, std::multiplies<size_t>()) * sizeof(value_type)),
+          std::begin(dimensions), std::end(dimensions), sizeof(value_type), std::multiplies<size_t>())),
       dimensions_(get_array<size_t, TRank>(std::move(dimensions))),
       strides_{make_strides<value_type>(dimensions_)}
   {
@@ -165,7 +210,7 @@ class Tensor<T, TRank> : public Array<T>
   /// Constructor for any rank tensor with a dynamically allocated initialized buffer
   explicit Tensor(std::initializer_list<size_t>&& dimensions, Uninitialized<value_type>)
     : Array<value_type>(std::accumulate(
-          begin(dimensions), end(dimensions), 1, std::multiplies<size_t>()) * sizeof(value_type)),
+          std::begin(dimensions), std::end(dimensions), sizeof(value_type), std::multiplies<size_t>())),
       dimensions_(get_array<size_t, TRank>(std::move(dimensions))),
       strides_{make_strides<value_type>(dimensions_)}
   {}
@@ -230,7 +275,8 @@ class Tensor<T, TRank> : public Array<T>
   /// Constructor for any rank tensor with a dynamically allocated uninitialized buffer.
   /// Note: assumes strides are type-aligned.
   explicit Tensor(std::array<size_t, TRank> dimensions, Uninitialized<value_type>)
-    : Array<value_type>(dimensions[0] * sizeof(value_type)),
+    : Array<value_type>(std::accumulate(
+          std::begin(dimensions), std::end(dimensions), sizeof(value_type), std::multiplies<size_t>())),
       dimensions_{dimensions},
       strides_{make_strides<value_type>(dimensions)}
   {}
@@ -244,20 +290,10 @@ class Tensor<T, TRank> : public Array<T>
       strides_{strides}
   {}
 
-  /// Constructor from a 'trivially copyable' tensor.
-  /// Note: assumes strides are type-aligned.
-  template <PrimitiveTensor TTensor>
-  Tensor(const TTensor& other)
-    : Array<value_type>(static_cast<const Array<value_type>&>(other)),
-      dimensions_(other.Dimensions()),
-      strides_(other.Strides())
-  {
-    copy<value_type, TRank>(data_, other.Data(), dimensions_, strides_, other.Strides());
-  }
 
   /// Copy constructor
   Tensor(const Tensor& other)
-    : Array<value_type>(static_cast<const Array<value_type>&>(other)),
+    : Array<value_type>(other.size_),
       dimensions_{other.Dimensions()},
       strides_{other.Strides()}
   {
@@ -269,9 +305,7 @@ class Tensor<T, TRank> : public Array<T>
     : Array<value_type>(std::move(static_cast<Array<value_type>&&>(other))),
       dimensions_{std::move(other.dimensions_)},
       strides_{std::move(other.strides_)}
-  {
-    other.data_ = nullptr;
-  }
+  {}
 
   // Constructors for converting from a tensor operator.
   template <AnyOperator TOperator>
@@ -281,25 +315,16 @@ class Tensor<T, TRank> : public Array<T>
   Tensor(const TOperator& functor) : Tensor{functor()} {};
 
 
-  /// Destructor
-  ~Tensor()
-  {
-    if (data_ != nullptr)
-      delete[] data_;
-  }
-
-
   /// Assign operator
   template <PrimitiveTensor TTensor>
   Tensor& operator=(const TTensor& other)
   {
+    Array<value_type>::Realloc(other.Size());
+
     dimensions_ = other.Dimensions();
-    strides_ = make_strides<value_type>(dimensions_);
-    size_ = strides_[0] * dimensions_[0];
-    if (data_ != nullptr)
-      delete[] data_;
-    data_ = new value_type[size_ / sizeof(value_type)];
+    strides_ = other.Strides();
     copy<value_type, TRank>(data_, other.Data(), dimensions_, strides_, other.Strides());
+
     return *this;
   }
 
@@ -307,13 +332,8 @@ class Tensor<T, TRank> : public Array<T>
   Tensor& operator=(Tensor&& other)
   {
     dimensions_ = other.Dimensions();
-    strides_ = make_strides<value_type>(dimensions_);
-    size_ = strides_[0] * dimensions_[0];
-    if (data_ != nullptr)
-      delete[] data_;
-    data_ = other.data_;
-    other.data_ = nullptr;
-
+    strides_ = other.Strides();
+    Array<value_type>::operator=(std::move(other));
     return *this;
   }
 
