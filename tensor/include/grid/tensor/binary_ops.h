@@ -11,6 +11,10 @@
 #ifndef GRID_TENSOR_BINARY_OP_H
 #define GRID_TENSOR_BINARY_OP_H
 
+#include <span>
+
+#include "concepts.h"
+
 namespace grid {
 namespace tensor {
 
@@ -44,7 +48,7 @@ class BinaryOp
   using tensor2_type = std::remove_reference_t<TTensor2>;
   constexpr static size_t rank = std::max(tensor1_type::rank, tensor2_type::rank);
 
-  template <ConvertibleTo<Tensor> T1, ConvertibleTo<Tensor> T2>
+  template <typename T1, typename T2>
   BinaryOp(T1&& tensor1, T2&& tensor2)
    : tensor1_(std::forward<T1>(tensor1)),
      tensor2_(std::forward<T2>(tensor2))

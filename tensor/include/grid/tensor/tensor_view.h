@@ -13,7 +13,8 @@
 
 #include <algorithm>
 
-#include "copy.h"
+#include "concepts.h"
+#include "base/copy.h"
 #include "iterator.h"
 
 namespace grid {
@@ -71,6 +72,7 @@ class TensorView
   template <AnyTensor TFromTensor> requires (TFromTensor::rank == TViewRank)
   auto operator=(const TFromTensor& rhs)
   {
+    // TODO: make this device agnostic
     copy<value_type, TViewRank>(data_, rhs.Data(), dimensions_, strides_, rhs.Strides());
   }
 
