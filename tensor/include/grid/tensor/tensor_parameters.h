@@ -9,6 +9,8 @@
 #ifndef GRID_TENSOR_TENSOR_PARAMETERS_H
 #define GRID_TENSOR_TENSOR_PARAMETERS_H
 
+#include <algorithm>
+
 namespace grid {
 
 // get_array(iniitlizer_list) returns a std::array initialized from a brace-initializer list.
@@ -105,6 +107,58 @@ size_t get_buffer_size(U&& dimensions, V&& strides)
   for (; di != dimensions.end() && si != strides.end(); ++di, ++si)
     size = std::max(size, *di * *si);
   return size;
+}
+
+// Broadcast expands dimensions ("broadcasting") of the tensors to make them the same rank.
+template <typename T1, typename T2, size_t Rank>
+inline auto BroadcastDimensions(std::array<size_t, Rank>& dimensions,
+                                const T1& tensor1,
+                                const T2& tensor2)
+{
+  constexpr int delta = T1::rank - T2::rank;
+  const auto& dimensions1 = tensor1.Dimensions();
+  const auto& dimensions2 = tensor2.Dimensions();
+
+  std::generate(dimensions.begin(), dimensions.end(), [n = 0, &dimensions1, &dimensions2]() mutable -> size_t
+  {
+    int k = n++;
+    if (k < delta || dimensions2[k-delta] == 1)
+      return dimensions1[k];
+    else if (dimensions1[k] == 1 || dimensions1[k] == dimensions2[k-delta])
+      return dimensions2[k-delta];
+    else
+      throw std::runtime_error("broadcast failed");
+  });
+}
+
+template <typename TTensor1, typename TTensor2>
+inline auto Broadcast(const TTensor1& tensor1, const TTensor2& tensor2)
+{
+  constexpr size_t rank = std::max(TTensor1::rank, TTensor2::rank);
+  std::array<size_t, rank> dimensions;
+
+  constexpr int delta = static_cast<int>(TTensor1::rank) - static_cast<int>(TTensor2::rank);
+  if constexpr (delta == 0)
+  {
+    BroadcastDimensions(dimensions, tensor1, tensor2);
+    return std::make_tuple(dimensions, std::cref(tensor1.Strides()), std::cref(tensor2.Strides()));
+  }
+  else if constexpr (delta > 0)
+  {
+    const auto& strides2 = tensor2.Strides();
+    std::array<ssize_t, rank> strides{0};
+    std::copy(strides2.begin(), strides2.end(), strides.begin() + delta);
+    BroadcastDimensions(dimensions, tensor1, tensor2);
+    return std::make_tuple(dimensions, std::cref(tensor1.Strides()), strides);
+  }
+  else
+  {
+    const auto& strides1 = tensor1.Strides();
+    std::array<ssize_t, rank> strides{0};
+    std::copy(strides1.begin(), strides1.end(), strides.begin() + (-delta));
+    BroadcastDimensions(dimensions, tensor2, tensor1);
+    return std::make_tuple(dimensions, strides, std::cref(tensor2.Strides()));
+  }
 }
 
 } // end of namespace grid

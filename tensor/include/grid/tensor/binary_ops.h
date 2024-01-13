@@ -64,55 +64,6 @@ class BinaryOp
   BinaryOp& operator=(BinaryOp&& other) = delete;
 
  private:
-  // Broadcast expands dimensions ("broadcasting") of the tensors to make them the same rank.
-  inline auto Broadcast(const tensor1_type& tensor1, const tensor2_type& tensor2) const
-  {
-    std::array<size_t, rank> dimensions;
-
-    constexpr int delta = static_cast<int>(tensor1_type::rank) - static_cast<int>(tensor2_type::rank);
-    if constexpr (delta == 0)
-    {
-      BroadcastDimensions(dimensions, tensor1, tensor2);
-      return std::make_tuple(dimensions, std::cref(tensor1_.Strides()), std::cref(tensor2_.Strides()));
-    }
-    else if constexpr (delta > 0)
-    {
-      const auto& strides2 = tensor2_.Strides();
-      std::array<ssize_t, rank> strides{0};
-      std::copy(strides2.begin(), strides2.end(), strides.begin() + delta);
-      BroadcastDimensions(dimensions, tensor1, tensor2);
-      return std::make_tuple(dimensions, std::cref(tensor1_.Strides()), strides);
-    }
-    else
-    {
-      const auto& strides1 = tensor1_.Strides();
-      std::array<ssize_t, rank> strides{0};
-      std::copy(strides1.begin(), strides1.end(), strides.begin() + (-delta));
-      BroadcastDimensions(dimensions, tensor2, tensor1);
-      return std::make_tuple(dimensions, strides, std::cref(tensor2_.Strides()));
-    }
-  }
-
-  template <typename T1, typename T2>
-  inline auto BroadcastDimensions(std::array<size_t, rank>& dimensions, const T1& tensor1, const T2& tensor2) const
-  {
-    constexpr int delta = T1::rank - T2::rank;
-    const auto& dimensions1 = tensor1.Dimensions();
-    const auto& dimensions2 = tensor2.Dimensions();
-
-    std::generate(dimensions.begin(), dimensions.end(), [n = 0, &dimensions1, &dimensions2]() mutable -> size_t
-    {
-      int k = n++;
-      if (k < delta || dimensions2[k-delta] == 1)
-        return dimensions1[k];
-      else if (dimensions1[k] == 1 || dimensions1[k] == dimensions2[k-delta])
-        return dimensions2[k-delta];
-      else
-        throw std::runtime_error("broadcast failed");
-    });
-  }
-
-
   // operation on a single element
   inline void eval(pointer dest, const_pointer src1, const_pointer src2,
                   std::span<const size_t,  0> dimensions,
