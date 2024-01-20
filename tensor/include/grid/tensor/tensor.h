@@ -95,10 +95,6 @@ class Tensor<T, TRank> : public Array<T>
   constexpr static size_t rank = TRank;
 
 
-  auto begin() const                  { return details::Iterator(this, array_type::data_); }
-  auto end() const                    { return details::Iterator(this, array_type::data_, Dimensions()); }
-
-
  public:
   Tensor() = default;
 
@@ -320,6 +316,19 @@ class Tensor<T, TRank> : public Array<T>
   }
 
 
+  /// begin returns an iterator for the begin of the Tensor array
+  auto begin()                        { return details::Iterator(this, array_type::data_); }
+
+  /// end returns the sentinel for the end of the Tensor array
+  auto end()                          { return details::Iterator(this, array_type::data_, Dimensions()); }
+
+  /// begin returns an iterator for the begin of the Tensor array
+  auto begin() const                  { return details::ConstIterator(this, array_type::data_); }
+
+  /// end returns the sentinel for the end of the Tensor array
+  auto end() const                    { return details::ConstIterator(this, array_type::data_, Dimensions()); }
+
+
   /// Rank returns the rank of the tensor.
   constexpr static size_t Rank()                          { return TRank; }
 
@@ -334,7 +343,7 @@ class Tensor<T, TRank> : public Array<T>
   std::array<ssize_t, TRank>        strides_;
 };
 
-/// Tensor<T, 0, 1> is a specialization of a rank-0 tensor.
+/// Tensor<T, 0> is a specialization of a rank-0 tensor.
 template <typename T>
 class Tensor<T, 0>
 {
@@ -347,7 +356,7 @@ class Tensor<T, 0>
   using const_reference = const value_type&;
   constexpr static size_t rank = 0UL;
 
-  /// Constructor for a rank-1 tensor (vector) with brace initialization.
+  /// Constructor for a rank-0 tensor (scalar) with brace initialization.
   explicit Tensor(value_type init) : data_{init} {}
 
   explicit Tensor(Uninitialized<value_type>) {}
@@ -355,6 +364,20 @@ class Tensor<T, 0>
   explicit Tensor(const std::array<size_t, 0>&, value_type init) : data_{init} {}
 
   explicit Tensor(const std::array<size_t, 0>&, Uninitialized<value_type>) {}
+
+
+  /// begin returns an iterator for the begin of the Tensor array
+  auto begin()                        { return details::Iterator(this, Data()); }
+
+  /// end returns the sentinel for the end of the Tensor array
+  auto end()                          { return details::Iterator(this, Data(), Dimensions()); }
+
+  /// begin returns an iterator for the begin of the Tensor array
+  auto begin() const                  { return details::ConstIterator(this, Data()); }
+
+  /// end returns the sentinel for the end of the Tensor array
+  auto end() const                    { return details::ConstIterator(this, Data(), Dimensions()); }
+
 
   /// Rank returns the rank of the tensor.
   constexpr static size_t Rank()                          { return 0UL; }
@@ -433,6 +456,13 @@ class Tensor<T, 1, StaticAllocator<N>>
   }
 
 
+  /// begin returns a const iterator for the begin of the Tensor array
+  auto begin() const                  { return details::ConstIterator(this, Data()); }
+
+  /// cend returns a const sentinel for the end of the Tensor array
+  auto end() const                    { return details::ConstIterator(this, Data(), Dimensions()); }
+
+
   /// Rank returns the rank of the tensor.
   constexpr static size_t Rank()                          { return 1UL; }
 
@@ -504,6 +534,13 @@ class Tensor<T, 2, StaticAllocator<M, N>>
   {
     return view::Reshape(*this, std::to_array(dimensions), std::to_array(strides));
   }
+
+
+  /// begin returns a const iterator for the begin of the Tensor array
+  auto begin() const                  { return details::ConstIterator(this, Data()); }
+
+  /// cend returns a const sentinel for the end of the Tensor array
+  auto end() const                    { return details::ConstIterator(this, Data(), Dimensions()); }
 
 
   /// Rank returns the rank of the tensor.
@@ -580,6 +617,13 @@ class Tensor<T, 3, StaticAllocator<C, M, N>>
   {
     return view::Reshape(*this, std::to_array(dimensions), std::to_array(strides));
   }
+
+
+  /// begin returns a const iterator for the begin of the Tensor array
+  auto begin() const                  { return details::ConstIterator(this, Data()); }
+
+  /// cend returns a const sentinel for the end of the Tensor array
+  auto end() const                    { return details::ConstIterator(this, Data(), Dimensions()); }
 
 
   /// Rank returns the rank of the tensor.
@@ -707,6 +751,12 @@ class Tensor<T, TRank, NoAllocator>
     return view::Reshape(*this, std::to_array(dimensions), std::to_array(strides));
   }
 
+
+  /// begin returns an iterator for the begin of the Tensor array
+  auto begin() const                  { return details::ConstIterator(this, Data()); }
+
+  /// end returns the sentinel for the end of the Tensor array
+  auto end() const                    { return details::ConstIterator(this, Data(), Dimensions()); }
 
 
   /// Rank returns the rank of the tensor.
