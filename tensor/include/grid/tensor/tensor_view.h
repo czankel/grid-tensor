@@ -59,7 +59,7 @@ class TensorView
              const std::array<size_t,  TViewRank>& dimensions,
              const std::array<ssize_t, TViewRank>& strides,
              size_t size,
-             size_t offset)
+             size_t offset = 0UL)
     : tensor_(tensor),
       dimensions_(dimensions),
       strides_(strides),
@@ -82,8 +82,19 @@ class TensorView
     return this->operator=(oper());
   }
 
-  auto begin() const                             { return details::Iterator(this, data_); }
-  auto end() const                               { return details::Iterator(this, data_, Dimensions()); }
+
+  /// begin returns an iterator for the begin of the Tensor array
+  auto begin()                        { return details::Iterator(this, data_); }
+
+  /// end returns the sentinel for the end of the Tensor array
+  auto end()                          { return details::Iterator(this, data_, Dimensions()); }
+
+  /// begin returns an iterator for the begin of the Tensor array
+  auto begin() const                  { return details::ConstIterator(this, data_); }
+
+  /// end returns the sentinel for the end of the Tensor array
+  auto end() const                    { return details::ConstIterator(this, data_, Dimensions()); }
+
 
   /// Rank returns the rank of the tensor.
   constexpr static size_t Rank()                          { return TViewRank; }
