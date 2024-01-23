@@ -18,6 +18,7 @@
 #include <tuple>
 
 #include "../array.h"
+#include "../device.h"
 #include "../tensor_parameters.h"
 
 #include "copy.h"
@@ -120,7 +121,7 @@ class Array
 
 // FIXME: the coordinates of the first tensor must be added to the
 template <>
-struct FillFunc<BaseCPU>
+struct FillFunc<device::CPU>
 {
   template<typename T, std::output_iterator<const T&> O, std::sentinel_for<O> S>
   constexpr O operator()(O first, S last, const T& value) const
@@ -147,7 +148,7 @@ struct FillFunc<BaseCPU>
 
 
 template <>
-struct CopyFunc<BaseCPU>
+struct CopyFunc<device::CPU>
 {
   template<std::input_iterator I, std::sentinel_for<I> S, std::weakly_incrementable O>
   requires std::indirectly_copyable<I, O>

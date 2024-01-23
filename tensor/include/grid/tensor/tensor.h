@@ -15,6 +15,7 @@
 #include <numeric>
 
 #include "concepts.h"
+#include "device.h"
 #include "iterator.h"
 #include "tensor_parameters.h"
 #include "tensor_view.h"
@@ -26,10 +27,6 @@ template <size_t...> struct StaticAllocator {};
 
 /// NoAllocator is a spcial "allocator" for an externally managed buffer.
 struct NoAllocator {};
-
-
-// TODO: make the entire code templated for devices
-struct BaseCPU {};
 
 
 // The arithmetic declaraions must be specialized for different tensor types, which supports
@@ -104,7 +101,7 @@ class Tensor<T, TRank> : public Array<T>
       dimensions_{dimension},
       strides_{make_strides<value_type>(dimensions_)}
   {
-    Fill<BaseCPU>(*this, init);
+    Fill<device::CPU>(*this, init);
   }
 
   /// Constructor for a rank-1 tensor (vector) with a dynamically allocated uninitialized buffer.
@@ -120,7 +117,7 @@ class Tensor<T, TRank> : public Array<T>
       dimensions_{dim_m, dim_n},
       strides_{make_strides<value_type>(dimensions_)}
   {
-    Fill<BaseCPU>(*this, init);
+    Fill<device::CPU>(*this, init);
   }
 
   /// Constructor for a rank-2 tensor (matrix) with a dynamically allocated uninitialized buffer.
@@ -137,7 +134,7 @@ class Tensor<T, TRank> : public Array<T>
       dimensions_(get_array<size_t, TRank>(std::move(dimensions))),
       strides_{make_strides<value_type>(dimensions_)}
   {
-    Fill<BaseCPU>(*this, init);
+    Fill<device::CPU>(*this, init);
   }
 
 
@@ -157,7 +154,7 @@ class Tensor<T, TRank> : public Array<T>
       dimensions_(get_array<size_t, TRank>(std::move(dimensions))),
       strides_(get_array<ssize_t, TRank>(std::move(strides)))
   {
-    Fill<BaseCPU>(*this, init);
+    Fill<device::CPU>(*this, init);
   }
 
   /// Constructor for any rank tensor with a dynamically allocated uninitialized buffer with strides.
@@ -175,7 +172,7 @@ class Tensor<T, TRank> : public Array<T>
       dimensions_(get_array<size_t, TRank>(dimensions)),
       strides_(get_array<ssize_t, TRank>(strides))
   {
-    Fill<BaseCPU>(*this, init);
+    Fill<device::CPU>(*this, init);
   }
 
   /// Constructor for any rank tensor with a dynamically allocated uninitialized buffer
@@ -193,7 +190,7 @@ class Tensor<T, TRank> : public Array<T>
       dimensions_(dimensions),
       strides_(make_strides<value_type>(dimensions))
   {
-    Fill<BaseCPU>(*this, init);
+    Fill<device::CPU>(*this, init);
   }
 
   /// Constructor for any rank tensor with a dynamically allocated initialized buffer with padding.
@@ -204,7 +201,7 @@ class Tensor<T, TRank> : public Array<T>
       dimensions_{dimensions},
       strides_{strides}
   {
-    Fill<BaseCPU>(*this, init);
+    Fill<device::CPU>(*this, init);
   }
 
   /// Constructor for any rank tensor with a dynamically allocated uninitialized buffer.
@@ -232,7 +229,7 @@ class Tensor<T, TRank> : public Array<T>
       dimensions_{other.Dimensions()},
       strides_{other.Strides()}
   {
-    Copy<BaseCPU>(other, this->begin());
+    Copy<device::CPU>(other, this->begin());
   }
 
   /// Move constructor
@@ -258,7 +255,7 @@ class Tensor<T, TRank> : public Array<T>
 
     dimensions_ = other.Dimensions();
     strides_ = other.Strides();
-    Copy<BaseCPU>(other, this->begin());
+    Copy<device::CPU>(other, this->begin());
 
     return *this;
   }
