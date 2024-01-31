@@ -6,6 +6,7 @@
 // The contents of this file are confidential and proprietary to Chris Zankel.
 //
 
+#include <grid/tensor/concepts.h>
 #include <grid/tensor/tensor.h>
 #include <grid/tensor/mmap.h>
 #include <grid/tensor/base/tensor.h>

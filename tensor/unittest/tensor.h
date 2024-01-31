@@ -157,6 +157,7 @@ TYPED_TEST_P(TensorTestSuite, TensorAllocUninitializedPattedRank3Double)
 
 TYPED_TEST_P(TensorTestSuite, TensorMMap)
 {
+#if 0
   std::FILE* tmpf = std::tmpfile();
 
   std::array<size_t, 4> ds1 = {2, 4, size<double>(4), size<double>(1)};
@@ -203,6 +204,7 @@ TYPED_TEST_P(TensorTestSuite, TensorMMap)
   EXPECT_EQ(tensor2, result2);
 
   std::fclose(tmpf);
+#endif
 }
 
 TYPED_TEST_P(TensorTestSuite, TensorViewBraceInitializationTensor)

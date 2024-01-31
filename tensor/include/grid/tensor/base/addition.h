@@ -21,8 +21,8 @@ namespace grid {
 ///   Matrix + row-vector    --> Matrix is split into row blocks, each added with the vector
 ///
 /// Note that tensor ranks must always match. In the case of broadcasting, the dimension is simply set to 1.
-template <typename T, size_t TRank, PrimitiveTensor TTensor1, PrimitiveTensor TTensor2>
-requires (TTensor1::Rank() == TTensor2::Rank())
+template <typename T, size_t TRank, AnyTensor TTensor1, AnyTensor TTensor2>
+// FIXME requires (TTensor1::Rank() == TTensor2::Rank())
 class TensorAdd<Tensor, T, TRank, TTensor1, TTensor2>
 {
  public:
@@ -135,9 +135,12 @@ class TensorAdd<Tensor, T, TRank, TTensor1, TTensor2>
 // CTAD
 //
 
-template <ConvertibleTo<Tensor> TTensor1, ConvertibleTo<Tensor> TTensor2>
-TensorAdd(TTensor1, TTensor2)
-  -> TensorAdd<Tensor, typename TTensor1::value_type, TTensor1::rank,
+//template <ConvertibleTo<Tensor> TTensor1, ConvertibleTo<Tensor> TTensor2>
+template <typename TTensor1, typename TTensor2>
+TensorAdd(TTensor1&&, TTensor2&&)
+  -> TensorAdd<Tensor,
+               typename std::remove_reference_t<TTensor1>::value_type,
+               std::remove_reference_t<TTensor1>::rank,
                typename to_tensor<TTensor1>::type, typename to_tensor<TTensor2>::type>;
 
 } // end of namespace grid

@@ -22,13 +22,79 @@ struct TensorBaseType
 
 struct TensorBaseType
 {
-  template <typename T, size_t TRank, typename... TAllocator>
-  class Tensor : public grid::Tensor<T, TRank, TAllocator...>
+  template <typename T, size_t TRank, typename TAllocator>
+  class Tensor : public grid::Tensor<T, TRank, TAllocator>
   {
    public:
-    using grid::Tensor<T, TRank, TAllocator...>::Tensor;
+    using grid::Tensor<T, TRank, TAllocator>::Tensor;
   };
 
+  template <typename T>
+  explicit Tensor(T) -> Tensor<T, 0, grid::ScalarAllocator>;
+  template <typename T>
+  explicit Tensor(grid::Uninitialized<T>) -> Tensor<T, 0, grid::ScalarAllocator>;
+
+  template <typename T, typename... Ts>
+  explicit Tensor(T, Ts...) -> Tensor<std::common_type_t<T, Ts...>, 1, grid::StaticAllocator<sizeof...(Ts)+1>>;
+  template <typename T, size_t... N>
+  explicit Tensor(T(&&... l)[N]) -> Tensor<T, 2, grid::StaticAllocator<sizeof...(N), std::max({N...})>>;
+  template <typename T, size_t... M, size_t... N>
+  explicit Tensor(T(&&... l)[M][N]) -> Tensor<T, 3, grid::StaticAllocator<sizeof...(M), std::max({M...}), std::max({N...})>>;
+
+  // dynamic tensors
+  template <typename T>
+  explicit Tensor(size_t, T) -> Tensor<T, 1, grid::StdAllocator>;
+  template <typename T>
+  explicit Tensor(size_t, grid::Uninitialized<T>) -> Tensor<T, 1, grid::StdAllocator>;
+  template <typename T>
+  explicit Tensor(size_t, size_t, T) -> Tensor<T, 2, grid::StdAllocator>;
+  template <typename T>
+  explicit Tensor(size_t, size_t, grid::Uninitialized<T>) -> Tensor<T, 2, grid::StdAllocator>;
+  template <typename T, size_t N>
+  explicit Tensor(const size_t(&)[N], const ssize_t(&)[N], T) -> Tensor<T, N, grid::StdAllocator>;
+  template <typename T, size_t N>
+  explicit Tensor(const size_t(&)[N], const ssize_t(&)[N], grid::Uninitialized<T>) -> Tensor<T, N, grid::StdAllocator>;
+  template <typename T, size_t N>
+  explicit Tensor(size_t(&&)[N], ssize_t(&&)[N], T) -> Tensor<T, N, grid::StdAllocator>;
+  template <typename T, size_t N>
+  explicit Tensor(size_t(&&)[N], ssize_t(&&)[N], grid::Uninitialized<T>) -> Tensor<T, N, grid::StdAllocator>;
+  template <typename T, size_t N>
+  explicit Tensor(const size_t(&)[N], T) -> Tensor<T, N, grid::StdAllocator>;
+  template <typename T, size_t N>
+  explicit Tensor(const size_t(&)[N], grid::Uninitialized<T>) -> Tensor<T, N, grid::StdAllocator>;
+  template <typename T, size_t N>
+  explicit Tensor(const size_t(&&)[N], T) -> Tensor<T, N, grid::StdAllocator>;
+  template <typename T, size_t N>
+  explicit Tensor(const size_t(&&)[N], grid::Uninitialized<T>) -> Tensor<T, N, grid::StdAllocator>;
+  template <typename T, size_t N>
+  explicit Tensor(std::array<size_t, N>, T) -> Tensor<T, N, grid::StdAllocator>;
+  template <typename T, size_t N>
+  explicit Tensor(std::array<size_t, N>, std::array<ssize_t, N>, T) -> Tensor<T, N, grid::StdAllocator>;
+  template <typename T, size_t N>
+  explicit Tensor(std::array<size_t, N>, grid::Uninitialized<T>) -> Tensor<T, N, grid::StdAllocator>;
+  template <typename T, size_t N>
+  explicit Tensor(std::array<size_t, N>, std::array<ssize_t, N>, grid::Uninitialized<T>) -> Tensor<T, N, grid::StdAllocator>;
+
+  // copy & move constructors
+  template <typename T, size_t N, typename TAllocator>
+  Tensor(const grid::Tensor<T, N, TAllocator>&) -> Tensor<T, N, grid::StdAllocator>;
+
+  // memory-mapped tensors
+  template <grid::Arithmetic T, size_t N>
+  explicit Tensor(const size_t(&)[N], const std::tuple<T*, size_t>&) -> Tensor<T, N, grid::NoAllocator>;
+  template <grid::Arithmetic T, size_t N>
+  explicit Tensor(const std::array<size_t, N>&, const std::tuple<T*, size_t>&) -> Tensor<T, N, grid::NoAllocator>;
+
+  // tensor view
+  template <template <typename, size_t> typename TensorView, typename TTensor, size_t TRank>
+  Tensor(TensorView<TTensor, TRank>&&) -> Tensor<typename TTensor::value_type, TRank, grid::StdAllocator>;
+  template <template <typename, size_t> typename TensorView, typename TTensor, size_t TRank>
+  Tensor(const TensorView<TTensor, TRank>&) -> Tensor<typename TTensor::value_type, TRank, grid::StdAllocator>;
+
+  template <grid::AnyOperator TOperator>
+  Tensor(const TOperator&) -> Tensor<typename TOperator::value_type, TOperator::rank, grid::StdAllocator>;
+
+#if 0
   // rank-0 tensor
   template <typename T>
   explicit Tensor(T) -> Tensor<T, 0>;
@@ -77,15 +143,9 @@ struct TensorBaseType
   template <typename T, size_t N>
   explicit Tensor(std::array<size_t, N>, std::array<ssize_t, N>, grid::Uninitialized<T>) -> Tensor<T, N>;
 
-  // memory-mapped tensors
-  template <grid::Arithmetic T, size_t N>
-  explicit Tensor(const size_t(&)[N], const std::tuple<T*, size_t>&) -> Tensor<T, N, grid::NoAllocator>;
-  template <grid::Arithmetic T, size_t N>
-  explicit Tensor(const std::array<size_t, N>&, const std::tuple<T*, size_t>&) -> Tensor<T, N, grid::NoAllocator>;
-
   // copy & move constructors
   template <typename T, size_t N, typename TAllocator>
-  Tensor(const grid::Tensor<T, N, TAllocator>&) -> Tensor<T, N>;
+  Tensor(const grid::Tensor<T, N, TAllocator>&) -> Tensor<T, N, StdAllocator>;
   template <typename T, size_t N>
   Tensor(grid::Tensor<T, N>&&) -> Tensor<T, N>;
 
@@ -99,12 +159,15 @@ struct TensorBaseType
   template <template <template <typename, size_t, typename...> typename, typename, size_t, typename...> typename Operator,
   template <typename, size_t, typename...> typename TTensor, typename T, size_t TRank, typename... TTensors>
   Tensor(Operator<TTensor, T, TRank, TTensors...>&&) -> Tensor<T, TRank>;
+
   template <template <template <typename, size_t, typename...> typename, typename, size_t, typename...> typename Operator,
   template <typename, size_t, typename...> typename TTensor, typename T, size_t TRank, typename... TTensors>
   Tensor(const Operator<TTensor, T,  TRank, TTensors...>&) -> Tensor<T, TRank>;
 
   template <grid::AnyOperator TOperator>
   Tensor(const TOperator&) -> Tensor<typename TOperator::value_type, TOperator::rank>;
+#endif
+
 };
 
 #endif

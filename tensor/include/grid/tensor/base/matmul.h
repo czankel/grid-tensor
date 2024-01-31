@@ -15,12 +15,15 @@ namespace grid {
 
 /// TensorMatMul<Tensor> implements tensor multiplication operation for tensors of the same and
 /// different ranks, such as matrix multiplication (MatMul) and vector dot-product (VecDot).
-template <typename T, size_t TRank, PrimitiveTensor TTensor1, PrimitiveTensor TTensor2>
+//template <typename T, size_t TRank, PrimitiveTensor TTensor1, PrimitiveTensor TTensor2>
+template <typename T, size_t TRank, AnyTensor TTensor1, AnyTensor TTensor2>
 class TensorMatMul<Tensor, T, TRank, TTensor1, TTensor2>
 {
  public:
   using value_type = T;
   using pointer = T*;
+  using tensor1_type = std::remove_cvref_t<TTensor1>; // FIXME: use constexpr ...tensor1_rank type is not used?
+  using tensor2_type = std::remove_cvref_t<TTensor2>;
   using const_pointer = const T*;
   constexpr static size_t rank = TRank;
 
@@ -29,11 +32,11 @@ class TensorMatMul<Tensor, T, TRank, TTensor1, TTensor2>
    : tensor1_(std::forward<T1>(tensor1)),
      tensor2_(std::forward<T2>(tensor2))
   {
-    if constexpr (TTensor1::rank > 0 && TTensor2::rank > 0)
+    if constexpr (tensor1_type::rank > 0 && tensor2_type::rank > 0)
     {
       // matmul: dim-m (rank-2) and dim-n (rank-1) have to match; vectors have only one dim
-      size_t dim_n = TTensor1::rank > 1 ? TTensor1::rank - 2 : 0;
-      if (tensor1_.Dimensions()[TTensor1::rank-1] != tensor2_.Dimensions()[dim_n])
+      size_t dim_n = tensor1_type::rank > 1 ? tensor2_type::rank - 2 : 0;
+      if (tensor1_.Dimensions()[tensor1_type::rank-1] != tensor2_.Dimensions()[dim_n])
         throw std::runtime_error("dimensions don't match");
     }
   }
@@ -124,7 +127,7 @@ class TensorMatMul<Tensor, T, TRank, TTensor1, TTensor2>
  public:
 
   /// operator()() executes and returns a (scalar) tensor with the 'vector dot' multiplication.
-  auto operator()() const requires (TTensor1::rank == 1 && TTensor2::rank == 1)
+  auto operator()() const requires (tensor1_type::rank == 1 && tensor2_type::rank == 1)
   {
     size_t dimensions = tensor1_.Dimensions()[0];
     auto result = Tensor(Uninitialized<value_type>{});
@@ -140,7 +143,7 @@ class TensorMatMul<Tensor, T, TRank, TTensor1, TTensor2>
   }
 
   /// operator()() executes and returns a (matrix) tensor for a mtrix multiplication.
-  auto operator()() const requires (TTensor1::rank == 2 && TTensor2::rank == 2)
+  auto operator()() const requires (tensor1_type::rank == 2 && tensor2_type::rank == 2)
   {
     auto&& dimensions1 = tensor1_.Dimensions();
     auto&& dimensions2 = tensor2_.Dimensions();
@@ -159,7 +162,7 @@ class TensorMatMul<Tensor, T, TRank, TTensor1, TTensor2>
   }
 
   /// operator()() execute and returns a tensor of the same rank for a matrix/vector * scalar multiplication.
-  auto operator()() const requires (TTensor2::rank == 0)
+  auto operator()() const requires (tensor2_type::rank == 0)
   {
     auto&& dimensions = tensor1_.Dimensions();
     auto result = Tensor(dimensions, Uninitialized<value_type>{});
@@ -172,9 +175,9 @@ class TensorMatMul<Tensor, T, TRank, TTensor1, TTensor2>
           std::span(tensor1_.Strides()));
     return result;
   }
-
+// FIXME: change logic, tensor1_type should be argument above
   /// operator()() execute and returns a tensor of the same rank for a scalar * matrix/vector multiplication.
-  auto operator()() const requires (TTensor1::rank == 0 && TTensor2::rank != 0)
+  auto operator()() const requires (tensor2_type::rank != 0 && tensor1_type::rank == 0)
   {
     auto&& dimensions = tensor2_.Dimensions();
     auto result = Tensor(dimensions, Uninitialized<value_type>{});
@@ -190,7 +193,7 @@ class TensorMatMul<Tensor, T, TRank, TTensor1, TTensor2>
   }
 
   /// operator()() executes and returns a (vector) tensor of a matrix * vector multiplication.
-  auto operator()() const requires (TTensor1::rank == 2 && TTensor2::rank == 1)
+  auto operator()() const requires (tensor1_type::rank == 2 && tensor2_type::rank == 1)
   {
     auto&& dimensions1 = tensor1_.Dimensions();
     auto result = Tensor(dimensions1[0], Uninitialized<value_type>{});
@@ -212,7 +215,7 @@ class TensorMatMul<Tensor, T, TRank, TTensor1, TTensor2>
   }
 
   /// operator()() executes and returns a (vector) tensor of a vector * matrix multiplication.
-  auto operator()() const requires (TTensor1::rank == 1 && TTensor2::rank == 2)
+  auto operator()() const requires (tensor1_type::rank == 1 && tensor2_type::rank == 2)
   {
     auto&& dimensions2 = tensor2_.Dimensions();
     auto result = Tensor(dimensions2[1], Uninitialized<value_type>{});
@@ -246,22 +249,32 @@ namespace {
 template <typename TTensor1, typename TTensor2>
 struct matmul_rank
 {
+  using T1 = std::remove_reference_t<TTensor1>;
+  using T2 = std::remove_reference_t<TTensor2>;
   constexpr static size_t value =
-    (TTensor1::rank == 0 ? TTensor2::rank :
-     TTensor2::rank == 0 ? TTensor1::rank :
-     std::min(TTensor1::rank, TTensor2::rank));
+    (T1::rank == 0 ? T2::rank :
+     T2::rank == 0 ? T1::rank :
+     std::min(T1::rank, T2::rank));
 };
 }
 
-template <ConvertibleTo<Tensor> TTensor1, ConvertibleTo<Tensor> TTensor2>
-TensorMatMul(TTensor1, TTensor2)
-  -> TensorMatMul<Tensor, typename TTensor2::value_type, matmul_rank<TTensor1, TTensor2>::value,
-               typename to_tensor<TTensor1>::type, typename to_tensor<TTensor2>::type>;
+//template <ConvertibleTo<Tensor> TTensor1, ConvertibleTo<Tensor> TTensor2>
+template <typename TTensor1, typename TTensor2>
+TensorMatMul(TTensor1&&, TTensor2&&)
+  -> TensorMatMul<Tensor,
+                  typename std::remove_reference_t<TTensor2>::value_type,
+                  matmul_rank<TTensor1, TTensor2>::value,
+                  typename to_tensor<TTensor1>::type,
+                  typename to_tensor<TTensor2>::type>;
 
-template <ConvertibleTo<Tensor> TTensor, Arithmetic T>
-TensorMatMul(TTensor, T)
-  -> TensorMatMul<Tensor, typename TTensor::value_type, TTensor::rank,
-               typename to_tensor<TTensor>::type, Tensor<typename TTensor::value_type, 0>>;
+//template <ConvertibleTo<Tensor> TTensor, Arithmetic T>
+template <typename TTensor, Arithmetic T>
+TensorMatMul(TTensor&&, T)
+  -> TensorMatMul<Tensor,
+                  typename std::remove_reference_t<TTensor>::value_type,
+                  std::remove_reference_t<TTensor>::rank,
+                  typename to_tensor<TTensor>::type,
+                  Tensor<typename std::remove_cvref_t<TTensor>::value_type, 0, ScalarAllocator>>;
 
 } // end of namespace grid
 

@@ -47,8 +47,10 @@ inline void initialize(T* dst, std::span<const size_t, N> dimensions, std::span<
 
 } // end of namespace details
 
+
+/// Array specialization using the std allocation .. FIXME
 template <typename T>
-class Array
+class Array<T, StdAllocator>
 {
   using value_type = T;
   using pointer = value_type*;
@@ -117,6 +119,97 @@ class Array
   size_t  size_;
   pointer data_;
 };
+
+/// Array specialization using the std allocation .. FIXME
+template <typename T>
+class Array<T, ScalarAllocator>
+{
+ public:
+  using value_type = T;
+  using pointer = value_type*;
+  using const_pointer = const value_type*;
+  static constexpr std::array<size_t, 1> dimensions{0};
+
+ public:
+  Array() = default;
+
+  // Explicity disallow copy construction as Array isn't fully aware of any buffer structure.
+  Array(const Array& other) = delete;
+
+  // @brief Move constructor.
+  Array(Array&& other) : size_(other.size_), data_(other.data_) {}
+
+  // FIXME
+  Array(std::array<T, 1>&& array) : data_(array[0]) {}
+
+  // @brief Allocates a buffer of the provided size.
+  Array(value_type init) : data_(init) {}
+
+  Array& operator=(Array&& other)
+  {
+    data_ = other.data_;
+    return *this;
+  }
+
+  Array& operator=(const Array& other) = delete;
+
+  /// Size returns the size of the entire buffer.
+  size_t Size() const                                     { return 1; }
+
+  /// Data returns a pointer to the data buffer.
+  pointer Data()                                          { return &data_; }
+
+  /// Data returns a pointer to the data buffer.
+  const_pointer Data() const                              { return &data_; }
+
+ protected:
+  size_t      size_;
+  value_type  data_;
+};
+
+
+/// Array specialization for static data.
+template <typename T, size_t... Ns>
+class Array<T, StaticAllocator<Ns...>>
+{
+ public:
+  using value_type = T;
+  using pointer = value_type*;  // FIXME should be const?
+  using const_pointer = const value_type*;
+  static constexpr std::array<size_t, sizeof...(Ns)> dimensions = { Ns... };
+  static constexpr size_t size = std::accumulate(
+      std::begin(dimensions), std::end(dimensions), sizeof(value_type), std::multiplies<size_t>());
+  static constexpr size_t array_size = std::accumulate(
+      std::begin(dimensions), std::end(dimensions), 1, std::multiplies<size_t>());
+
+ public:
+  Array() = default;
+
+  // Explicity disallow copy construction as Array isn't fully aware of any buffer structure.
+  Array(const Array& other) = delete;
+
+  // @brief Move constructor.
+  Array(Array&& other) = delete; // : size_(other.size_), data_(std::move(other.data_)) { other.data_ = nullptr; }
+
+  // @brief Allocates a buffer of the provided size. FIXME
+  Array(std::array<T, array_size>&& array) : array_(array) {}
+  Array& operator=(Array&& other) = delete;
+  Array& operator=(const Array& other) = delete;
+
+
+  /// Size returns the size of the entire buffer.
+  size_t Size() const                                     { return sizeof(value_type) * size; }
+
+  /// Data returns a pointer to the data buffer.
+  pointer Data()                                          { return array_.data(); }
+
+  /// Data returns a pointer to the data buffer.
+  const_pointer Data() const                              { return array_.data(); }
+
+ protected:
+  std::array<value_type, array_size>  array_;
+};
+
 
 
 // FIXME: the coordinates of the first tensor must be added to the
