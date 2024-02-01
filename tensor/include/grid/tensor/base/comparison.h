@@ -46,8 +46,8 @@ equals(const T* src1, const T* src2,
   {
     if (*src1 != *src2)
       return false;
-    reinterpret_cast<const char*&>(src1) += strides1[0];
-    reinterpret_cast<const char*&>(src2) += strides2[0];
+    src1 += strides1[0];
+    src2 += strides2[0];
   }
   return true;
 }
@@ -67,8 +67,8 @@ equals(const T* src1, const T* src2,
     if (std::abs(*src1 - *src2) > eps)
       return false;
 
-    reinterpret_cast<const char*&>(src1) += strides1[0];
-    reinterpret_cast<const char*&>(src2) += strides2[0];
+    src1 += strides1[0];
+    src2 += strides2[0];
   }
   return true;
 }
@@ -89,8 +89,8 @@ equals(const T* src1, const T* src2,
                              std::span<const ssize_t, N - 1>(strides2.begin() + 1, N - 1)))
       return false;
 
-    reinterpret_cast<const char*&>(src1) += strides1[0];
-    reinterpret_cast<const char*&>(src2) += strides2[0];
+    src1 += strides1[0];
+    src2 += strides2[0];
   }
   return true;
 }

@@ -55,8 +55,8 @@ class TensorElemMul<Tensor, T, TRank, TTensor1, TTensor2>
     for (size_t i = 0; i < dimensions[0]; i++)
     {
       dest[i] = *src1 * *src2;
-      reinterpret_cast<const char*&>(src1) += strides1[0];
-      reinterpret_cast<const char*&>(src2) += strides2[0];
+      src1 += strides1[0];
+      src2 += strides2[0];
     }
   }
 
@@ -75,9 +75,9 @@ class TensorElemMul<Tensor, T, TRank, TTensor1, TTensor2>
           std::span<const ssize_t, N - 1>(strides1.begin() + 1, N - 1),
           std::span<const ssize_t, N - 1>(strides2.begin() + 1, N - 1));
 
-      reinterpret_cast<char*&>(dest) += strides0[0];
-      reinterpret_cast<const char*&>(src1) += strides1[0];
-      reinterpret_cast<const char*&>(src2) += strides2[0];
+      dest += strides0[0];
+      src1 += strides1[0];
+      src2 += strides2[0];
     }
   }
 

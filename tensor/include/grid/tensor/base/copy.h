@@ -36,8 +36,8 @@ copy(T* dst, const T* src,
   for (size_t i = 0; i < dimensions[0]; i++)
   {
     *dst = *src;
-    reinterpret_cast<char*&>(dst) += strides1[0];
-    reinterpret_cast<const char*&>(src) += strides2[0];
+    dst += strides1[0];
+    src += strides2[0];
   }
 }
 
@@ -55,8 +55,8 @@ copy(T* dst, const T* src,
                      std::span<const size_t,  N - 1>(dimensions.begin() + 1, N - 1),
                      std::span<const ssize_t, N - 1>(strides1.begin() + 1, N - 1),
                      std::span<const ssize_t, N - 1>(strides2.begin() + 1, N - 1));
-    reinterpret_cast<char*&>(dst) += strides1[0];
-    reinterpret_cast<const char*&>(src) += strides2[0];
+    dst += strides1[0];
+    src += strides2[0];
   }
 }
 

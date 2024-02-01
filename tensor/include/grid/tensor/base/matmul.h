@@ -60,8 +60,8 @@ class TensorMatMul<Tensor, T, TRank, TTensor1, TTensor2>
     for (size_t i = 0; i < dimensions; i++)
     {
       sum += *src1 * *src2;
-      reinterpret_cast<const char*&>(src1) += strides1;
-      reinterpret_cast<const char*&>(src2) += strides2;
+      src1 += strides1;
+      src2 += strides2;
     }
     *dest = sum;
   }
@@ -82,11 +82,11 @@ class TensorMatMul<Tensor, T, TRank, TTensor1, TTensor2>
       for (size_t n = 0; n < dimensions[2]; n++)
       {
         VecDot(destprime, src1, src2prime, dimensions[1], strides1[1], strides2[0]);
-        reinterpret_cast<char*&>(destprime) += strides0[1];
-        reinterpret_cast<const char*&>(src2prime) += strides2[1];
+        destprime += strides0[1];
+        src2prime += strides2[1];
       }
-      reinterpret_cast<char*&>(dest) += strides0[0];
-      reinterpret_cast<const char*&>(src1) += strides1[0];
+      dest += strides0[0];
+      src1 += strides1[0];
     }
   }
 
@@ -98,8 +98,8 @@ class TensorMatMul<Tensor, T, TRank, TTensor1, TTensor2>
     for (size_t i = 0; i < dimensions[0]; i++)
     {
       *dest = *src * factor;
-      reinterpret_cast<char*&>(dest) += strides0[0];
-      reinterpret_cast<const char*&>(src) += strides1[0];
+      dest += strides0[0];
+      src += strides1[0];
     }
   }
 
@@ -116,8 +116,8 @@ class TensorMatMul<Tensor, T, TRank, TTensor1, TTensor2>
           std::span<const size_t,  N - 1>(dimensions.begin() + 1, N - 1),
           std::span<const ssize_t, N - 1>(strides0.begin() + 1, N - 1),
           std::span<const ssize_t, N - 1>(strides1.begin() + 1, N - 1));
-      reinterpret_cast<char*&>(dest) += strides0[0];
-      reinterpret_cast<const char*&>(src) += strides1[0];
+      dest += strides0[0];
+      src += strides1[0];
     }
   }
 

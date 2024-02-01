@@ -47,7 +47,7 @@ class TensorSoftMax<Tensor, T, TRank, TTensor>
   {
     value_type max{std::numeric_limits<value_type>::lowest()};
 
-    for (size_t i = 0; i < dimensions[0]; i++, reinterpret_cast<const char*&>(src) += strides[0])
+    for (size_t i = 0; i < dimensions[0]; i++, src += strides[0])
       max = std::max(max, *src);
 
     return max;
@@ -62,7 +62,7 @@ class TensorSoftMax<Tensor, T, TRank, TTensor>
     value_type max{std::numeric_limits<value_type>::lowest()};
     static_assert(_N != std::dynamic_extent, "dynamic_extent not allowed");
 
-    for (size_t i = 0; i < dimensions[0]; i++, reinterpret_cast<const char*&>(src) += strides[0])
+    for (size_t i = 0; i < dimensions[0]; i++, src += strides[0])
     {
       max = std::max(max, Max(src,
                               std::span<const size_t,  _N - 1>(dimensions.begin() + 1, _N - 1),
@@ -79,7 +79,7 @@ class TensorSoftMax<Tensor, T, TRank, TTensor>
          std::span<const ssize_t, 1> strides) const
   {
     value_type sum{0};
-    for (size_t i = 0; i < dimensions[0]; i++, reinterpret_cast<const char*&>(src) += strides[0])
+    for (size_t i = 0; i < dimensions[0]; i++, src += strides[0])
     {
       dst[i] = exp(*src - max);
       sum += dst[i];
@@ -98,7 +98,7 @@ class TensorSoftMax<Tensor, T, TRank, TTensor>
     static_assert(_N != std::dynamic_extent, "dynamic_extent not allowed");
 
     value_type sum{0};
-    for (size_t i = 0; i < dimensions[0]; i++, reinterpret_cast<const char*&>(src) += strides[0])
+    for (size_t i = 0; i < dimensions[0]; i++, src += strides[0])
     {
       sum += SumExp(dst, src, max,
                     std::span<const size_t,  _N - 1>(dimensions.begin() + 1, _N - 1),

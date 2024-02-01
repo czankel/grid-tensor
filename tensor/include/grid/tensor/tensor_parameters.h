@@ -84,11 +84,11 @@ get_array(T(&&init)[N])
 
 // make_strides returns a std::array with the strides calculated from the provided dimensions and
 // the template type parameter (make_strides<TYPE>(...))
-template <typename T, size_t TRank, typename Indices = std::make_index_sequence<TRank>>
+template <size_t TRank, typename Indices = std::make_index_sequence<TRank>>
 std::array<ssize_t, TRank> make_strides(const std::array<size_t, TRank>& dimensions)
 {
   std::array<ssize_t, TRank> strides;
-  ssize_t stride = sizeof(T);
+  ssize_t stride = 1;
   for (int i = static_cast<int>(TRank) - 1; i >= 0; i--)
   {
     strides[i] = dimensions[i] != 1 ? stride : 0;
@@ -98,7 +98,7 @@ std::array<ssize_t, TRank> make_strides(const std::array<size_t, TRank>& dimensi
 }
 
 // get_buffer_size returns the required size for the given dimensions and strides.
-template <typename U, typename V>
+template <typename T, typename U, typename V>
 size_t get_buffer_size(U&& dimensions, V&& strides)
 {
   size_t size = 0;
@@ -106,7 +106,7 @@ size_t get_buffer_size(U&& dimensions, V&& strides)
   auto si = std::forward<V>(strides).begin();
   for (; di != dimensions.end() && si != strides.end(); ++di, ++si)
     size = std::max(size, *di * *si);
-  return size;
+  return size * sizeof(T);
 }
 
 // Broadcast expands dimensions ("broadcasting") of the tensors to make them the same rank.

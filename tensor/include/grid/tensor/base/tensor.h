@@ -31,14 +31,14 @@ namespace {
 template <typename T>
 inline void initialize(T* dst, std::span<const size_t, 1> dimensions, std::span<const ssize_t, 1> strides, const T& init)
 {
-  for (size_t i = 0; i < dimensions[0]; i++, reinterpret_cast<char*&>(dst) += strides[0])
+  for (size_t i = 0; i < dimensions[0]; i++, dst += strides[0])
     *dst = init;
 }
 
 template <typename T, size_t N>
 inline void initialize(T* dst, std::span<const size_t, N> dimensions, std::span<const ssize_t, N> strides, const T& init)
 {
-  for (size_t i = 0; i < dimensions[0]; i++, reinterpret_cast<char*&>(dst) += strides[0])
+  for (size_t i = 0; i < dimensions[0]; i++, dst += strides[0])
     initialize(dst,
         std::span<const size_t, N - 1>(dimensions.begin() + 1, dimensions.end()),
         std::span<const ssize_t, N - 1>(strides.begin() + 1, strides.end()),

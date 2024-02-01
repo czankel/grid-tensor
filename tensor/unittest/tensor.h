@@ -13,12 +13,6 @@ using grid::view::Null;
 using grid::view::NewAxis;
 
 
-// helper to get the size of a type of (optional) array of COUNT elements or the TYPE:
-//  size_t bytes = size<TYPE>(COUNT)
-namespace {
-template <typename T> constexpr size_t size(size_t count = 1) { return sizeof(T) * count; }
-}
-
 // Use Google's Type-Parameterized Tests so these tests can be re-used for other device implementations.
 
 template <typename T> class TensorTestSuite : public testing::Test {};
@@ -38,7 +32,7 @@ TYPED_TEST_P(TensorTestSuite, TensorBraceInitializationRank1Integer)
   EXPECT_TRUE(grid::is_tensor_v<decltype(tensor1)>);
   EXPECT_EQ(tensor1.Rank(), 1);
   EXPECT_THAT(tensor1.Dimensions(), ElementsAre(6));
-  EXPECT_THAT(tensor1.Strides(), ElementsAre(size<int>(1)));
+  EXPECT_THAT(tensor1.Strides(), ElementsAre(1));
 
   int data[] = { 11, 22, 33, 44, 55, 66 };
   EXPECT_EQ(memcmp(tensor1.Data(), data, sizeof(data)), 0);
@@ -50,7 +44,7 @@ TYPED_TEST_P(TensorTestSuite, TensorBraceInitializationRank2Integer)
 
   EXPECT_EQ(tensor1.Rank(), 2);
   EXPECT_THAT(tensor1.Dimensions(), ElementsAre(3, 4));
-  EXPECT_THAT(tensor1.Strides(), ElementsAre(size<int>(4), size<int>(1)));
+  EXPECT_THAT(tensor1.Strides(), ElementsAre(4, 1));
 
   const int* data = reinterpret_cast<const int*>(tensor1.Data());
   EXPECT_EQ(data[0], 11);
@@ -76,7 +70,7 @@ TYPED_TEST_P(TensorTestSuite, TensorBraceInitializationRank3Integer)
 
   EXPECT_EQ(tensor1.Rank(), 3);
   EXPECT_THAT(tensor1.Dimensions(), ElementsAre(3, 4, 5));
-  EXPECT_THAT(tensor1.Strides(), ElementsAre(size<int>(4*5), size<int>(5), size<int>(1)));
+  EXPECT_THAT(tensor1.Strides(), ElementsAre(4*5, 5, 1));
 
   const int* data = reinterpret_cast<const int*>(tensor1.Data());
   EXPECT_EQ(data[0],  111);
@@ -93,7 +87,7 @@ TYPED_TEST_P(TensorTestSuite, TensorAllocInitializedRank1Double)
 
   EXPECT_EQ(tensor1.Rank(), 1);
   EXPECT_THAT(tensor1.Dimensions(), ElementsAre(4));
-  EXPECT_THAT(tensor1.Strides(), ElementsAre(size<double>(1)));
+  EXPECT_THAT(tensor1.Strides(), ElementsAre(1));
 
   double verify[] = { 1.2, 1.2, 1.2, 1.2 };
   EXPECT_EQ(memcmp(tensor1.Data(), verify, sizeof(verify)), 0);
@@ -104,7 +98,7 @@ TYPED_TEST_P(TensorTestSuite, TensorAllocUninitializedRank1Double)
   typename TypeParam::Tensor tensor1(5UL, grid::Uninitialized<double>{});
   EXPECT_EQ(tensor1.Rank(), 1);
   EXPECT_THAT(tensor1.Dimensions(), ElementsAre(5));
-  EXPECT_THAT(tensor1.Strides(), ElementsAre(size<double>(1)));
+  EXPECT_THAT(tensor1.Strides(), ElementsAre(1));
 }
 
 TYPED_TEST_P(TensorTestSuite, TensorAllocInitializedRank2Char)
@@ -113,7 +107,7 @@ TYPED_TEST_P(TensorTestSuite, TensorAllocInitializedRank2Char)
 
   EXPECT_EQ(tensor1.Rank(), 2);
   EXPECT_THAT(tensor1.Dimensions(), ElementsAre(5, 4));
-  EXPECT_THAT(tensor1.Strides(), ElementsAre(size<char>(4), size<char>(1)));
+  EXPECT_THAT(tensor1.Strides(), ElementsAre(4, 1));
 
   char verify[] = { '3', '3', '3', '3', '3',
                     '3', '3', '3', '3', '3',
@@ -128,7 +122,7 @@ TYPED_TEST_P(TensorTestSuite, TensorAllocUninitializedRank2Double)
 
   EXPECT_EQ(tensor1.Rank(), 2);
   EXPECT_THAT(tensor1.Dimensions(), ElementsAre(7, 3));
-  EXPECT_THAT(tensor1.Strides(), ElementsAre(size<int>(3), size<int>(1)));
+  EXPECT_THAT(tensor1.Strides(), ElementsAre(3, 1));
 }
 
 TYPED_TEST_P(TensorTestSuite, TensorAllocInitializedRank3Double)
@@ -137,21 +131,21 @@ TYPED_TEST_P(TensorTestSuite, TensorAllocInitializedRank3Double)
 
   EXPECT_EQ(tensor1.Rank(), 3);
   EXPECT_THAT(tensor1.Dimensions(), ElementsAre(4, 5, 7));
-  EXPECT_THAT(tensor1.Strides(), ElementsAre(size<double>(7 * 5), size<double>(7), size<double>(1)));
+  EXPECT_THAT(tensor1.Strides(), ElementsAre(7 * 5, 7, 1));
 }
 
 TYPED_TEST_P(TensorTestSuite, TensorAllocUninitializedRank3Double)
 {
   typename TypeParam::Tensor t33({3, 2, 1}, grid::Uninitialized<double>{});
-  EXPECT_THAT(t33.Strides(), ElementsAre(size<double>(2 * 1), size<double>(1), size<double>(0)));
+  EXPECT_THAT(t33.Strides(), ElementsAre(2 * 1, 1, 0));
 }
 
 TYPED_TEST_P(TensorTestSuite, TensorAllocUninitializedPattedRank3Double)
 {
-  typename TypeParam::Tensor tensor1({3, 2, 1}, {size<double>(2 * 2 * 4), size<double>(2 * 2), size<double>(2)}, grid::Uninitialized<double>{});
+  typename TypeParam::Tensor tensor1({3, 2, 1}, {2 * 2 * 4, 2 * 2, 2}, grid::Uninitialized<double>{});
   EXPECT_EQ(tensor1.Rank(), 3);
   EXPECT_THAT(tensor1.Dimensions(), ElementsAre(3, 2, 1));
-  EXPECT_THAT(tensor1.Strides(), ElementsAre(size<double>(2 * 2 * 4), size<double>(2 * 2), size<double>(2)));
+  EXPECT_THAT(tensor1.Strides(), ElementsAre(2 * 2 * 4, 2 * 2, 2));
 }
 
 
@@ -159,14 +153,14 @@ TYPED_TEST_P(TensorTestSuite, TensorMMap)
 {
   std::FILE* tmpf = std::tmpfile();
 
-  std::array<size_t, 4> ds1 = {2, 4, size<double>(4), size<double>(1)};
+  std::array<size_t, 4> ds1 = {2, 4, 4, 1};
   std::fwrite(ds1.data(), sizeof ds1[0], ds1.size(), tmpf);
 
   std::array<double, 4> row1 = {1.2, 2.3, 3.4, 4.5};
   std::fwrite(row1.data(), sizeof row1[0], row1.size(), tmpf);
   std::fwrite(row1.data(), sizeof row1[0], row1.size(), tmpf);
 
-  std::array<size_t, 4> ds2 = {2, 3, size<double>(3), size<double>(1)};
+  std::array<size_t, 4> ds2 = {2, 3, 3, 1};
   std::fwrite(ds2.data(), sizeof ds2[0], ds2.size(), tmpf);
 
   std::array<double, 3> row2 = {4.3, 3.2, 2.1};
@@ -185,7 +179,7 @@ TYPED_TEST_P(TensorTestSuite, TensorMMap)
   grid::MMapView view(std::move(mmap));
   auto dimensions1 = view.Read<std::array<size_t, 2>>();
   auto strides1 = view.Read<std::array<ssize_t, 2>>();
-  auto size1 = grid::get_buffer_size(dimensions1, strides1);
+  auto size1 = grid::get_buffer_size<double>(dimensions1, strides1);
   double* addr1 = reinterpret_cast<double*>(view.Address());
   typename TypeParam::Tensor tensor1(dimensions1, std::make_tuple(addr1, size1));
 
@@ -195,7 +189,7 @@ TYPED_TEST_P(TensorTestSuite, TensorMMap)
   view.Seek(size1);
   auto dimensions2 = view.Read<std::array<size_t, 2>>();
   auto strides2 = view.Read<std::array<ssize_t, 2>>();
-  auto size2 = grid::get_buffer_size(dimensions2, strides2);
+  auto size2 = grid::get_buffer_size<double>(dimensions2, strides2);
   double* addr2 = reinterpret_cast<double*>(view.Address());
   typename TypeParam::Tensor tensor2(dimensions2, std::make_tuple(addr2, size2));
 
@@ -224,7 +218,7 @@ TYPED_TEST_P(TensorTestSuite, TensorViewBraceInitializationTensor)
     auto view_row = tensor1.View(1, 2, Slice());
     EXPECT_EQ(view_row.Rank(), 1);
     EXPECT_THAT(view_row.Dimensions(), ElementsAre(5));
-    EXPECT_THAT(view_row.Strides(), ElementsAre(size<int>(1)));
+    EXPECT_THAT(view_row.Strides(), ElementsAre(1));
     typename TypeParam::Tensor expected{231, 232, 233, 234, 235};
     EXPECT_EQ(view_row, expected);
   }
@@ -244,21 +238,21 @@ TYPED_TEST_P(TensorTestSuite, TensorViewAllocInitializationTensor)
     { 1.1, 5.4, 1.1, 1.1, 1.1} };
 
   EXPECT_THAT(tensor.Dimensions(), ElementsAre(4, 5));
-  EXPECT_THAT(tensor.Strides(), ElementsAre(size<double>(5 * 1), size<double>(1)));
+  EXPECT_THAT(tensor.Strides(), ElementsAre(5 * 1, 1));
   EXPECT_EQ(tensor, expected);
 
   // tensor[2]-> (5)
   auto view_index = tensor.View(2);
   EXPECT_EQ(view_index.Rank(), 1);
   EXPECT_THAT(view_index.Dimensions(), ElementsAre(5UL));
-  EXPECT_THAT(view_index.Strides(), ElementsAre(size<double>(1)));
+  EXPECT_THAT(view_index.Strides(), ElementsAre(1));
   EXPECT_EQ(view_index.Data(), data + 2 * 5);
 
   // tensor[2:] -> (2, 5)
   auto view_span = tensor.View(Slice(2));
   EXPECT_EQ(view_span.Rank(), 2);
   EXPECT_THAT(view_span.Dimensions(), ElementsAre(2UL, 5UL));
-  EXPECT_THAT(view_span.Strides(), ElementsAre(size<double>(5), size<double>(1)));
+  EXPECT_THAT(view_span.Strides(), ElementsAre(5, 1));
   EXPECT_EQ(view_span.Data(), data + 2 * 5);
 }
 
@@ -270,25 +264,25 @@ TYPED_TEST_P(TensorTestSuite, TensorBroadcast)
   auto view_newaxis_0 = tensor.View(NewAxis);
   EXPECT_EQ(view_newaxis_0.Rank(), 3);
   EXPECT_THAT(view_newaxis_0.Dimensions(), ElementsAre(1UL, 4UL, 5UL));
-  EXPECT_THAT(view_newaxis_0.Strides(), ElementsAre(size<double>(0), size<double>(5), size<double>(1)));
+  EXPECT_THAT(view_newaxis_0.Strides(), ElementsAre(0, 5, 1));
 
   // tensor[:,newaxis] -> (4, 1, 5)
   auto view_newaxis_1 = tensor.View(Slice(), NewAxis);
   EXPECT_EQ(view_newaxis_1.Rank(), 3);
   EXPECT_THAT(view_newaxis_1.Dimensions(), ElementsAre(4UL, 1UL, 5UL));
-  EXPECT_THAT(view_newaxis_1.Strides(), ElementsAre(size<double>(5), size<double>(0), size<double>(1)));
+  EXPECT_THAT(view_newaxis_1.Strides(), ElementsAre(5, 0, 1));
 
   // tensor[:,:,newaxis] -> (4, 5, 1)
   auto view_newaxis_2 = tensor.View(Slice(), Slice(), NewAxis);
   EXPECT_EQ(view_newaxis_2.Rank(), 3);
   EXPECT_THAT(view_newaxis_2.Dimensions(), ElementsAre(4UL, 5UL, 1UL));
-  EXPECT_THAT(view_newaxis_2.Strides(), ElementsAre(size<double>(5), size<double>(1), size<double>(0)));
+  EXPECT_THAT(view_newaxis_2.Strides(), ElementsAre(5, 1, 0));
 
   // tensor[:,:1:0] -> (4, 1)
   auto view_change_to_broadcast = tensor.View(Slice(), Slice(0, 1, 0));
   EXPECT_EQ(view_change_to_broadcast.Rank(), 2);
   EXPECT_THAT(view_change_to_broadcast.Dimensions(), ElementsAre(4UL, 1UL));
-  EXPECT_THAT(view_change_to_broadcast.Strides(), ElementsAre(size<double>(5), size<double>(0)));
+  EXPECT_THAT(view_change_to_broadcast.Strides(), ElementsAre(5, 0));
 }
 
 

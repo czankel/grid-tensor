@@ -57,7 +57,7 @@ class TensorRmsNorm<Tensor, T, TRank, TTensor>
   {
     value_type value{0};
     size_t count = dimensions[0];
-    for (size_t i = 0; i < dimensions[0]; i++, reinterpret_cast<const char*&>(src) += strides[0])
+    for (size_t i = 0; i < dimensions[0]; i++, src += strides[0])
       value += *src * *src;
     return std::tuple{value, count};
   }
@@ -71,7 +71,7 @@ class TensorRmsNorm<Tensor, T, TRank, TTensor>
     static_assert(N != std::dynamic_extent, "dynamic_extent not allowed");
     value_type value{0};
     size_t count = 0;
-    for (size_t i = 0; i < dimensions[0]; i++, reinterpret_cast<const char*&>(src) += strides[0])
+    for (size_t i = 0; i < dimensions[0]; i++, src += strides[0])
     {
       auto [s, c] = SumSquare(src,
                               std::span<const size_t,  N - 1>(dimensions.begin() + 1, N - 1),

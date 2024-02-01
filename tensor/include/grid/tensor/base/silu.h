@@ -45,7 +45,7 @@ class TensorSilu<Tensor, T, TRank, TTensor>
        std::span<const size_t,  1> dimensions,
        std::span<const ssize_t, 1> strides) const
   {
-    for (size_t i = 0; i < dimensions[0]; i++, reinterpret_cast<const char*&>(src) += strides[0])
+    for (size_t i = 0; i < dimensions[0]; i++, src += strides[0])
       dst[i] = *src / (1.0f + exp(-*src));
   }
 
@@ -57,7 +57,7 @@ class TensorSilu<Tensor, T, TRank, TTensor>
        std::span<const ssize_t, _N> strides) const
   {
     static_assert(_N != std::dynamic_extent, "dynamic_extent not allowed");
-    for (size_t i = 0; i < dimensions[0]; i++, reinterpret_cast<const char*&>(src) += strides[0])
+    for (size_t i = 0; i < dimensions[0]; i++, src += strides[0])
       Silu(dst, src,
            std::span<const size_t,  _N - 1>(dimensions.begin() + 1, _N - 1),
            std::span<const ssize_t, _N - 1>(strides.begin() + 1, _N - 1));

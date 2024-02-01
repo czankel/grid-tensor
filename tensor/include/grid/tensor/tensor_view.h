@@ -234,7 +234,7 @@ inline auto View(TTensor& tensor, Ts&&... ts)
       }
 
       view_size = std::max(view_size, extent * tensor_strides[tensor_index]);
-      view_offset += start * tensor_strides[tensor_index];
+      view_offset += start * tensor_strides[tensor_index] * sizeof(typename TTensor::value_type);
 
       if (++tensor_index > tensor.Rank())
         throw std::runtime_error("index exceeds tensor rank");
