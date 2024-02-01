@@ -68,15 +68,8 @@ template <typename TDevice> struct CopyFunc;
 ///   std::array<ssize_t, Rank>  Strides() const
 ///   pointer                    Data()
 ///   const_pointer              Data() const
-template <typename T, size_t TRank, typename... TAllocator> class Tensor;
-
-/// Tensor<T,TRank> provides an non-optimized base implementation of tensors using the standard
-/// std:allocator (new/delete).
-/// Note that the implementation implicitly requires that the buffer and strides are aligned to the value type.
-template <typename TDevice> struct FillFunc;
-template <typename TDevice> struct CopyFunc;
-template <typename T, size_t TRank>
-class Tensor<T, TRank> : public Array<T>
+template <typename T, size_t TRank, typename TAllocator = std::allocator<T>>
+class Tensor : public Array<T>
 {
   template <PrimitiveTensor P, size_t R> friend class TensorView;
 
@@ -85,7 +78,7 @@ class Tensor<T, TRank> : public Array<T>
 
  public:
   using value_type = T;
-  using allocator_type = std::allocator<T>;
+  using allocator_type = TAllocator;
   using pointer = value_type*;
   using reference = value_type&;
   using const_pointer = const value_type*;
