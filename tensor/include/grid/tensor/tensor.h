@@ -21,6 +21,7 @@
 #include "tensor_parameters.h"
 #include "tensor_view.h"
 
+
 namespace grid {
 
 // The arithmetic declaraions must be specialized for different tensor types, which supports
@@ -70,6 +71,15 @@ class Tensor : public Array<T, TMemory>
   template <typename TDevice> static constexpr FillFunc<TDevice> Fill;
   template <typename TDevice> static constexpr CopyFunc<TDevice> Copy;
 
+
+  // helper to extract the template parameters for StaticMemory
+  template <typename> struct mem_ext;
+  template <size_t... Ns> struct mem_ext<grid::StaticMemory<Ns...>>
+  {
+    static constexpr std::array<size_t, sizeof...(Ns)> array{Ns...};
+  };
+
+
  public:
   using value_type = T;
   using memory_type = TMemory;
@@ -89,6 +99,35 @@ class Tensor : public Array<T, TMemory>
   Tensor(const value_type& init) : Array<value_type, memory_type>(init) {}
   Tensor(value_type&& init) : Array<value_type, memory_type>(init) {}
   Tensor(Uninitialized<value_type>) {}
+
+
+  /// Constructor for a rank-1 tensor (vector) with static brace initialization.
+  explicit Tensor(std::initializer_list<value_type>&& init) requires (TRank > 0)
+    : Array<value_type, memory_type>(get_array<value_type, mem_ext<memory_type>::array[0]>(std::move(init))),
+      dimensions_(mem_ext<memory_type>::array),
+      strides_{1}
+  {}
+
+  /// Constructor for a rank-2 tensor (matrix) with static brace initialization.
+  explicit Tensor(std::initializer_list<std::initializer_list<value_type>>&& init)
+    : Array<value_type, memory_type>(
+        get_array<value_type, mem_ext<memory_type>::array[0], mem_ext<memory_type>::array[1]>(std::move(init))),
+      dimensions_(mem_ext<memory_type>::array),
+      strides_{make_strides(dimensions_)}
+  {}
+
+  /// Constructor for a rank-3 tensor with static brace initialization.
+  explicit Tensor(std::initializer_list<std::initializer_list<std::initializer_list<value_type>>>&& init)
+    : Array<value_type, memory_type>(
+        get_array<value_type,
+                  mem_ext<memory_type>::array[0],
+                  mem_ext<memory_type>::array[1],
+                  mem_ext<memory_type>::array[2]>(std::move(init))),
+      dimensions_(mem_ext<memory_type>::array),
+      strides_{make_strides(dimensions_)}
+  {}
+
+
 
   /// Constructor for a rank-1 tensor (vector) with a dynamically allocated buffer without padding.
   explicit Tensor(size_t dimension, value_type init)
@@ -333,250 +372,6 @@ class Tensor : public Array<T, TMemory>
  private:
   std::array<size_t, TRank>         dimensions_;
   std::array<ssize_t, TRank>        strides_;
-};
-
-
-/// Tensor<T, 1, N> is a specialization of a rank-1 tensor (vector) for a 'static' array.
-/// Note that the brace-initializer form of Tensors don't support padding.
-template <typename T, size_t N>
-class Tensor<T, 1, StaticMemory<N>>
-{
- public:
-  using value_type = T;
-  using allocator_type = StaticMemory<N>;
-  using pointer = const value_type*;
-  using reference = const value_type&;
-  using const_pointer = const value_type*;
-  using const_reference = const value_type&;
-  constexpr static size_t rank = 1UL;
-
-  /// Constructor for a rank-1 tensor (vector) with brace initialization.
-  explicit Tensor(std::initializer_list<value_type>&& init)
-    : dimensions_{N},
-      strides_{1},
-      array_(get_array<value_type, N>(std::move(init)))
-  {}
-
-
-  /// View returns a view of the proivded tensor.
-  template <typename... Ts>
-  auto View(Ts&&... slices)
-  {
-    return view::View(*this, std::forward<Ts>(slices)...);
-  }
-
-  template <typename... Ts>
-  auto View(Ts&&... slices) const
-  {
-    return view::View(*this, std::forward<Ts>(slices)...);
-  }
-
-  /// Reshape returns a view of the tensor with a different shape (axes, dimensions, strides)
-  /// of the underlying array.
-  template <size_t TViewRank>
-  auto Reshape(const std::array<size_t, TViewRank>& dimensions,
-               const std::array<ssize_t, TViewRank>& strides)
-  {
-    return view::Reshape(*this, std::to_array(dimensions), std::to_array(strides));
-  }
-
-  template <size_t TViewRank>
-  auto Reshape(const std::array<size_t, TViewRank>& dimensions,
-               const std::array<ssize_t, TViewRank>& strides) const
-  {
-    return view::Reshape(*this, std::to_array(dimensions), std::to_array(strides));
-  }
-
-
-  /// begin returns a const iterator for the begin of the Tensor array
-  auto begin() const                  { return details::ConstIterator(this, Data()); }
-
-  /// cend returns a const sentinel for the end of the Tensor array
-  auto end() const                    { return details::ConstIterator(this, Data(), Dimensions()); }
-
-
-  /// Rank returns the rank of the tensor.
-  constexpr static size_t Rank()                          { return 1UL; }
-
-  /// Dimensions returns the dimensions for the axis.
-  const std::array<size_t, 1>& Dimensions() const         { return dimensions_; }
-
-  /// Strides returns the strides for the axis.
-  const std::array<ssize_t, 1>& Strides() const           { return strides_; }
-
-  /// Size returns the size of the entire buffer.
-  size_t Size() const                                     { return sizeof(value_type) * N; }
-
-  /// Data returns a pointer to the data buffer.
-  const_pointer Data() const                              { return array_.data(); }
-
- private:
-  std::array<size_t, 1>     dimensions_;
-  std::array<ssize_t, 1>    strides_;
-  std::array<value_type, N> array_;
-};
-
-
-/// Tensor<T, M, N> is a specialization of a rank-2 tensor (matrix) for a 'static' array.
-/// Note that the brace-initializer form of Tensors don't support padding.
-template <typename T, size_t M, size_t N>
-class Tensor<T, 2, StaticMemory<M, N>>
-{
- public:
-  using value_type = T;
-  using pointer = const value_type*;
-  using reference = const value_type&;
-  using const_pointer = const value_type*;
-  using const_reference = const value_type&;
-  constexpr static size_t rank = 2UL;
-
-  /// Constructor for a rank-2 (matrix) brace initialization.
-  explicit Tensor(std::initializer_list<std::initializer_list<value_type>>&& init)
-    : dimensions_{M, N},
-      strides_{ M != 1 ? N : 0, 1},
-      array_(get_array<value_type, M, N>(std::move(init)))
-  {}
-
-
-  /// View returns a view of the proivded tensor.
-  template <typename... Ts>
-  auto View(Ts&&... slices)
-  {
-    return view::View(*this, std::forward<Ts>(slices)...);
-  }
-
-  template <typename... Ts>
-  auto View(Ts&&... slices) const
-  {
-    return view::View(*this, std::forward<Ts>(slices)...);
-  }
-
-  /// Reshape returns a view of the tensor with a different shape (axes, dimensions, strides)
-  /// of the underlying array.
-  template <size_t TViewRank>
-  auto Reshape(const std::array<size_t, TViewRank>& dimensions,
-               const std::array<ssize_t, TViewRank>& strides)
-  {
-    return view::Reshape(*this, std::to_array(dimensions), std::to_array(strides));
-  }
-
-  template <size_t TViewRank>
-  auto Reshape(const std::array<size_t, TViewRank>& dimensions,
-               const std::array<ssize_t, TViewRank>& strides) const
-  {
-    return view::Reshape(*this, std::to_array(dimensions), std::to_array(strides));
-  }
-
-
-  /// begin returns a const iterator for the begin of the Tensor array
-  auto begin() const                  { return details::ConstIterator(this, Data()); }
-
-  /// cend returns a const sentinel for the end of the Tensor array
-  auto end() const                    { return details::ConstIterator(this, Data(), Dimensions()); }
-
-
-  /// Rank returns the rank of the tensor.
-  constexpr static size_t Rank()                          { return 2UL; }
-
-  /// Dimensions returns the dimensions for the axis.
-  const std::array<size_t, 2>& Dimensions() const         { return dimensions_; }
-
-  /// Strides returns the strides for the axis.
-  const std::array<ssize_t, 2>& Strides() const           { return strides_; }
-
-  /// Size returns the size of the entire buffer.
-  size_t Size() const                                     { return sizeof(value_type) * M * N; }
-
-  /// Data returns a pointer to the data buffer.
-  const_pointer Data() const                              { return array_.data(); }
-
- private:
-  std::array<size_t, 2>           dimensions_;
-  std::array<ssize_t, 2>          strides_;
-  std::array<value_type, M * N> array_;
-};
-
-
-/// Tensor<T, C, M, N> is a specialization of a rank-3 tensor for a 'static' array.
-/// Note that the brace-initializer form of Tensors don't support padding.
-template <typename T, size_t C, size_t M, size_t N>
-class Tensor<T, 3, StaticMemory<C, M, N>>
-{
- public:
-  using value_type = T;
-  using allocator_type = StaticMemory<C, M, N>;
-  using pointer = const value_type*;
-  using reference = const value_type&;
-  using const_pointer = const value_type*;
-  using const_reference = const value_type&;
-  constexpr static size_t rank = 3UL;
-
-  /// Constructor for a rank-2 (matrix) brace initialization.
-  explicit Tensor(std::initializer_list<std::initializer_list<std::initializer_list<value_type>>>&& init)
-    : dimensions_{C, M, N},
-      strides_{ C != 1 ? M * N : 0,
-                M != 1 ? N : 0,
-                N != 1 ? 1 : 0},
-      array_(get_array<value_type, C, M, N>(std::move(init)))
-  {}
-
-
-  /// View returns a view of the proivded tensor.
-  template <typename... Ts>
-  auto View(Ts&&... slices)
-  {
-    return view::View(*this, std::forward<Ts>(slices)...);
-  }
-
-  template <typename... Ts>
-  auto View(Ts&&... slices) const
-  {
-    return view::View(*this, std::forward<Ts>(slices)...);
-  }
-
-  /// Reshape returns a view of the tensor with a different shape (axes, dimensions, strides)
-  /// of the underlying array.
-  template <size_t TViewRank>
-  auto Reshape(const std::array<size_t, TViewRank>& dimensions,
-               const std::array<ssize_t, TViewRank>& strides)
-  {
-    return view::Reshape(*this, std::to_array(dimensions), std::to_array(strides));
-  }
-
-  template <size_t TViewRank>
-  auto Reshape(const std::array<size_t, TViewRank>& dimensions,
-               const std::array<ssize_t, TViewRank>& strides) const
-  {
-    return view::Reshape(*this, std::to_array(dimensions), std::to_array(strides));
-  }
-
-
-  /// begin returns a const iterator for the begin of the Tensor array
-  auto begin() const                  { return details::ConstIterator(this, Data()); }
-
-  /// cend returns a const sentinel for the end of the Tensor array
-  auto end() const                    { return details::ConstIterator(this, Data(), Dimensions()); }
-
-
-  /// Rank returns the rank of the tensor.
-  constexpr static size_t Rank()                          { return 3UL; }
-
-  /// Dimensions returns the dimensions for the axis.
-  const std::array<size_t, 3>& Dimensions() const         { return dimensions_; }
-
-  /// Strides returns the strides for the axis.
-  const std::array<ssize_t, 3>& Strides() const           { return strides_; }
-
-  /// Size returns the size of the entire buffer.
-  size_t Size() const                                     { return sizeof(value_type) * C * M * N; }
-
-  /// Data returns a pointer to the data buffer.
-  const_pointer Data() const                              { return array_.data(); }
-
-
-  std::array<size_t, 3>                 dimensions_;
-  std::array<ssize_t, 3>                strides_;
-  std::array<value_type, C * M * N>  array_;
 };
 
 
