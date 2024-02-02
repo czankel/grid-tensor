@@ -23,6 +23,8 @@ class TensorElemMul<Tensor, T, TRank, TTensor1, TTensor2>
   using pointer = T*;
   using const_pointer = const T*;
   constexpr static size_t rank = TRank;
+  constexpr static size_t tensor1_rank = std::remove_cvref_t<TTensor1>::rank;
+  constexpr static size_t tensor2_rank = std::remove_cvref_t<TTensor2>::rank;
 
   template <ConvertibleTo<Tensor> T1, ConvertibleTo<Tensor> T2>
   TensorElemMul(T1&& tensor1, T2&& tensor2)
@@ -91,10 +93,10 @@ class TensorElemMul<Tensor, T, TRank, TTensor1, TTensor2>
 
     // handle broadcast
     std::array<size_t, rank> dimensions;
-    if constexpr (TTensor1::rank <= TTensor2::rank)
+    if constexpr (tensor1_rank <= tensor2_rank)
     {
       size_t i = 0;
-      for (; i < TTensor2::rank; i++)
+      for (; i < tensor2_rank; i++)
         dimensions[i] = dimensions1[i];
       for (size_t j = 0; i < rank; i++, j++)
         dimensions[i] = dimensions1[i] != 1 ? dimensions1[i] : dimensions2[j];
@@ -102,7 +104,7 @@ class TensorElemMul<Tensor, T, TRank, TTensor1, TTensor2>
     else
     {
       size_t i = 0;
-      for (; i < TTensor1::rank; i++)
+      for (; i < tensor1_rank; i++)
         dimensions[i] = dimensions2[i];
       for (size_t j = 0; i < rank; i++, j++)
         dimensions[i] = dimensions2[i] != 1 ? dimensions2[i] : dimensions2[j];
@@ -131,9 +133,12 @@ class TensorElemMul<Tensor, T, TRank, TTensor1, TTensor2>
 //
 
 template <ConvertibleTo<Tensor> TTensor1, ConvertibleTo<Tensor> TTensor2>
-TensorElemMul(TTensor1, TTensor2)
-  -> TensorElemMul<Tensor, typename TTensor2::value_type, std::max(TTensor1::rank, TTensor2::rank),
-               typename to_tensor<TTensor1>::type, typename to_tensor<TTensor2>::type>;
+TensorElemMul(TTensor1&&, TTensor2&&)
+  -> TensorElemMul<Tensor,
+                   typename std::remove_cvref_t<TTensor2>::value_type,
+                   std::max(std::remove_cvref_t<TTensor1>::rank, std::remove_cvref_t<TTensor2>::rank),
+                   typename to_tensor<TTensor1>::type,
+                   typename to_tensor<TTensor2>::type>;
 
 } // end of namespace grid
 

@@ -85,8 +85,11 @@ class TensorSilu<Tensor, T, TRank, TTensor>
 //
 
 template <ConvertibleTo<Tensor> TTensor>
-TensorSilu(TTensor)
-  -> TensorSilu<Tensor, typename TTensor::value_type, TTensor::rank, typename to_tensor<TTensor>::type>;
+TensorSilu(TTensor&&)
+  -> TensorSilu<Tensor,
+                typename std::remove_cvref_t<TTensor>::value_type,
+                std::remove_cvref_t<TTensor>::rank,
+                typename to_tensor<TTensor>::type>;
 
 } // end of namespace grid
 

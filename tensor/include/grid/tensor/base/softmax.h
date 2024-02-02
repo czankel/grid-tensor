@@ -137,8 +137,11 @@ class TensorSoftMax<Tensor, T, TRank, TTensor>
 //
 
 template <ConvertibleTo<Tensor> TTensor>
-TensorSoftMax(TTensor)
-  -> TensorSoftMax<Tensor, typename TTensor::value_type, TTensor::rank, typename to_tensor<TTensor>::type>;
+TensorSoftMax(TTensor&&)
+  -> TensorSoftMax<Tensor,
+                   typename std::remove_cvref_t<TTensor>::value_type,
+                   std::remove_cvref_t<TTensor>::rank,
+                   typename to_tensor<TTensor>::type>;
 
 } // end of namespace grid
 
