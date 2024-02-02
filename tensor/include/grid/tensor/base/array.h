@@ -15,7 +15,7 @@ namespace grid {
 
 /// brief: Array is a dynamically allocated buffer.
 template <typename T>
-class Array
+class Array<T, DynamicMemory>
 {
   using value_type = T;
   using pointer = value_type*;
