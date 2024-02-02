@@ -28,7 +28,7 @@ using grid::view::Extent;
 namespace grid {
 
 /// LLaMAModelT is the templated version of the LLaMAModel class for data type and backend.
-template <template <typename, size_t, typename...> typename Tensor, typename T>
+template <typename T>
 class LLaMAModelT : public LLaMAModel
 {
   friend class KarpathyFile;
@@ -50,7 +50,7 @@ class LLaMAModelT : public LLaMAModel
   virtual void Predict(std::string_view prompt, size_t steps);
 
   /// Load loads the LLaMA model from the provided file.
-  static LLaMAModelT<Tensor, T>* Load(LLaMAFile& file);
+  static LLaMAModelT<T>* Load(LLaMAFile& file);
 
  protected:
   // EncodeBPE encodes the prompt into a token vector using byte-pair encoding
@@ -108,10 +108,10 @@ class LLaMAModelT : public LLaMAModel
 };
 
 
-template <template <typename, size_t, typename...> typename Tensor, typename T>
-LLaMAModelT<Tensor, T>* LLaMAModelT<Tensor, T>::Load(LLaMAFile& file)
+template <typename T>
+LLaMAModelT<T>* LLaMAModelT<T>::Load(LLaMAFile& file)
 {
-  auto* model = new LLaMAModelT<Tensor, T>();
+  auto* model = new LLaMAModelT<T>();
 
   file.GetParameters(model->parameters_);
   file.GetTokenizer(model->vocab_);
@@ -163,8 +163,8 @@ LLaMAModelT<Tensor, T>* LLaMAModelT<Tensor, T>::Load(LLaMAFile& file)
 
 
 // Byte-Pair Encoding
-template <template <typename, size_t, typename...> typename Tensor, typename T>
-void LLaMAModelT<Tensor, T>::EncodeBPE(std::string_view prompt, std::vector<LLaMAVocab::token>& tokens)
+template <typename T>
+void LLaMAModelT<T>::EncodeBPE(std::string_view prompt, std::vector<LLaMAVocab::token>& tokens)
 {
   if (vocab_.add_bos_token_)
     tokens.push_back(vocab_.bos_token_);
@@ -233,8 +233,8 @@ void LLaMAModelT<Tensor, T>::EncodeBPE(std::string_view prompt, std::vector<LLaM
 }
 
 
-template <template <typename, size_t, typename...> typename Tensor, typename T>
-std::string LLaMAModelT<Tensor, T>::Decode(LLaMAVocab::token prev, LLaMAVocab::token token)
+template <typename T>
+std::string LLaMAModelT<T>::Decode(LLaMAVocab::token prev, LLaMAVocab::token token)
 {
   std::string symbol = vocab_.scores_[token].text;
 
@@ -266,8 +266,8 @@ std::string LLaMAModelT<Tensor, T>::Decode(LLaMAVocab::token prev, LLaMAVocab::t
 
 // Note that this is a "lower-rank" implementation going through the calculation for each
 // token vector instead of combining a sequence into a matrix and using higher-rank tensors.
-template <template <typename, size_t, typename...> typename Tensor, typename T>
-void LLaMAModelT<Tensor, T>::Forward(LLaMAVocab::token token, size_t pos)
+template <typename T>
+void LLaMAModelT<T>::Forward(LLaMAVocab::token token, size_t pos)
 {
   using namespace grid;
 
@@ -353,8 +353,8 @@ void LLaMAModelT<Tensor, T>::Forward(LLaMAVocab::token token, size_t pos)
   logits_ = TensorMatMul(output_, TensorRmsNorm(x_) * output_norm_);
 }
 
-template <template <typename, size_t, typename...> typename Tensor, typename T>
-LLaMAVocab::token LLaMAModelT<Tensor, T>::SampleArgMax()
+template <typename T>
+LLaMAVocab::token LLaMAModelT<T>::SampleArgMax()
 {
   float max_p = std::numeric_limits<float>::lowest();
   int max_i = 0;
@@ -372,16 +372,16 @@ LLaMAVocab::token LLaMAModelT<Tensor, T>::SampleArgMax()
   return max_i;
 }
 
-template <template <typename, size_t, typename...> typename Tensor, typename T>
-LLaMAVocab::token LLaMAModelT<Tensor, T>::Sample()
+template <typename T>
+LLaMAVocab::token LLaMAModelT<T>::Sample()
 {
   // greedy argmax sampling: return the token with the highest probability
   // TODO: implement entropy sampling: if (temperature_ == value_type(0))
   return SampleArgMax();
 }
 
-template <template <typename, size_t, typename...> typename Tensor, typename T>
-void LLaMAModelT<Tensor, T>::Predict(std::string_view prompt, size_t steps)
+template <typename T>
+void LLaMAModelT<T>::Predict(std::string_view prompt, size_t steps)
 {
   using token = LLaMAVocab::token;
 

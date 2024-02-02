@@ -73,8 +73,7 @@ std::ostream& LLaMAFile::PrintModelInfo(std::ostream& out) const
 // LLaMAModel
 //
 
-template <> // template <typename, size_t, typename...> typename Tensor>
-LLaMAModel* LLaMAModel::Load<Tensor>(LLaMAFile& file, bool mmap)
+LLaMAModel* LLaMAModel::Load(LLaMAFile& file, bool mmap)
 {
   if (!mmap)
     throw("only memory-mapped files currently supported");
@@ -84,7 +83,7 @@ LLaMAModel* LLaMAModel::Load<Tensor>(LLaMAFile& file, bool mmap)
   if (data_type != typeid(float))
     throw std::runtime_error("invalid data type, only float is supported");
 
-  return LLaMAModelT<Tensor, float>::Load(file);
+  return LLaMAModelT<float>::Load(file);
 }
 
 } // end of namespace grid
