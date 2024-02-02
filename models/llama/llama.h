@@ -37,8 +37,8 @@ class LLaMAModelT : public LLaMAModel
   /// Using two tensor types, a dynamically allocated default tensor and a memory-mapped file tensors.
   using Tensor1D = Tensor<T, 1>;
   using Tensor2D = Tensor<T, 2>;
-  using TensorFile1D = Tensor<T, 1, NoAllocator>;
-  using TensorFile2D = Tensor<T, 2, NoAllocator>;
+  using TensorFile1D = Tensor<T, 1, MemoryMapped>;
+  using TensorFile2D = Tensor<T, 2, MemoryMapped>;
 
  protected:
   LLaMAModelT() = default;

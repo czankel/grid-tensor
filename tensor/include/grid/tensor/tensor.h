@@ -17,17 +17,11 @@
 #include "concepts.h"
 #include "device.h"
 #include "iterator.h"
+#include "memory.h"
 #include "tensor_parameters.h"
 #include "tensor_view.h"
 
 namespace grid {
-
-/// StaticAllocator is a special "allocator" for constant static data.
-template <size_t...> struct StaticAllocator {};
-
-/// NoAllocator is a spcial "allocator" for an externally managed buffer.
-struct NoAllocator {};
-
 
 // The arithmetic declaraions must be specialized for different tensor types, which supports
 // specializations for accelerators.
@@ -68,7 +62,7 @@ template <typename TDevice> struct CopyFunc;
 ///   std::array<ssize_t, Rank>  Strides() const
 ///   pointer                    Data()
 ///   const_pointer              Data() const
-template <typename T, size_t TRank, typename TAllocator = std::allocator<T>>
+template <typename T, size_t TRank, typename TAllocator = DynamicMemory>
 class Tensor : public Array<T>
 {
   template <PrimitiveTensor P, size_t R> friend class TensorView;
@@ -341,7 +335,7 @@ class Tensor<T, 0>
 {
  public:
   using value_type = T;
-  using allocator_type = StaticAllocator<1>;
+  using allocator_type = StaticMemory<1>;
   using pointer = value_type*;
   using reference = value_type&;
   using const_pointer = const value_type*;
@@ -399,11 +393,11 @@ class Tensor<T, 0>
 /// Tensor<T, 1, N> is a specialization of a rank-1 tensor (vector) for a 'static' array.
 /// Note that the brace-initializer form of Tensors don't support padding.
 template <typename T, size_t N>
-class Tensor<T, 1, StaticAllocator<N>>
+class Tensor<T, 1, StaticMemory<N>>
 {
  public:
   using value_type = T;
-  using allocator_type = StaticAllocator<N>;
+  using allocator_type = StaticMemory<N>;
   using pointer = const value_type*;
   using reference = const value_type&;
   using const_pointer = const value_type*;
@@ -480,7 +474,7 @@ class Tensor<T, 1, StaticAllocator<N>>
 /// Tensor<T, M, N> is a specialization of a rank-2 tensor (matrix) for a 'static' array.
 /// Note that the brace-initializer form of Tensors don't support padding.
 template <typename T, size_t M, size_t N>
-class Tensor<T, 2, StaticAllocator<M, N>>
+class Tensor<T, 2, StaticMemory<M, N>>
 {
  public:
   using value_type = T;
@@ -560,11 +554,11 @@ class Tensor<T, 2, StaticAllocator<M, N>>
 /// Tensor<T, C, M, N> is a specialization of a rank-3 tensor for a 'static' array.
 /// Note that the brace-initializer form of Tensors don't support padding.
 template <typename T, size_t C, size_t M, size_t N>
-class Tensor<T, 3, StaticAllocator<C, M, N>>
+class Tensor<T, 3, StaticMemory<C, M, N>>
 {
  public:
   using value_type = T;
-  using allocator_type = StaticAllocator<C, M, N>;
+  using allocator_type = StaticMemory<C, M, N>;
   using pointer = const value_type*;
   using reference = const value_type&;
   using const_pointer = const value_type*;
@@ -640,13 +634,13 @@ class Tensor<T, 3, StaticAllocator<C, M, N>>
 };
 
 
-/// Tensor<T, Rank, NoAllocator> is a tensor for an externally managed buffer
+/// Tensor<T, Rank, MemoryMapped> is a tensor for an externally managed buffer
 template <typename T, size_t TRank>
-class Tensor<T, TRank, NoAllocator>
+class Tensor<T, TRank, MemoryMapped>
 {
  public:
   using value_type = T;
-  using allocator_type = NoAllocator;
+  using allocator_type = MemoryMapped;
   using pointer = const value_type*;
   using reference = const value_type&;
   using const_pointer = const value_type*;
@@ -795,15 +789,15 @@ explicit Tensor(Uninitialized<T>) -> Tensor<T, 0>;
 
 // Tensor{Ts...} -> Rank-1 tensor with a static/local array (brace-initializer).
 template <Arithmetic T, typename... Ts>
-explicit Tensor(T, Ts...) -> Tensor<std::common_type_t<T, Ts...>, 1, StaticAllocator<sizeof...(Ts)+1>>;
+explicit Tensor(T, Ts...) -> Tensor<std::common_type_t<T, Ts...>, 1, StaticMemory<sizeof...(Ts)+1>>;
 
 // Tensor{{...},...} -> Rank-2 tensor with a static/local array (brace-initializer).
 template <Arithmetic T, size_t... N>
-Tensor(T(&&... l)[N]) -> Tensor<T, 2, StaticAllocator<sizeof...(N), std::max({N...})>>;
+Tensor(T(&&... l)[N]) -> Tensor<T, 2, StaticMemory<sizeof...(N), std::max({N...})>>;
 
 // Tensor{{{...},...},...} -> Rank-3 tensor with a static/local array (brace-initializer).
 template <Arithmetic T, size_t... M, size_t... N>
-explicit Tensor(T(&&... l)[M][N]) -> Tensor<T, 3, StaticAllocator<sizeof...(M), std::max({M...}), std::max({N...})>>;
+explicit Tensor(T(&&... l)[M][N]) -> Tensor<T, 3, StaticMemory<sizeof...(M), std::max({M...}), std::max({N...})>>;
 
 // Tensor with Dynamic Allocator - Paremter List
 
@@ -889,11 +883,11 @@ template <template <template <typename, size_t, typename...> typename, typename,
           template <typename, size_t, typename...> typename TTensor, typename T, size_t TRank, typename... TTensors>
 Tensor(const TOperator<TTensor, T,  TRank, TTensors...>&) -> Tensor<T, TRank>;
 
-// Tensor with "NoAllocator"
+// Tensor with "MemoryMapped"
 template <Arithmetic T, size_t N>
-explicit Tensor(const size_t(&)[N], const std::tuple<T*, size_t>&) -> Tensor<T, N, NoAllocator>;
+explicit Tensor(const size_t(&)[N], const std::tuple<T*, size_t>&) -> Tensor<T, N, MemoryMapped>;
 template <Arithmetic T, size_t N>
-explicit Tensor(const std::array<size_t, N>&, const std::tuple<T*, size_t>&) -> Tensor<T, N, grid::NoAllocator>;
+explicit Tensor(const std::array<size_t, N>&, const std::tuple<T*, size_t>&) -> Tensor<T, N, grid::MemoryMapped>;
 
 
 //
