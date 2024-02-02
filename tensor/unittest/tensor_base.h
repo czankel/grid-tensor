@@ -14,8 +14,8 @@
 
 struct TensorBaseType
 {
-  template <typename T, size_t N, typename... TAllocator>
-  using Tensor = grid::Tensor<T, N, TAllocator...>;
+  template <typename T, size_t N, typename A>
+  using Tensor = grid::Tensor<T, N, A>;
 };
 
 #else

@@ -51,7 +51,8 @@ class LLaMAModel
   /// @param file  LLaMA file.
   /// @param mmap  Enable to map the tensors into memory (mmap)
   /// @returns LLaMA model
-  template <template <typename, size_t, typename...> typename Tensor>
+  //template <template <typename, size_t, typename...> typename Tensor>
+  //template<typename T>
   static LLaMAModel* Load(LLaMAFile& file, bool mmap = true);
 };
 

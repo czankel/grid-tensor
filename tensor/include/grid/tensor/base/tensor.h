@@ -167,6 +167,18 @@ class Array<T, ScalarAllocator>
   value_type  data_;
 };
 
+template <typename T, size_t... Ns>
+struct initializer_list_info
+{
+  static constexpr std::array<size_t, sizeof...(Ns)> dimensions = { Ns... };
+  static constexpr size_t size = std::accumulate(
+      std::begin(dimensions), std::end(dimensions), sizeof(value_type), std::multiplies<size_t>());
+  // remove, is size / sizeof(T) or size() -> number of elements * sizeof(T)
+  static constexpr size_t count = std::accumulate(
+      std::begin(dimensions), std::end(dimensions), 1, std::multiplies<size_t>());
+};
+
+
 
 /// Array specialization for static data.
 template <typename T, size_t... Ns>
@@ -176,6 +188,9 @@ class Array<T, StaticAllocator<Ns...>>
   using value_type = T;
   using pointer = value_type*;  // FIXME should be const?
   using const_pointer = const value_type*;
+
+// FIXME: move this out
+
   static constexpr std::array<size_t, sizeof...(Ns)> dimensions = { Ns... };
   static constexpr size_t size = std::accumulate(
       std::begin(dimensions), std::end(dimensions), sizeof(value_type), std::multiplies<size_t>());
@@ -270,8 +285,8 @@ struct CopyFunc<device::CPU>
   }
 };
 
-template <typename TDevice> inline constexpr CopyFunc<TDevice> Copy;
-template <typename TDevice> inline constexpr FillFunc<TDevice> Fill;
+//template <typename TDevice> inline constexpr CopyFunc<TDevice> Copy;
+//template <typename TDevice> inline constexpr FillFunc<TDevice> Fill;
 
 
 

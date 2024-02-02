@@ -25,6 +25,8 @@ namespace grid {
 /// StaticAllocator is a special "allocator" for constant static data.
 template <size_t, size_t...> struct StaticAllocator {};
 
+// FIXME: rename? Dynamic, Mapped, Scalar, Static
+// DynamicMemory, MemoryMapped, Scalar, StaticMemory
 struct StdAllocator {};
 
 /// NoAllocator is a spcial "allocator" for an externally managed buffer.
@@ -50,6 +52,8 @@ template <template <typename, size_t, typename...> typename, typename, size_t, t
 template <typename T, typename TAllocator> class Array;
 template <typename TDevice> struct FillFunc;
 template <typename TDevice> struct CopyFunc;
+  template <typename TDevice> inline constexpr FillFunc<TDevice> Fill;
+  template <typename TDevice> inline constexpr CopyFunc<TDevice> Copy;
 
 
 /// Tensor implements an "AI Tensor" that follows more typical AI implementations rather than
@@ -78,13 +82,15 @@ template <typename TDevice> struct CopyFunc;
 /// Tensor<T,TRank> provides an non-optimized base implementation of tensors using the standard
 /// std:allocator (new/delete).
 /// Note that the implementation implicitly requires that the buffer and strides are aligned to the value type.
-template <typename T, size_t TRank, typename TAllocator = StdAllocator>
+template <typename T, size_t TRank, typename TAllocator>
 class Tensor : public Array<T, TAllocator>
 {
   template <PrimitiveTensor P, size_t R> friend class TensorView;
 
+#if 0 // g++ doesn't like that
   template <typename TDevice> static constexpr FillFunc<TDevice> Fill;
   template <typename TDevice> static constexpr CopyFunc<TDevice> Copy;
+#endif
 
  public:
   using value_type = T;
@@ -104,24 +110,25 @@ class Tensor : public Array<T, TAllocator>
   // FIXME not use, uses initializer list with tensor{ 4 };
 #if 1
   Tensor(const value_type& init)
-    : Array<value_type, allocator_type>(init),
-      dimensions_(1),
-      strides_{sizeof(value_type)}
+    : Array<value_type, allocator_type>(init) // FIXME,
+      //dimensions_(1),
+      //strides_{sizeof(value_type)}
   {}
 
   Tensor(value_type&& init)
-    : Array<value_type, allocator_type>(init),
+    : Array<value_type, allocator_type>(init)
       //dimensions_(1),
-      strides_{sizeof(value_type)}
+      //strides_{sizeof(value_type)}
   {}
 #endif
 
   /// Constructor for a rank-0 tensor (scalar) with brace initialization.
   explicit Tensor(Uninitialized<value_type>)
     //: dimensions_(1),
-    : strides_{sizeof(value_type)}
+    //: strides_{sizeof(value_type)}
   {}
 
+  // This is only for static allocation? 
   /// Constructor for a rank-1 tensor (vector) with brace initialization.
   explicit Tensor(std::initializer_list<value_type>&& init) requires (TRank > 0)
     : Array<value_type, allocator_type>(get_array<value_type, array_type::dimensions[0]>(std::move(init))),
@@ -385,6 +392,7 @@ class Tensor : public Array<T, TAllocator>
     return view::Reshape(*this, std::to_array(dimensions), std::to_array(strides));
   }
 
+  // FIXME: only for non-static?
 
   /// begin returns an iterator for the begin of the Tensor array
   auto begin()                        { return details::Iterator(this, array_type::Data()); }
@@ -869,7 +877,6 @@ explicit Tensor(T) -> Tensor<T, 0, ScalarAllocator>;
 template <Arithmetic T>
 explicit Tensor(Uninitialized<T>) -> Tensor<T, 0, ScalarAllocator>;
 
-# if 0
 // Tensor with Static Allocator - Brace-initializer List
 
 // Tensor{Ts...} -> Rank-1 tensor with a static/local array (brace-initializer).
@@ -887,86 +894,105 @@ explicit Tensor(T(&&... l)[M][N]) -> Tensor<T, 3, StaticAllocator<sizeof...(M), 
 // Tensor with Dynamic Allocator - Paremter List
 
 // Tensor(uint,T) -> Rank-1 tensor with a dynamically allocated buffer.
-template <Arithmetic T>
-explicit Tensor(size_t, T) -> Tensor<T, 1>;
+template <Arithmetic T, typename A = StdAllocator>
+explicit Tensor(size_t, T) -> Tensor<T, 1, A>;
 
+# if 1
 // Tensor(uint, Uninitialized<T>) -> Rank-1 tensor with a dynamically allocated uninitialized buffer.
-template <Arithmetic T>
-explicit Tensor(size_t, Uninitialized<T>) -> Tensor<T, 1>;
+template <Arithmetic T, typename A = StdAllocator>
+explicit Tensor(size_t, Uninitialized<T>) -> Tensor<T, 1, A>;
 
 // Tensor(uint, uint, T) -> Rank-2 tensor with a dynamically allocated buffer.
-template <Arithmetic T>
-explicit Tensor(size_t, size_t, T) -> Tensor<T, 2>;
+template <Arithmetic T, typename A = StdAllocator>
+explicit Tensor(size_t, size_t, T) -> Tensor<T, 2, A>;
 
 // Tensor(uint, Uninitialized<T>) -> Rank-2 tensor with a dynamically allocated uninitialized buffer.
-template <Arithmetic T>
-explicit Tensor(size_t, size_t, Uninitialized<T>) -> Tensor<T, 2>;
+template <Arithmetic T, typename A = StdAllocator>
+explicit Tensor(size_t, size_t, Uninitialized<T>) -> Tensor<T, 2, A>;
+
+#endif
 
 // Tensor(&[], &[], T) -> Rank-N tensor with a dynamically allocated initialized buffer.
-template <Arithmetic T, size_t N>
-explicit Tensor(const size_t(&)[N], const ssize_t(&)[N], T) -> Tensor<T, N>;
+template <Arithmetic T, size_t N, typename A = StdAllocator>
+explicit Tensor(const size_t(&)[N], const ssize_t(&)[N], T) -> Tensor<T, N, A>;
 
 // Tensor(&[], &[], Uninitialized<T>) -> Rank-N tensor with a dynamically allocated uninitialized buffer.
-template <Arithmetic T, size_t N>
-explicit Tensor(const size_t(&)[N], const ssize_t(&)[N], Uninitialized<T>) -> Tensor<T, N>;
+template <Arithmetic T, size_t N, typename A = StdAllocator>
+explicit Tensor(const size_t(&)[N], const ssize_t(&)[N], Uninitialized<T>) -> Tensor<T, N, A>;
 
 // Tensor(&&[], &&[], T) -> Rank-N tensor with a dynamically allocated initialized buffer.
-template <Arithmetic T, size_t N>
-explicit Tensor(size_t(&&)[N], ssize_t(&&)[N], T) -> Tensor<T, N>;
+template <Arithmetic T, size_t N, typename A = StdAllocator>
+explicit Tensor(size_t(&&)[N], ssize_t(&&)[N], T) -> Tensor<T, N, A>;
 
 // Tensor(&&[], &&[]) -> Rank-N tensor with a dynamically allocated uninitialized buffer.
-template <Arithmetic T, size_t N>
-explicit Tensor(size_t(&&)[N], ssize_t(&&)[N], Uninitialized<T>) -> Tensor<T, N>;
+template <Arithmetic T, size_t N, typename A = StdAllocator>
+explicit Tensor(size_t(&&)[N], ssize_t(&&)[N], Uninitialized<T>) -> Tensor<T, N, A>;
 
 // Tensor(&[], T) -> Rank-N tensor with a dynamically allocated initialized buffer.
-template <Arithmetic T, size_t N>
-explicit Tensor(const size_t(&)[N], T) -> Tensor<T, N>;
+template <Arithmetic T, size_t N, typename A = StdAllocator>
+explicit Tensor(const size_t(&)[N], T) -> Tensor<T, N, A>;
 
 // Tensor(&[], Uninitialized<T>) -> Rank-N tensor with a dynamically allocated uninitialized buffer.
-template <Arithmetic T, size_t N>
-explicit Tensor(const size_t(&)[N], Uninitialized<T>) -> Tensor<T, N>;
+template <Arithmetic T, size_t N, typename A = StdAllocator>
+explicit Tensor(const size_t(&)[N], Uninitialized<T>) -> Tensor<T, N, A>;
 
 // Tensor(&&[], T) -> Rank-N tensor with a dynamically allocated initialized buffer.
-template <Arithmetic T, size_t N>
-explicit Tensor(const size_t(&&)[N], T) -> Tensor<T, N>;
+template <Arithmetic T, size_t N, typename A = StdAllocator>
+explicit Tensor(const size_t(&&)[N], T) -> Tensor<T, N, A>;
 
 // Tensor(&&[], Uninitialized<T>) -> Rank-N tensor with a dynamically allocated uninitialized buffer.
-template <Arithmetic T, size_t N>
-explicit Tensor(const size_t(&&)[N], Uninitialized<T>) -> Tensor<T, N>;
+template <Arithmetic T, size_t N, typename A = StdAllocator>
+explicit Tensor(const size_t(&&)[N], Uninitialized<T>) -> Tensor<T, N, A>;
 
 // Tensor(array, T)
-template <Arithmetic T, size_t N>
-Tensor(std::array<size_t, N>, T) -> Tensor<T, N>;
+template <Arithmetic T, size_t N, typename A = StdAllocator>
+Tensor(std::array<size_t, N>, T) -> Tensor<T, N, A>;
 
 // Tensor(array, array, T)
-template <Arithmetic T, size_t N>
-explicit Tensor(std::array<size_t, N>, std::array<ssize_t, N>, T) -> Tensor<T, N>;
+template <Arithmetic T, size_t N, typename A = StdAllocator>
+explicit Tensor(std::array<size_t, N>, std::array<ssize_t, N>, T) -> Tensor<T, N, A>;
 
 // Tensor(array, Uninitialized<T>)
-template <Arithmetic T, size_t N>
-explicit Tensor(std::array<size_t, N>, Uninitialized<T>) -> Tensor<T, N>;
+template <Arithmetic T, size_t N, typename A = StdAllocator>
+explicit Tensor(std::array<size_t, N>, Uninitialized<T>) -> Tensor<T, N, A>;
 
 // Tensor(array, array, Uninitialized<T>)
-template <Arithmetic T, size_t N>
-explicit Tensor(std::array<size_t, N>, std::array<ssize_t, N>, Uninitialized<T>) -> Tensor<T, N>;
+template <Arithmetic T, size_t N, typename A = StdAllocator>
+explicit Tensor(std::array<size_t, N>, std::array<ssize_t, N>, Uninitialized<T>) -> Tensor<T, N, A>;
 
 // Tensor with Dynamic Allocator - TensorView Argument
 
-template <typename TTensor, size_t TRank>
-Tensor(TensorView<TTensor, TRank>&&) -> Tensor<typename TTensor::value_type, TRank>;
-template <typename TTensor, size_t TRank>
-Tensor(const TensorView<TTensor, TRank>&) -> Tensor<typename TTensor::value_type, TRank>;
+template <typename TTensor, size_t TRank, typename A = StdAllocator>
+Tensor(TensorView<TTensor, TRank>&&) -> Tensor<typename TTensor::value_type, TRank, A>;
+template <typename TTensor, size_t TRank, typename A = StdAllocator>
+Tensor(const TensorView<TTensor, TRank>&) -> Tensor<typename TTensor::value_type, TRank, A>;
 
 // Tensor with Dynamic Allocator - Operator Argument
 // Tensor(Operator) -> Tensor (move)
-template <template <template <typename, size_t, typename...> typename, typename, size_t, typename...> typename TOperator,
-          template <typename, size_t, typename...> typename TTensor, typename T, size_t TRank, typename... TTensors>
-Tensor(TOperator<TTensor, T, TRank, TTensors...>&&) -> Tensor<T, TRank>;
+template <template <template <typename, size_t, typename> typename, typename, size_t, typename...> typename TOperator,
+          template <typename, size_t, typename> typename TTensor, typename T, size_t TRank, typename... TTensors,
+          typename A = StdAllocator>
+
+Tensor(TOperator<TTensor, T, TRank, TTensors...>&&) -> Tensor<T, TRank, A>;
 
 // Tensor(Operator) -> Tensor (copy)
-template <template <template <typename, size_t, typename...> typename, typename, size_t, typename...> typename TOperator,
-          template <typename, size_t, typename...> typename TTensor, typename T, size_t TRank, typename... TTensors>
-Tensor(const TOperator<TTensor, T,  TRank, TTensors...>&) -> Tensor<T, TRank>;
+template <template <template <typename, size_t, typename> typename, typename, size_t, typename...> typename TOperator,
+          template <typename, size_t, typename> typename TTensor, typename T, size_t TRank, typename... TTensors,
+          typename A = StdAllocator>
+Tensor(const TOperator<TTensor, T,  TRank, TTensors...>&) -> Tensor<T, TRank, A>;
+
+// Tensor(BinaryFunction<BinaryOperator<AddOperator, Tensor<double, 1, grid::StdAllocator>&, grid::Tensor<double, 2, grid::StdAllocator>
+
+template <template <typename, typename...> typename F,
+          //template <typename, size_t, typename> typename... Ts,
+          //typename... Ts,
+          typename T1, typename T2,
+          typename O, typename A = StdAllocator>
+Tensor(const F<O, T1, T2>&)
+  -> Tensor<std::common_type_t<typename std::remove_cvref_t<T1>::value_type,
+                               typename std::remove_cvref_t<T2>::value_type>,
+            std::max(std::remove_cvref_t<T1>::rank, std::remove_cvref_t<T2>::rank), A>;
+
 
 // Tensor with "NoAllocator"
 template <Arithmetic T, size_t N>
@@ -974,7 +1000,6 @@ explicit Tensor(const size_t(&)[N], const std::tuple<T*, size_t>&) -> Tensor<T, 
 template <Arithmetic T, size_t N>
 explicit Tensor(const std::array<size_t, N>&, const std::tuple<T*, size_t>&) -> Tensor<T, N, grid::NoAllocator>;
 
-#endif
 //
 // Tensor basic arithmetic operations
 //

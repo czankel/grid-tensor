@@ -35,7 +35,7 @@ class TensorMatMul<Tensor, T, TRank, TTensor1, TTensor2>
     if constexpr (tensor1_type::rank > 0 && tensor2_type::rank > 0)
     {
       // matmul: dim-m (rank-2) and dim-n (rank-1) have to match; vectors have only one dim
-      size_t dim_n = tensor1_type::rank > 1 ? tensor2_type::rank - 2 : 0;
+      size_t dim_n = tensor1_type::rank > 1 ? tensor1_type::rank - 2 : 0;
       if (tensor1_.Dimensions()[tensor1_type::rank-1] != tensor2_.Dimensions()[dim_n])
         throw std::runtime_error("dimensions don't match");
     }

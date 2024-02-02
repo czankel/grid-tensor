@@ -91,7 +91,7 @@ int main(int argc, char** argv)
 
   std::cout << "Prompt: " << prompt << std::endl;
 
-  std::unique_ptr<grid::LLaMAModel> model(grid::LLaMAModel::Load<grid::Tensor>(*file));
+  std::unique_ptr<grid::LLaMAModel> model(grid::LLaMAModel::Load(*file));
 
   std::chrono::steady_clock::time_point start_time;
   start_time = std::chrono::steady_clock::now();

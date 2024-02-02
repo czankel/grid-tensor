@@ -178,11 +178,17 @@ inline auto View(TTensor& tensor, Ts&&... ts)
   // view rank:      number of slices (S) + 'remaining' tensor dims + new newaxiss (B)
   // remaining dims: tensor rank (R) - (number of arguments (N) - new newaxiss (B))
   constexpr size_t view_rank =
-    accumulate<Slice, Ts...>::count +
-    TTensor::rank -
-    sizeof...(Ts) +
-    accumulate<NewAxisType, Ts...>::count * 2;
-
+    accumulate<Slice, Ts...>::count +                     // 1  --> OK
+    std::remove_cvref_t<TTensor>::rank -                  // 2  --> ERR should be 2?
+    sizeof...(Ts) +                                       // 2  --> OK
+    accumulate<NewAxisType, Ts...>::count * 2;            // 0
+#if 0
+  static_assert(accumulate<Slice, Ts...>::count > 1000);
+  static_assert(std::remove_cvref_t<TTensor>::rank  > 1000);
+  static_assert(sizeof...(Ts) > 1000);
+  static_assert(accumulate<NewAxisType, Ts...>::count * 2 > 1000);
+  static_assert(view_rank > 0);
+#endif
   auto& tensor_dims = tensor.Dimensions();
   auto& tensor_strides = tensor.Strides();
 

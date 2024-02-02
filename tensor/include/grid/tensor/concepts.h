@@ -45,9 +45,9 @@ struct to_tensor<TTensor>
   using type = TTensor;
 };
 
-template <template <template <typename, size_t, typename...> typename, typename, size_t, typename...> typename TOperator,
-          template <typename, size_t, typename...> typename TTensor,
-          typename T, size_t TRank, typename... TTensors>
+template <template <template <typename, std::size_t, typename...> typename, typename, std::size_t, typename...> typename TOperator,
+          template <typename, std::size_t, typename...> typename TTensor,
+          typename T, std::size_t TRank, typename... TTensors>
 struct to_tensor<TOperator<TTensor, T, TRank, TTensors...>>
 {
   using type = decltype(std::declval<TOperator<TTensor, T, TRank, TTensors...>>().operator()());
@@ -55,9 +55,9 @@ struct to_tensor<TOperator<TTensor, T, TRank, TTensors...>>
 
 
 // is_same_tensor<TENSOR1, TENSOR2> checks if two tensors are of the same type.
-template <typename, template <typename, size_t, typename...> typename> struct is_same_tensor_as : std::false_type {};
+template <typename, template <typename, std::size_t, typename...> typename> struct is_same_tensor_as : std::false_type {};
 
-template <template <typename, size_t, typename...> typename TTensor, typename T, size_t TRank, typename... TAllocator>
+template <template <typename, std::size_t, typename...> typename TTensor, typename T, std::size_t TRank, typename... TAllocator>
 struct is_same_tensor_as<TTensor<T, TRank, TAllocator...>, TTensor> : std::true_type {};
 
 
@@ -99,10 +99,10 @@ concept TensorConvertible = is_tensor_v<TTensor> || is_operator_v<TTensor>;
 struct StdAllocator;
 
 // FIXME doesn't work for Views directly, assuming it converts View to Tensor before??
-template <typename TFrom, template <typename, size_t, typename> typename TTensor>
+template <typename TFrom, template <typename, std::size_t, typename> typename TTensor>
 struct tensor_is_convertible_to : std::is_assignable<TTensor<typename TFrom::value_type, TFrom::rank, StdAllocator>, TFrom> {};
 
-template <typename TFrom, template <typename, size_t, typename> typename TTensor>
+template <typename TFrom, template <typename, std::size_t, typename> typename TTensor>
 concept ConvertibleTo = std::is_class_v<std::remove_cvref_t<TFrom>> && tensor_is_convertible_to<std::remove_cvref_t<TFrom>, TTensor>::value;
 
 } // end of namespace grid
