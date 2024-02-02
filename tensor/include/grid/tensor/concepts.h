@@ -9,6 +9,8 @@
 #ifndef GRID_TENSOR_CONCEPTS_H
 #define GRID_TENSOR_CONCEPTS_H
 
+#include "memory.h"
+
 namespace grid {
 
 
@@ -96,7 +98,7 @@ concept TensorConvertible = is_tensor_v<TTensor> || is_operator_v<TTensor>;
 
 // FIXME doesn't work for Views directly, assuming it converts View to Tensor before??
 template <typename TFrom, template <typename, size_t, typename...> typename TTensor>
-struct tensor_is_convertible_to : std::is_assignable<TTensor<typename TFrom::value_type, TFrom::rank>, TFrom> {};
+struct tensor_is_convertible_to : std::is_assignable<TTensor<typename TFrom::value_type, TFrom::rank, DynamicMemory>, TFrom> {};
 
 template <typename TFrom, template <typename, size_t, typename...> typename TTensor>
 concept ConvertibleTo = std::is_class_v<std::remove_cvref_t<TFrom>> && tensor_is_convertible_to<std::remove_cvref_t<TFrom>, TTensor>::value;

@@ -14,26 +14,26 @@
 
 struct TensorBaseType
 {
-  template <typename T, size_t N, typename... TAllocator>
-  using Tensor = grid::Tensor<T, N, TAllocator...>;
+  template <typename T, size_t N, typename M>
+  using Tensor = grid::Tensor<T, N, M>;
 };
 
 #else
 
 struct TensorBaseType
 {
-  template <typename T, size_t TRank, typename... TAllocator>
-  class Tensor : public grid::Tensor<T, TRank, TAllocator...>
+  template <typename T, size_t TRank, typename TMemory>
+  class Tensor : public grid::Tensor<T, TRank, TMemory>
   {
    public:
-    using grid::Tensor<T, TRank, TAllocator...>::Tensor;
+    using grid::Tensor<T, TRank, TMemory>::Tensor;
   };
 
   // rank-0 tensor
   template <typename T>
-  explicit Tensor(T) -> Tensor<T, 0>;
+  explicit Tensor(T) -> Tensor<T, 0, grid::Scalar>;
   template <typename T>
-  explicit Tensor(grid::Uninitialized<T>) -> Tensor<T, 0>;
+  explicit Tensor(grid::Uninitialized<T>) -> Tensor<T, 0, grid::Scalar>;
 
   // static tensors
   template <typename T, typename... Ts>
@@ -45,37 +45,37 @@ struct TensorBaseType
 
   // dynamic tensors
   template <typename T>
-  explicit Tensor(size_t, T) -> Tensor<T, 1>;
+  explicit Tensor(size_t, T) -> Tensor<T, 1, grid::DynamicMemory>;
   template <typename T>
-  explicit Tensor(size_t, grid::Uninitialized<T>) -> Tensor<T, 1>;
+  explicit Tensor(size_t, grid::Uninitialized<T>) -> Tensor<T, 1, grid::DynamicMemory>;
   template <typename T>
-  explicit Tensor(size_t, size_t, T) -> Tensor<T, 2>;
+  explicit Tensor(size_t, size_t, T) -> Tensor<T, 2, grid::DynamicMemory>;
   template <typename T>
-  explicit Tensor(size_t, size_t, grid::Uninitialized<T>) -> Tensor<T, 2>;
+  explicit Tensor(size_t, size_t, grid::Uninitialized<T>) -> Tensor<T, 2, grid::DynamicMemory>;
   template <typename T, size_t N>
-  explicit Tensor(const size_t(&)[N], const ssize_t(&)[N], T) -> Tensor<T, N>;
+  explicit Tensor(const size_t(&)[N], const ssize_t(&)[N], T) -> Tensor<T, N, grid::DynamicMemory>;
   template <typename T, size_t N>
-  explicit Tensor(const size_t(&)[N], const ssize_t(&)[N], grid::Uninitialized<T>) -> Tensor<T, N>;
+  explicit Tensor(const size_t(&)[N], const ssize_t(&)[N], grid::Uninitialized<T>) -> Tensor<T, N, grid::DynamicMemory>;
   template <typename T, size_t N>
-  explicit Tensor(size_t(&&)[N], ssize_t(&&)[N], T) -> Tensor<T, N>;
+  explicit Tensor(size_t(&&)[N], ssize_t(&&)[N], T) -> Tensor<T, N, grid::DynamicMemory>;
   template <typename T, size_t N>
-  explicit Tensor(size_t(&&)[N], ssize_t(&&)[N], grid::Uninitialized<T>) -> Tensor<T, N>;
+  explicit Tensor(size_t(&&)[N], ssize_t(&&)[N], grid::Uninitialized<T>) -> Tensor<T, N, grid::DynamicMemory>;
   template <typename T, size_t N>
-  explicit Tensor(const size_t(&)[N], T) -> Tensor<T, N>;
+  explicit Tensor(const size_t(&)[N], T) -> Tensor<T, N, grid::DynamicMemory>;
   template <typename T, size_t N>
-  explicit Tensor(const size_t(&)[N], grid::Uninitialized<T>) -> Tensor<T, N>;
+  explicit Tensor(const size_t(&)[N], grid::Uninitialized<T>) -> Tensor<T, N, grid::DynamicMemory>;
   template <typename T, size_t N>
-  explicit Tensor(const size_t(&&)[N], T) -> Tensor<T, N>;
+  explicit Tensor(const size_t(&&)[N], T) -> Tensor<T, N, grid::DynamicMemory>;
   template <typename T, size_t N>
-  explicit Tensor(const size_t(&&)[N], grid::Uninitialized<T>) -> Tensor<T, N>;
+  explicit Tensor(const size_t(&&)[N], grid::Uninitialized<T>) -> Tensor<T, N, grid::DynamicMemory>;
   template <typename T, size_t N>
-  explicit Tensor(std::array<size_t, N>, T) -> Tensor<T, N>;
+  explicit Tensor(std::array<size_t, N>, T) -> Tensor<T, N, grid::DynamicMemory>;
   template <typename T, size_t N>
-  explicit Tensor(std::array<size_t, N>, std::array<ssize_t, N>, T) -> Tensor<T, N>;
+  explicit Tensor(std::array<size_t, N>, std::array<ssize_t, N>, T) -> Tensor<T, N, grid::DynamicMemory>;
   template <typename T, size_t N>
-  explicit Tensor(std::array<size_t, N>, grid::Uninitialized<T>) -> Tensor<T, N>;
+  explicit Tensor(std::array<size_t, N>, grid::Uninitialized<T>) -> Tensor<T, N, grid::DynamicMemory>;
   template <typename T, size_t N>
-  explicit Tensor(std::array<size_t, N>, std::array<ssize_t, N>, grid::Uninitialized<T>) -> Tensor<T, N>;
+  explicit Tensor(std::array<size_t, N>, std::array<ssize_t, N>, grid::Uninitialized<T>) -> Tensor<T, N, grid::DynamicMemory>;
 
   // memory-mapped tensors
   template <grid::Arithmetic T, size_t N>
@@ -84,27 +84,27 @@ struct TensorBaseType
   explicit Tensor(const std::array<size_t, N>&, const std::tuple<T*, size_t>&) -> Tensor<T, N, grid::MemoryMapped>;
 
   // copy & move constructors
-  template <typename T, size_t N, typename TAllocator>
-  Tensor(const grid::Tensor<T, N, TAllocator>&) -> Tensor<T, N>;
-  template <typename T, size_t N>
-  Tensor(grid::Tensor<T, N>&&) -> Tensor<T, N>;
+  template <typename T, size_t N, typename M>
+  Tensor(const grid::Tensor<T, N, M>&) -> Tensor<T, N, grid::DynamicMemory>;
+  template <typename T, size_t N, typename M>
+  Tensor(grid::Tensor<T, N, M>&&) -> Tensor<T, N, grid::DynamicMemory>;
 
   // tensor view
   template <template <typename, size_t> typename TensorView, typename TTensor, size_t TRank>
-  Tensor(TensorView<TTensor, TRank>&&) -> Tensor<typename TTensor::value_type, TRank>;
+  Tensor(TensorView<TTensor, TRank>&&) -> Tensor<typename TTensor::value_type, TRank, grid::DynamicMemory>;
   template <template <typename, size_t> typename TensorView, typename TTensor, size_t TRank>
-  Tensor(const TensorView<TTensor, TRank>&) -> Tensor<typename TTensor::value_type, TRank>;
+  Tensor(const TensorView<TTensor, TRank>&) -> Tensor<typename TTensor::value_type, TRank, grid::DynamicMemory>;
 
   //  operators
   template <template <template <typename, size_t, typename...> typename, typename, size_t, typename...> typename Operator,
   template <typename, size_t, typename...> typename TTensor, typename T, size_t TRank, typename... TTensors>
-  Tensor(Operator<TTensor, T, TRank, TTensors...>&&) -> Tensor<T, TRank>;
+  Tensor(Operator<TTensor, T, TRank, TTensors...>&&) -> Tensor<T, TRank, grid::DynamicMemory>;
   template <template <template <typename, size_t, typename...> typename, typename, size_t, typename...> typename Operator,
   template <typename, size_t, typename...> typename TTensor, typename T, size_t TRank, typename... TTensors>
-  Tensor(const Operator<TTensor, T,  TRank, TTensors...>&) -> Tensor<T, TRank>;
+  Tensor(const Operator<TTensor, T,  TRank, TTensors...>&) -> Tensor<T, TRank, grid::DynamicMemory>;
 
   template <grid::AnyOperator TOperator>
-  Tensor(const TOperator&) -> Tensor<typename TOperator::value_type, TOperator::rank>;
+  Tensor(const TOperator&) -> Tensor<typename TOperator::value_type, TOperator::rank, grid::DynamicMemory>;
 };
 
 #endif

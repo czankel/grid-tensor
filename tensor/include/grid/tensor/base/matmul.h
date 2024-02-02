@@ -19,8 +19,8 @@ template <typename T, size_t TRank, PrimitiveTensor TTensor1, PrimitiveTensor TT
 class TensorMatMul<Tensor, T, TRank, TTensor1, TTensor2>
 {
  public:
-  using value_type = T;
-  using pointer = T*;
+  using value_type = std::remove_cvref_t<T>;
+  using pointer = value_type*;
   using const_pointer = const T*;
   constexpr static size_t rank = TRank;
   constexpr static size_t tensor1_rank = std::remove_cvref_t<TTensor1>::rank;
@@ -271,7 +271,7 @@ TensorMatMul(TTensor&&, T)
                   typename std::remove_reference_t<TTensor>::value_type,
                   std::remove_reference_t<TTensor>::rank,
                   typename to_tensor<TTensor>::type,
-                  Tensor<typename std::remove_cvref_t<TTensor>::value_type, 0>>;
+                  Tensor<typename std::remove_cvref_t<TTensor>::value_type, 0, Scalar>>;
 
 } // end of namespace grid
 

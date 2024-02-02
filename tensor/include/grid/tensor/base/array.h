@@ -13,7 +13,36 @@
 
 namespace grid {
 
-/// brief: Array is a dynamically allocated buffer.
+/// Array specialization for storing a single scalar
+template <typename T>
+class Array<T, Scalar>
+{
+ public:
+  using value_type = T;
+  using pointer = value_type*;
+  using const_pointer = const value_type*;
+
+ public:
+  Array() = default;
+
+  // @brief Initializes the data value to init.
+  Array(value_type init) : data_(init) {}
+
+  /// Size returns the size of the entire buffer.
+  size_t Size() const                                     { return sizeof(value_type); }
+
+  /// Data returns a pointer to the data buffer.
+  pointer Data()                                          { return &data_; }
+
+  /// Data returns a pointer to the data buffer.
+  const_pointer Data() const                              { return &data_; }
+
+ protected:
+  value_type  data_;
+};
+
+
+/// brief: Array is a specialization for a dynamically allocated buffer.
 template <typename T>
 class Array<T, DynamicMemory>
 {
