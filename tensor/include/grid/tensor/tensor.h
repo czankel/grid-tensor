@@ -14,6 +14,7 @@
 #include <iostream>
 #include <numeric>
 
+#include "unary_function.h"
 #include "binary_function.h"
 #include "concepts.h"
 #include "device.h"
@@ -39,7 +40,6 @@ template <template <typename, size_t, typename> typename, typename, size_t, type
 
 template <typename, typename> class Array;
 template <typename TDevice> struct FillFunc;
-template <typename TDevice> struct CopyFunc;
 
 /// Tensor implements an "AI Tensor" that follows more typical AI implementations rather than
 /// mathematical or physical definition.
@@ -68,7 +68,6 @@ class Tensor : public Array<T, TMemory>
   template <PrimitiveTensor P, size_t R> friend class TensorView;
 
   template <typename TDevice> static constexpr FillFunc<TDevice> Fill;
-  template <typename TDevice> static constexpr CopyFunc<TDevice> Copy;
 
 
   // helper to extract the template parameters for StaticMemory
@@ -262,7 +261,7 @@ class Tensor : public Array<T, TMemory>
       dimensions_{other.Dimensions()},
       strides_{other.Strides()}
   {
-    Copy<device::CPU>(other, this->begin());
+    Transform(other, begin(), UnaryOperator<CopyOperator>{});
   }
 
   /// Move constructor
@@ -285,10 +284,9 @@ class Tensor : public Array<T, TMemory>
   Tensor& operator=(const TTensor& other)
   {
     array_type::Realloc(other.Size());
-
     dimensions_ = other.Dimensions();
     strides_ = other.Strides();
-    Copy<device::CPU>(other, this->begin());
+    Transform(other, begin(), UnaryOperator<CopyOperator>{});
 
     return *this;
   }

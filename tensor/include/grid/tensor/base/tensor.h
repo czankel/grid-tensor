@@ -75,38 +75,6 @@ struct FillFunc<device::CPU>
 };
 
 
-
-template <>
-struct CopyFunc<device::CPU>
-{
-  template<std::input_iterator I, std::sentinel_for<I> S, std::weakly_incrementable O>
-  requires std::indirectly_copyable<I, O>
-  constexpr std::ranges::copy_result<I, O> operator()(I first, S last, O result) const
-  {
-    constexpr size_t rank = O::rank;
-
-    // TODO, identify if first is {0} and skip loop
-    auto dimensions = last.Coordinates();
-    auto& subtrahend = first.Coordinates();
-    for (size_t i = 0; i < rank; i++)
-      dimensions[i] -= subtrahend[i];
-
-    copy<typename O::value_type, rank>(&*result, &*first, dimensions, first.Strides(), result.Strides());
-    first += dimensions;
-    result += dimensions;
-    return {std::move(first), std::move(result)};
-  }
-
-  template<std::ranges::input_range R, std::weakly_incrementable O>
-  requires std::indirectly_copyable<std::ranges::iterator_t<R>, O>
-  constexpr std::ranges::copy_result<std::ranges::borrowed_iterator_t<R>, O>
-  operator()(R&& r, O result) const
-  {
-    return (*this)(std::ranges::begin(r), std::ranges::end(r), std::move(result));
-  }
-};
-
-template <typename TDevice> inline constexpr CopyFunc<TDevice> Copy;
 template <typename TDevice> inline constexpr FillFunc<TDevice> Fill;
 
 

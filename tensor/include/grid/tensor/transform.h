@@ -33,6 +33,43 @@ namespace grid {
 class TransformFunction
 {
  public:
+
+  // in-out
+  template<std::input_iterator I, std::sentinel_for<I> S,
+           std::weakly_incrementable O,
+           std::copy_constructible F>
+  requires std::indirectly_copyable<I, O>
+  constexpr std::ranges::unary_transform_result<I, O>
+  operator()(I first, S last, O result, F op) const
+  {
+    constexpr size_t rank = O::rank;
+
+    // TODO, identify if first is {0} and skip loop
+    auto dimensions = last.Coordinates();
+    auto& subtrahend = first.Coordinates();
+    for (size_t i = 0; i < rank; i++)
+      dimensions[i] -= subtrahend[i];
+
+    std::invoke(op, &*result, &*first, dimensions, result.Strides(), first.Strides());
+    first += dimensions;
+    result += dimensions;
+
+    return {std::move(first), std::move(result)};
+  }
+
+  // in-out
+  template<std::ranges::input_range R,
+           std::weakly_incrementable O,
+           std::copy_constructible F>
+  requires std::indirectly_copyable<std::ranges::iterator_t<R>, O>
+  constexpr std::ranges::unary_transform_result<std::ranges::borrowed_iterator_t<R>, O>
+  operator()(R&& r, O result, F op) const
+  {
+    return (*this)(std::ranges::begin(r), std::ranges::end(r),
+                   std::move(result),
+                   std::ref(op));
+  }
+
   // in-in-out
   template<std::input_iterator I1, std::sentinel_for<I1> S1,
            std::input_iterator I2, std::sentinel_for<I2> S2,
