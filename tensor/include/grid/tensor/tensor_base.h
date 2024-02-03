@@ -15,10 +15,9 @@
 
 #include "base/tensor.h"
 
-#include "base/addition.h"
+#include "base/binary_ops.h"
 #include "base/comparison.h"
 #include "base/matmul.h"
-#include "base/elemmul.h"
 #include "base/rms_norm.h"
 #include "base/softmax.h"
 #include "base/silu.h"

@@ -14,6 +14,7 @@
 #include <iostream>
 #include <numeric>
 
+#include "binary_function.h"
 #include "concepts.h"
 #include "device.h"
 #include "iterator.h"
@@ -27,12 +28,10 @@ namespace grid {
 // The arithmetic declaraions must be specialized for different tensor types, which supports
 // specializations for accelerators.
 
-template <template <typename, size_t, typename...> typename, typename, size_t, typename... > class TensorAdd;
-template <template <typename, size_t, typename...> typename, typename, size_t, typename... > class TensorMatMul;
-template <template <typename, size_t, typename...> typename, typename, size_t, typename... > class TensorElemMul;
-template <template <typename, size_t, typename...> typename, typename, size_t, typename... > class TensorRmsNorm;
-template <template <typename, size_t, typename...> typename, typename, size_t, typename... > class TensorSoftMax;
-template <template <typename, size_t, typename...> typename, typename, size_t, typename... > class TensorSilu;
+template <template <typename, size_t, typename> typename, typename, size_t, typename... > class TensorMatMul;
+template <template <typename, size_t, typename> typename, typename, size_t, typename... > class TensorRmsNorm;
+template <template <typename, size_t, typename> typename, typename, size_t, typename... > class TensorSoftMax;
+template <template <typename, size_t, typename> typename, typename, size_t, typename... > class TensorSilu;
 
 //
 // Tensor
@@ -313,7 +312,7 @@ class Tensor : public Array<T, TMemory>
   template <AnyOperator TOperator>
   Tensor& operator+=(TOperator&& oper)
   {
-    return operator=(TensorAdd(*this, std::forward<TOperator>(oper)()));
+    return operator=(Add(*this, std::forward<TOperator>(oper)()));
   }
 
 
@@ -643,15 +642,15 @@ explicit Tensor(const std::array<size_t, N>&, const std::tuple<T*, size_t>&) -> 
 template <TensorConvertible TTensor1, TensorConvertible TTensor2>
 auto operator+(TTensor1&& tensor1, TTensor2&& tensor2)
 {
-  return TensorAdd(std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
+  return Add(std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
 }
 
-// operator* (TensorType, TensorType) -> ElemMul, requires same rank
+// operator* (TensorType, TensorType) -> Mul, requires same rank
 template <TensorConvertible TTensor1, TensorConvertible TTensor2>
 auto operator*(TTensor1&& tensor1, TTensor2&& tensor2)
 requires (std::decay_t<TTensor1>::rank == std::decay_t<TTensor2>::rank)
 {
-  return TensorElemMul(std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
+  return Mul(std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
 }
 
 // operator* (TensorType, TensorType) -> Scale, if one Tensor has rank0

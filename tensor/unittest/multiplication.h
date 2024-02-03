@@ -71,7 +71,7 @@ TYPED_TEST_P(MultiplicationTestSuite, TensorElemMulRank1)
   typename TypeParam::Tensor tensor2 { 1, 8, 5, 3, 7, 4 };
   typename TypeParam::Tensor expected{ 3,48,45, 6,56,16 };
 
-  typename TypeParam::Tensor result = grid::TensorElemMul(tensor1, tensor2);
+  typename TypeParam::Tensor result = grid::Mul(tensor1, tensor2);
   EXPECT_EQ(result, expected);
 }
 
@@ -81,7 +81,7 @@ TYPED_TEST_P(MultiplicationTestSuite, TensorElemMulRank2)
   typename TypeParam::Tensor tensor2 { { 1, 8, 5 }, { 3, 7, 4 }};
   typename TypeParam::Tensor expected{ { 3,48,45 }, { 6,56,16 }};
 
-  typename TypeParam::Tensor result = grid::TensorElemMul(tensor1, tensor2);
+  typename TypeParam::Tensor result = grid::Mul(tensor1, tensor2);
   EXPECT_EQ(result, expected);
 }
 
@@ -91,7 +91,7 @@ TYPED_TEST_P(MultiplicationTestSuite, TensorElemMulRank2Broadcast)
   typename TypeParam::Tensor tensor2 { { 1, 8, 5 } };
   typename TypeParam::Tensor expected{ { 3,48,45 }, { 2,64,20 }};
 
-  typename TypeParam::Tensor result = grid::TensorElemMul(tensor1, tensor2);
+  typename TypeParam::Tensor result = grid::Mul(tensor1, tensor2);
   EXPECT_EQ(result, expected);
 }
 

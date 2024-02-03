@@ -16,10 +16,8 @@
 #include <ranges>
 
 #include "../concepts.h"
-#include "../binary_function.h"
 
 namespace grid {
-namespace tensor {
 
 /// BinaryOperator<Operator> implements element-wise binary operations of two tensors.
 /// The dimensions of the tensors must match following broadcasting rules.
@@ -129,40 +127,7 @@ struct DivOperator
   static inline void eval(T* dest, const T* src1, const T* src2) { *dest = *src1 / *src2; }
 };
 
-//
-// Exported binary functions
-//
 
-/// @brief Add adds two tensors element-wise (lazily).
-template <PrimitiveTensor TTensor1, PrimitiveTensor TTensor2>
-auto Add(TTensor1&& tensor1, TTensor2&& tensor2)
-{
-  return BinaryFunction(BinaryOperator<AddOperator>{}, std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
-}
-
-/// @brief Sub subtracts two tensors element-wise (lazily).
-template <PrimitiveTensor TTensor1, PrimitiveTensor TTensor2>
-auto Sub(TTensor1&& tensor1, TTensor2&& tensor2)
-{
-  return BinaryFunction(SubOperator{}, std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
-}
-
-/// @brief Mul multiplies two tensors element-wise (lazily).
-template <PrimitiveTensor TTensor1, PrimitiveTensor TTensor2>
-auto Mul(TTensor1&& tensor1, TTensor2&& tensor2)
-{
-  return BinaryFunction(MulOperator{}, std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
-}
-
-/// @brief Div multiplies two tensors element-wise (lazily).
-template <PrimitiveTensor TTensor1, PrimitiveTensor TTensor2>
-auto Div(TTensor1&& tensor1, TTensor2&& tensor2)
-{
-  return BinaryFunction(DivOperator{}, std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
-}
-
-
-} // end of namespace tensor
 } // end of namespace grid
 
 #endif // GRID_TENSOR_BINARY_OP_H

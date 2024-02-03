@@ -22,7 +22,7 @@ TYPED_TEST_P(AdditionTestSuite, TensorAddRank0)
 {
   typename TypeParam::Tensor tensor1{ 5 };
   typename TypeParam::Tensor tensor2{ 3 };
-  auto op = grid::TensorAdd(tensor1, tensor2);
+  auto op = grid::Add(tensor1, tensor2);
   auto res = op();
   EXPECT_EQ(res.Rank(), 0);
   typename TypeParam::Tensor expected{ 8 };
@@ -35,7 +35,7 @@ TYPED_TEST_P(AdditionTestSuite, TensorAdd)
   typename TypeParam::Tensor t12{ 89, 78, 67, 56, 45, 34 };
   int v1[] = { 100, 100, 100, 100, 100, 100 };
 
-  auto op1a = grid::TensorAdd(t11, t12);
+  auto op1a = grid::Add(t11, t12);
   auto res1a = op1a();
   EXPECT_EQ(memcmp(res1a.Data(), v1, sizeof(v1)), 0);
 
@@ -82,7 +82,6 @@ TYPED_TEST_P(AdditionTestSuite, TensorAddMatVecBroadcast)
 
 TYPED_TEST_P(AdditionTestSuite, TensorAddBroadcast)
 {
-  using namespace grid::tensor;
   typename TypeParam::Tensor tensor1(5UL, 1.1);
   typename TypeParam::Tensor tensor2(4UL, 5UL, 4.4);
   typename TypeParam::Tensor result = Add(tensor1, tensor2);

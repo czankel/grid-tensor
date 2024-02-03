@@ -45,14 +45,19 @@ struct to_tensor<TTensor>
   using type = TTensor;
 };
 
-template <template <template <typename, size_t, typename...> typename, typename, size_t, typename...> typename TOperator,
-          template <typename, size_t, typename...> typename TTensor,
+template <template <template <typename, size_t, typename> typename, typename, size_t, typename...> typename TOperator,
+          template <typename, size_t, typename> typename TTensor,
           typename T, size_t TRank, typename... TTensors>
 struct to_tensor<TOperator<TTensor, T, TRank, TTensors...>>
 {
   using type = decltype(std::declval<TOperator<TTensor, T, TRank, TTensors...>>().operator()());
 };
 
+template <template <typename, typename...> typename TFunction, typename TOperator, typename... TTensors>
+struct to_tensor<TFunction<TOperator, TTensors...>>
+{
+  using type = decltype(std::declval<TFunction<TOperator, TTensors...>>().operator()());
+};
 
 // is_same_tensor<TENSOR1, TENSOR2> checks if two tensors are of the same type.
 template <typename, template <typename, size_t, typename...> typename> struct is_same_tensor_as : std::false_type {};

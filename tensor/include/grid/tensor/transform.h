@@ -16,7 +16,6 @@
 #include "concepts.h"
 
 namespace grid {
-namespace tensor {
 
 
 /// @brief TransformFunction provides helper for applying an operator on a range(s)
@@ -80,11 +79,10 @@ class TransformFunction
 
 
 /// Transform applies the given operator to a provided range (Tensor) or ranges (Tensors)
-/// and stores the result in another provided range (Tensor). 
+/// and stores the result in another provided range (Tensor).
 inline constexpr TransformFunction Transform;
 
 
-} // end of namespace tensor
-} // end of namespace grd
+} // end of namespace grid
 
 #endif  // GRID_TENSOR_TRANSFORM_H

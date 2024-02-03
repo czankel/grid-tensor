@@ -16,8 +16,12 @@
 #include "concepts.h"
 #include "transform.h"
 
+#include "base/binary_ops.h"  // TODO: remove when operators are device templated
+
 namespace grid {
-namespace tensor {
+
+template <typename, size_t, typename> class Tensor;
+template <PrimitiveTensor, size_t> class TensorView;
 
 
 /// @brief BinaryFunction<Operator> implements lazy element-wise binary operations of two tensors.
@@ -86,10 +90,43 @@ class BinaryFunction
   TTensor2 tensor2_;
 };
 
-template <typename TOp, typename T1, typename T2> BinaryFunction(TOp, T1&&, T2&&) -> BinaryFunction<TOp, T1&&, T2&&>;
+
+template <typename TOp, typename T1, typename T2> BinaryFunction(TOp, T1&&, T2&&)
+  -> BinaryFunction<TOp, typename to_tensor<T1>::type, typename to_tensor<T2>::type>;
+
+//
+// Exported binary functions
+//
+
+/// @brief Add adds two tensors element-wise (lazily).
+template <TensorConvertible TTensor1, TensorConvertible TTensor2>
+auto Add(TTensor1&& tensor1, TTensor2&& tensor2)
+{
+  return BinaryFunction(BinaryOperator<AddOperator>{}, std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
+}
+
+/// @brief Sub subtracts two tensors element-wise (lazily).
+template <TensorConvertible TTensor1, TensorConvertible TTensor2>
+auto Sub(TTensor1&& tensor1, TTensor2&& tensor2)
+{
+  return BinaryFunction(BinaryOperator<SubOperator>{}, std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
+}
+
+/// @brief Mul multiplies two tensors element-wise (lazily).
+template <TensorConvertible TTensor1, TensorConvertible TTensor2>
+auto Mul(TTensor1&& tensor1, TTensor2&& tensor2)
+{
+  return BinaryFunction(BinaryOperator<MulOperator>{}, std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
+}
+
+/// @brief Div multiplies two tensors element-wise (lazily).
+template <TensorConvertible TTensor1, TensorConvertible TTensor2>
+auto Div(TTensor1&& tensor1, TTensor2&& tensor2)
+{
+  return BinaryFunction(BinaryOperator<DivOperator>{}, std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
+}
 
 
-} // end of namespace tensor
 } // end of namespace grd
 
 #endif  // GRID_TENSOR_BINARY_FUNCTION_H
