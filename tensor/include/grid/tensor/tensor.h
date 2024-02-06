@@ -30,7 +30,6 @@ namespace grid {
 // specializations for accelerators.
 
 template <template <typename, size_t, typename> typename, typename, size_t, typename... > class TensorMatMul;
-template <template <typename, size_t, typename> typename, typename, size_t, typename... > class TensorRmsNorm;
 template <template <typename, size_t, typename> typename, typename, size_t, typename... > class TensorSoftMax;
 template <template <typename, size_t, typename> typename, typename, size_t, typename... > class TensorSilu;
 

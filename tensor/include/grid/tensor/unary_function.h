@@ -16,7 +16,9 @@
 #include "concepts.h"
 #include "transform.h"
 
-#include "base/unary_operators.h"  // TODO: remove when operators are device templated
+// TODO: remove when operators are device templated
+#include "base/unary_operators.h"
+#include "base/rms_norm.h"
 
 namespace grid {
 
@@ -80,6 +82,15 @@ auto Copy(TTensor&& tensor)
 {
   return UnaryFunction(UnaryOperator<CopyOperator>{}, std::forward<TTensor>(tensor));
 }
+
+
+/// @brief RmsNorm returns a tensor of the RMS normalized tensor.
+template <TensorConvertible TTensor>
+auto RmsNorm(TTensor&& tensor)
+{
+  return UnaryFunction(RmsNormOperator{}, std::forward<TTensor>(tensor));
+}
+
 
 } // end of namespace grd
 

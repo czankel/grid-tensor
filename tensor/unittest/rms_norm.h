@@ -19,7 +19,7 @@ TYPED_TEST_SUITE_P(RmsNormTestSuite);
 TYPED_TEST_P(RmsNormTestSuite, TensorNormRmsRank1)
 {
   typename TypeParam::Tensor tensor{ 1.618, 2., 3.14, 5.382, -8.5, 13., -21., 34.77, 55. };
-  typename TypeParam::Tensor result = grid::TensorRmsNorm(tensor);
+  typename TypeParam::Tensor result = grid::RmsNorm(tensor);
 
   double scale = 23.47965324677914722429;
   typename TypeParam::Tensor expected{ 1.618 / scale, 2. / scale, 3.14 / scale,
@@ -31,7 +31,7 @@ TYPED_TEST_P(RmsNormTestSuite, TensorNormRmsRank1)
 TYPED_TEST_P(RmsNormTestSuite, TensorNormRmsRank2)
 {
   typename TypeParam::Tensor tensor{ { 1.618, 2., 3.14, 5.382, -8.5}, { 13., -21., 34.77, 55., 43.5} };
-  auto op = grid::TensorRmsNorm(tensor);
+  auto op = grid::RmsNorm(tensor);
   auto result = op();
 
   // TODO: check actual result

@@ -282,7 +282,7 @@ void LLaMAModelT<T>::Forward(LLaMAVocab::token token, size_t pos)
   for (auto& l: layers_)
   {
     // normalize input and element-multiply with weight.
-    xb_ = TensorRmsNorm(x_) * l.att_norm_;                      // (dim) * (dim) -> (dim)
+    xb_ = RmsNorm(x_) * l.att_norm_;                      // (dim) * (dim) -> (dim)
 
     // Insert Weight(xb) vectors into the key and value caches at row "pos"
     l.key_cache_.View(pos) = TensorMatMul(l.wk_, xb_);          // (kv_dim, dim) @ (dim) -> (kv_dim)
@@ -339,7 +339,7 @@ void LLaMAModelT<T>::Forward(LLaMAVocab::token token, size_t pos)
     x_ += TensorMatMul(l.wo_, scores_);
 
     // (dim) * (dim) -> (dim)
-    xb_ = TensorRmsNorm(x_) * l.ffn_norm_;
+    xb_ = RmsNorm(x_) * l.ffn_norm_;
 
     // self.w2(F.silu(self.w1(x)) * self.w3(x))
     // w1(x), w3(x)         -> (hidden_dim, dim) @ (dim)        -> (hidden_dim)
@@ -350,7 +350,7 @@ void LLaMAModelT<T>::Forward(LLaMAVocab::token token, size_t pos)
 
   // Final RMS norm and classified into logits
   // (vocab_size, dim) @ ((dim, dim) * (dim)) -> (vocab_size)
-  logits_ = TensorMatMul(output_, TensorRmsNorm(x_) * output_norm_);
+  logits_ = TensorMatMul(output_, RmsNorm(x_) * output_norm_);
 }
 
 template <typename T>
