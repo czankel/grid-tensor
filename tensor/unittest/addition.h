@@ -8,12 +8,6 @@
 
 using testing::ElementsAre;
 
-// helper to get the size of a type of (optional) array of COUNT elements or the TYPE:
-//  size_t bytes = size<TYPE>(COUNT)
-namespace {
-template <typename T> constexpr size_t size(size_t count) { return sizeof(T) * count; }
-}
-
 template <typename T> class AdditionTestSuite : public testing::Test {};
 TYPED_TEST_SUITE_P(AdditionTestSuite);
 
