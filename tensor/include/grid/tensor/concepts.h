@@ -30,11 +30,17 @@ inline constexpr bool is_tensor_v =
   requires (const TTensor& t) { t.Rank(); t.Dimensions(); t.Strides(); t.Data(); };
 
 
+/// AnyTensor requires that the provided argument is a tensor.
+template <typename TTensor>
+concept AnyTensor = is_tensor_v<TTensor>;
+
+
 /// is_operator_v<Operator> checks if a type is tensor operator, which requires to have a member
 /// operator()() overload.
 /// TODO: check also template signature
 template <typename TOperator>
-inline constexpr bool is_operator_v = requires (const TOperator& t) { t.operator()(); };
+inline constexpr bool is_operator_v = requires (const TOperator& t) { { t.operator()() } -> AnyTensor; };
+
 
 // to_tensor provides the type of the tensor or the type of the tensor resulting from a  tensor operation
 template <typename> struct to_tensor;
@@ -84,10 +90,6 @@ struct tensor_is_primitive : tensor_is_primitive_helper<std::remove_reference_t<
 /// Arithmetic defines an arithmetic type, such as integer, float, etc.
 template <typename T>
 concept Arithmetic = std::is_arithmetic_v<T>;
-
-/// AnyTensor requires that the provided argument is a tensor.
-template <typename TTensor>
-concept AnyTensor = is_tensor_v<TTensor>;
 
 /// PrimitiveTensor requires that the buffer is directly accessible and consists of primitive types,
 template <typename TTensor>
