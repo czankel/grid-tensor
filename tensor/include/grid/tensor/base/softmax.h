@@ -11,41 +11,26 @@
 #ifndef GRID_TENSOR_BASE_SOFTMAX_H
 #define GRID_TENSOR_BASE_SOFTMAX_H
 
-#include <tuple>
 #include <limits>
 #include <math.h>
+#include <tuple>
 
-#include "matmul.h"
+#include "binary_ops.h"
 
 namespace grid {
 
-/// TensorSoftMax<Tensor> implements softmax of the provided tensor.
-template <typename T, size_t TRank, PrimitiveTensor TTensor>
-class TensorSoftMax<Tensor, T, TRank, TTensor>
+/// SoftMaxOperator implements the softmax operator.
+class SoftMaxOperator
 {
- public:
-  using value_type = T;
-  using pointer = T*;
-  using const_pointer = const T*;
-  constexpr static size_t rank = TRank;
-
-  template <ConvertibleTo<Tensor> T1>
-  TensorSoftMax(T1&& tensor) : tensor_(std::forward<T1>(tensor)) {}
-
-  // delete assignment and copy/move constructors
-  TensorSoftMax() = delete;
-  TensorSoftMax(const TensorSoftMax& other) = delete;
-  TensorSoftMax(TensorSoftMax&& other) = delete;
-  TensorSoftMax& operator=(const TensorSoftMax& other) = delete;
-  TensorSoftMax& operator=(TensorSoftMax&& other) = delete;
-
  private:
+
+  template <typename T>
   inline auto
-  Max(const_pointer src,
+  Max(const T* src,
       std::span<const size_t,  1> dimensions,
       std::span<const ssize_t, 1> strides) const
   {
-    value_type max{std::numeric_limits<value_type>::lowest()};
+    T max{std::numeric_limits<T>::lowest()};
 
     for (size_t i = 0; i < dimensions[0]; i++, src += strides[0])
       max = std::max(max, *src);
@@ -53,13 +38,13 @@ class TensorSoftMax<Tensor, T, TRank, TTensor>
     return max;
   }
 
-  template <size_t _N>
+  template <typename T, size_t _N>
   inline auto
-  Max(const_pointer src,
+  Max(const T* src,
       std::span<const size_t,  _N> dimensions,
       std::span<const ssize_t, _N> strides) const
   {
-    value_type max{std::numeric_limits<value_type>::lowest()};
+    T max{std::numeric_limits<T>::lowest()};
     static_assert(_N != std::dynamic_extent, "dynamic_extent not allowed");
 
     for (size_t i = 0; i < dimensions[0]; i++, src += strides[0])
@@ -71,14 +56,15 @@ class TensorSoftMax<Tensor, T, TRank, TTensor>
     return max;
   }
 
+  template <typename T>
   inline auto
-  SumExp(pointer dst,
-         const_pointer src,
-         value_type max,
+  SumExp(T* dst,
+         const T* src,
+         T max,
          std::span<const size_t,  1> dimensions,
          std::span<const ssize_t, 1> strides) const
   {
-    value_type sum{0};
+    T sum{0};
     for (size_t i = 0; i < dimensions[0]; i++, src += strides[0])
     {
       dst[i] = exp(*src - max);
@@ -87,17 +73,18 @@ class TensorSoftMax<Tensor, T, TRank, TTensor>
     return sum;
   }
 
-  template <size_t _N>
+  // FIXME: add strides for dst
+  template <typename T, size_t _N>
   inline auto
-  SumExp(pointer dst,
-         const_pointer src,
-         value_type max,
+  SumExp(T* dst,
+         const T* src,
+         T max,
          std::span<const size_t,  _N> dimensions,
          std::span<const ssize_t, _N> strides) const
   {
     static_assert(_N != std::dynamic_extent, "dynamic_extent not allowed");
 
-    value_type sum{0};
+    T sum{0};
     for (size_t i = 0; i < dimensions[0]; i++, src += strides[0])
     {
       sum += SumExp(dst, src, max,
@@ -108,42 +95,26 @@ class TensorSoftMax<Tensor, T, TRank, TTensor>
   }
 
  public:
+
   /// operator()() executes the operation and returns a tensor.
-  // TODO: make eps a parameter
-  // TODO: avoid temporary (or pass), or use tensor::Like(tensor_);
-  auto operator()() const requires (std::is_floating_point_v<value_type>)
+  // TODO: make eps a parameter, see also definition in rms_norm
+  template <typename T, size_t TRank>
+  auto operator()(T* dst, const T* src,
+                  const std::array<size_t,  TRank>& dimensions,
+                  const std::array<ssize_t, TRank>& strides0,
+                  const std::array<ssize_t, TRank>& strides1)
   {
-    auto result = Tensor(tensor_.Dimensions(), Uninitialized<value_type>{});
-    auto max = Max(tensor_.Data(),
-                   std::span(tensor_.Dimensions()),
-                   std::span(tensor_.Strides()));
+    constexpr T eps = std::numeric_limits<T>::epsilon();
 
-    auto sum = SumExp(result.Data(),
-                      tensor_.Data(),
-                      max,
-                      std::span(tensor_.Dimensions()),
-                      std::span(tensor_.Strides()));
+    auto max = Max(src, std::span(dimensions), std::span(strides1));
+    auto sum = SumExp(dst, src, max, std::span(dimensions), std::span(strides1));
 
-    constexpr value_type eps = std::numeric_limits<value_type>::epsilon();
-    value_type scale = static_cast<value_type>(1)/(sum + eps);
+    T scale = static_cast<T>(1)/(sum + eps);
 
-    return (result * scale)();
+    auto strides2 = std::array<ssize_t, TRank>{0};
+    BinaryOperator<MulOperator>{}(dst, dst, &scale, dimensions, strides0, strides0, strides2);
   }
-
- private:
-  TTensor tensor_;
 };
-
-//
-// CTAD
-//
-
-template <ConvertibleTo<Tensor> TTensor>
-TensorSoftMax(TTensor&&)
-  -> TensorSoftMax<Tensor,
-                   typename std::remove_cvref_t<TTensor>::value_type,
-                   std::remove_cvref_t<TTensor>::rank,
-                   typename to_tensor<TTensor>::type>;
 
 } // end of namespace grid
 
