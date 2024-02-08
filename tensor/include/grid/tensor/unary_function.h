@@ -19,6 +19,7 @@
 // TODO: remove when operators are device templated
 #include "base/unary_operators.h"
 #include "base/rms_norm.h"
+#include "base/softmax.h"
 
 namespace grid {
 
@@ -90,6 +91,15 @@ auto RmsNorm(TTensor&& tensor)
 {
   return UnaryFunction(RmsNormOperator{}, std::forward<TTensor>(tensor));
 }
+
+
+/// @brief SoftMax returns a tensor with the SoftMax applied to the provided tensor.
+template <TensorConvertible TTensor>
+auto SoftMax(TTensor&& tensor)
+{
+  return UnaryFunction(SoftMaxOperator{}, std::forward<TTensor>(tensor));
+}
+
 
 
 } // end of namespace grd
