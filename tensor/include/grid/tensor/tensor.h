@@ -143,7 +143,7 @@ class Tensor : public Array<T, TMemory>
   {}
 
   /// Constructor for a rank-2 tensor (matrix) with a dynamically allocated buffer and no padding.
-  explicit Tensor(size_t dim_m, int dim_n, value_type init)
+  explicit Tensor(size_t dim_m, size_t dim_n, value_type init)
     : Array<value_type, memory_type>(dim_m * dim_n * sizeof(value_type)),
       dimensions_{dim_m, dim_n},
       strides_{make_strides(dimensions_)}
