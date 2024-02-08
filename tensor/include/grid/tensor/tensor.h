@@ -14,14 +14,15 @@
 #include <iostream>
 #include <numeric>
 
-#include "unary_function.h"
 #include "binary_function.h"
 #include "concepts.h"
 #include "device.h"
 #include "iterator.h"
+#include "matmul.h"
 #include "memory.h"
 #include "tensor_parameters.h"
 #include "tensor_view.h"
+#include "unary_function.h"
 
 
 namespace grid {
@@ -29,7 +30,6 @@ namespace grid {
 // The arithmetic declaraions must be specialized for different tensor types, which supports
 // specializations for accelerators.
 
-template <template <typename, size_t, typename> typename, typename, size_t, typename... > class TensorMatMul;
 template <template <typename, size_t, typename> typename, typename, size_t, typename... > class TensorSoftMax;
 template <template <typename, size_t, typename> typename, typename, size_t, typename... > class TensorSilu;
 
@@ -655,21 +655,21 @@ template <TensorConvertible TTensor1, TensorConvertible TTensor2>
 auto operator*(TTensor1&& tensor1, TTensor2&& tensor2)
 requires (std::decay_t<TTensor1>::rank == 0 || std::decay_t<TTensor2>::rank == 0)
 {
-  return TensorMatMul(std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
+  return Mul(std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
 }
 
 // operator* (TensorType, arithmetic)
 template <TensorConvertible TTensor, Arithmetic T>
 auto operator*(TTensor&& tensor, T scalar)
 {
-  return TensorMatMul(std::forward<TTensor>(tensor), scalar);
+  return Mul(std::forward<TTensor>(tensor), scalar);
 }
 
 // operator* (arithmetic, TensorType)
 template <Arithmetic T, TensorConvertible TTensor>
 auto operator*(T scalar, TTensor&& tensor)
 {
-  return TensorMatMul(scalar, std::forward<TTensor>(tensor));
+  return Mul(scalar, std::forward<TTensor>(tensor));
 }
 
 } // end of namespace grid

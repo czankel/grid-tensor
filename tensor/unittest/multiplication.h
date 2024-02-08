@@ -22,7 +22,7 @@ TYPED_TEST_P(MultiplicationTestSuite, TensorVecDot)
   typename TypeParam::Tensor tensor1{   2,   3,   5 };
   typename TypeParam::Tensor tensor2{   7,  11,  13 };
 
-  auto op = grid::TensorMatMul(tensor1, tensor2);
+  auto op = grid::MatMul(tensor1, tensor2);
   auto res = op();
   EXPECT_EQ(res, typename TypeParam::Tensor{112});
 }
@@ -40,7 +40,7 @@ TYPED_TEST_P(MultiplicationTestSuite, TensorMatMul)
                                       { 2 * 1 + 8 * 5 + 4 * 7, 2 * 8 + 8 * 3 + 4 * 4 }, // 70, 56
                                       { 5 * 1 + 1 * 5 + 7 * 7, 5 * 8 + 1 * 3 + 7 * 4 }};// 59, 71
 
-  auto op = grid::TensorMatMul(tensor1, tensor2);
+  auto op = grid::MatMul(tensor1, tensor2);
   auto res = op();
   EXPECT_EQ(res, expected);
 }

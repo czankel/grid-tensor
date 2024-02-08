@@ -109,9 +109,10 @@ class TensorSoftMax<Tensor, T, TRank, TTensor>
 
  public:
   /// operator()() executes the operation and returns a tensor.
+  // TODO: make eps a parameter
+  // TODO: avoid temporary (or pass), or use tensor::Like(tensor_);
   auto operator()() const requires (std::is_floating_point_v<value_type>)
   {
-    // FIXME: really create temporary?? at least comment this is just a 0-rank???
     auto result = Tensor(tensor_.Dimensions(), Uninitialized<value_type>{});
     auto max = Max(tensor_.Data(),
                    std::span(tensor_.Dimensions()),
@@ -123,9 +124,10 @@ class TensorSoftMax<Tensor, T, TRank, TTensor>
                       std::span(tensor_.Dimensions()),
                       std::span(tensor_.Strides()));
 
-    constexpr value_type eps = std::numeric_limits<value_type>::epsilon();  /// FIXME: must be parameter...
-    value_type scale = 1.0/(sum + eps);
-    return TensorMatMul(result, Tensor{scale})();
+    constexpr value_type eps = std::numeric_limits<value_type>::epsilon();
+    value_type scale = static_cast<value_type>(1)/(sum + eps);
+
+    return (result * scale)();
   }
 
  private:

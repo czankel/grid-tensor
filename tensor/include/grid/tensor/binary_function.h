@@ -14,9 +14,9 @@
 #include <ranges>
 
 #include "concepts.h"
-#include "transform.h"
 
-#include "base/binary_ops.h"  // TODO: remove when operators are device templated
+// TODO: remove when operators are device templated
+#include "base/binary_ops.h"
 
 namespace grid {
 
@@ -118,6 +118,20 @@ template <TensorConvertible TTensor1, TensorConvertible TTensor2>
 auto Mul(TTensor1&& tensor1, TTensor2&& tensor2)
 {
   return BinaryFunction(BinaryOperator<MulOperator>{}, std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
+}
+
+/// @brief Mul multiplies a tensors with a scalar.
+template <TensorConvertible TTensor, Arithmetic T>
+auto Mul(TTensor&& tensor, T scalar)
+{
+  return BinaryFunction(BinaryOperator<MulOperator>{}, std::forward<TTensor>(tensor), Tensor(scalar));
+}
+
+/// @brief Mul multiplies a scalar with a tensors.
+template <Arithmetic T, TensorConvertible TTensor>
+auto Mul(T scalar, TTensor&& tensor)
+{
+  return BinaryFunction(BinaryOperator<MulOperator>{}, std::forward<TTensor>(tensor), Tensor(scalar));
 }
 
 /// @brief Div multiplies two tensors element-wise (lazily).
