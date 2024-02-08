@@ -79,9 +79,10 @@ class BinaryFunction
   {
     auto [dimensions, strides1, strides2] = Broadcast(tensor1_, tensor2_);
     auto result = Tensor(dimensions, Uninitialized<value_type>{});
-    Transform(TensorView(tensor1_, dimensions, strides1, tensor1_.Size()),
-              TensorView(tensor2_, dimensions, strides2, tensor2_.Size()),
-              result.begin(), TOperator{});
+
+    TOperator{}(result.Data(), tensor1_.Data(), tensor2_.Data(),
+                dimensions, result.Strides(), strides1, strides2);
+
     return result;
   }
 

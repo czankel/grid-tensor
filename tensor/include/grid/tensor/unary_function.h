@@ -62,7 +62,7 @@ class UnaryFunction
   {
     auto& dimensions = tensor_.Dimensions();
     auto result = Tensor(dimensions, Uninitialized<value_type>{});
-    Transform(TensorView(tensor_, dimensions, tensor_.Strides(), tensor_.Size()), result.begin(), TOperator{});
+    TOperator{}(result.Data(), tensor_.Data(), dimensions, result.Strides(), tensor_.Strides());
     return result;
   }
 

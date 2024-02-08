@@ -66,16 +66,15 @@ class RmsNormOperator
   /// operator()() executes and returns a tensor with the RMS norm of the stored vector.
   template <typename T, size_t TRank>
   void operator()(T* dst, const T* src,
-                  const std::array<size_t, TRank>& dimensions,
+                  const std::array<size_t,  TRank>& dimensions,
                   const std::array<ssize_t, TRank>& strides0,
                   const std::array<ssize_t, TRank>& strides1,
                   T eps = Eps<T>::default_value)
   {
     auto [value, count] = SumSquare(src, std::span(dimensions), std::span(strides1));
-
     T scale = 1.0f/sqrtf(value / count + eps);
     auto strides2 = std::array<ssize_t, TRank>{0};
-    std::invoke(BinaryOperator<MulOperator>{}, dst, src, &scale, dimensions, strides0, strides1, strides2);
+    BinaryOperator<MulOperator>{}(dst, src, &scale, dimensions, strides0, strides1, strides2);
   }
 };
 
