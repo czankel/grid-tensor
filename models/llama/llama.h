@@ -345,7 +345,7 @@ void LLaMAModelT<T>::Forward(LLaMAVocab::token token, size_t pos)
     // w1(x), w3(x)         -> (hidden_dim, dim) @ (dim)        -> (hidden_dim)
     // silu(w1(x)) * w3(x)  -> (hidden_dim) * (hiddem_dim)      -> (hidden_dim)
     // w2(...)              -> (dim, hidden_dim) @ (hidden_dim) -> (dim)
-    x_ += MatMul(l.w2_, TensorSilu(MatMul(l.w1_, xb_)) * MatMul(l.w3_, xb_));
+    x_ += MatMul(l.w2_, Silu(MatMul(l.w1_, xb_)) * MatMul(l.w3_, xb_));
   }
 
   // Final RMS norm and classified into logits

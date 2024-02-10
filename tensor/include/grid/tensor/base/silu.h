@@ -11,85 +11,66 @@
 #ifndef GRID_TENSOR_BASE_SILU_H
 #define GRID_TENSOR_BASE_SILU_H
 
+#include <limits>
 #include <math.h>
 #include <tuple>
 
-#include "matmul.h"
+#include "binary_ops.h"
 
 namespace grid {
 
-/// TensorSilu<Tensor> implements RMS norm.
-template <typename T, size_t TRank, PrimitiveTensor TTensor>
-class TensorSilu<Tensor, T, TRank, TTensor>
+/// Silu implements the SiLU activation function operator.
+class SiluOperator
 {
- public:
-  using value_type = T;
-  using pointer = T*;
-  using const_pointer = const T*;
-  constexpr static size_t rank = TRank;
-
-  template <ConvertibleTo<Tensor> T1>
-  TensorSilu(T1&& tensor) : tensor_(std::forward<T1>(tensor)) {}
-
-  // delete assignment and copy/move constructors
-  TensorSilu() = delete;
-  TensorSilu(const TensorSilu& other) = delete;
-  TensorSilu(TensorSilu&& other) = delete;
-  TensorSilu& operator=(const TensorSilu& other) = delete;
-  TensorSilu& operator=(TensorSilu&& other) = delete;
-
  private:
+
+  template <typename T>
   inline void
-  Silu(pointer dst,
-       const_pointer src,
+  Silu(T* dst,
+       const T* src,
        std::span<const size_t,  1> dimensions,
-       std::span<const ssize_t, 1> strides) const
+       std::span<const ssize_t, 1> strides0,
+       std::span<const ssize_t, 1> strides1) const
   {
-    for (size_t i = 0; i < dimensions[0]; i++, src += strides[0])
-      dst[i] = *src / (1.0f + exp(-*src));
+    for (size_t i = 0; i < dimensions[0]; i++)
+    {
+      *dst = *src / (1.0f + exp(-*src));
+      dst += strides0[0];
+      src += strides1[0];
+    }
   }
 
-  template <size_t _N>
+  template <typename T, size_t _N>
   inline void
-  Silu(pointer dst,
-       const_pointer src,
+  Silu(T* dst,
+       const T* src,
        std::span<const size_t,  _N> dimensions,
-       std::span<const ssize_t, _N> strides) const
+       std::span<const ssize_t, _N> strides0,
+       std::span<const ssize_t, _N> strides1) const
   {
     static_assert(_N != std::dynamic_extent, "dynamic_extent not allowed");
-    for (size_t i = 0; i < dimensions[0]; i++, src += strides[0])
+    for (size_t i = 0; i < dimensions[0]; i++)
+    {
       Silu(dst, src,
            std::span<const size_t,  _N - 1>(dimensions.begin() + 1, _N - 1),
-           std::span<const ssize_t, _N - 1>(strides.begin() + 1, _N - 1));
+           std::span<const ssize_t, _N - 1>(strides0.begin() + 1, _N - 1),
+           std::span<const ssize_t, _N - 1>(strides1.begin() + 1, _N - 1));
+      dst += strides0[0];
+      src += strides1[0];
+    }
   }
 
  public:
   /// operator()() executes the operation and returns a tensor.
-  auto operator()() const requires (std::is_floating_point_v<value_type>)
+  template <typename T, size_t TRank>
+  auto operator()(T* dst, const T* src,
+                  const std::array<size_t,  TRank>& dimensions,
+                  const std::array<ssize_t, TRank>& strides0,
+                  const std::array<ssize_t, TRank>& strides1)
   {
-    // FIXME: temporary necessary?
-    auto result = Tensor(tensor_.Dimensions(), Uninitialized<value_type>{});
-    Silu(result.Data(),
-         tensor_.Data(),
-         std::span(tensor_.Dimensions()),
-         std::span(tensor_.Strides()));
-    return result;
+    Silu(dst, src, dimensions, strides0, strides1);
   }
-
- private:
-  TTensor tensor_;
 };
-
-//
-// CTAD
-//
-
-template <ConvertibleTo<Tensor> TTensor>
-TensorSilu(TTensor&&)
-  -> TensorSilu<Tensor,
-                typename std::remove_cvref_t<TTensor>::value_type,
-                std::remove_cvref_t<TTensor>::rank,
-                typename to_tensor<TTensor>::type>;
 
 } // end of namespace grid
 
