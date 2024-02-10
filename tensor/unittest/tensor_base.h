@@ -97,8 +97,9 @@ struct TensorBaseType
 
   //  operators
   template <template <template <typename, size_t, typename...> typename, typename, size_t, typename...> typename Operator,
-  template <typename, size_t, typename...> typename TTensor, typename T, size_t TRank, typename... TTensors>
+            template <typename, size_t, typename...> typename TTensor, typename T, size_t TRank, typename... TTensors>
   Tensor(Operator<TTensor, T, TRank, TTensors...>&&) -> Tensor<T, TRank, grid::DynamicMemory>;
+
   template <template <template <typename, size_t, typename...> typename, typename, size_t, typename...> typename Operator,
   template <typename, size_t, typename...> typename TTensor, typename T, size_t TRank, typename... TTensors>
   Tensor(const Operator<TTensor, T,  TRank, TTensors...>&) -> Tensor<T, TRank, grid::DynamicMemory>;
