@@ -663,6 +663,8 @@ Tensor(TOperator<TTensor, T, TRank, TTensors...>&&) -> Tensor<T, TRank, DynamicM
 template <template <template <typename, size_t, typename...> typename, typename, size_t, typename...> typename TOperator,
           template <typename, size_t, typename...> typename TTensor, typename T, size_t TRank, typename... TTensors>
 Tensor(const TOperator<TTensor, T,  TRank, TTensors...>&) -> Tensor<T, TRank, DynamicMemory>;
+template <grid::AnyOperator TOperator>
+Tensor(const TOperator&) -> Tensor<typename TOperator::value_type, TOperator::rank, grid::DynamicMemory>;
 
 // Tensor with "MemoryMapped"
 template <Arithmetic T, size_t N>
