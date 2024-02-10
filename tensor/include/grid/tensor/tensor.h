@@ -24,7 +24,6 @@
 #include "tensor_view.h"
 #include "unary_function.h"
 
-
 namespace grid {
 
 //
@@ -32,7 +31,59 @@ namespace grid {
 //
 
 template <typename, typename> class Array;
+
+// TODO: temporary until Generator is implemented
 template <typename TDevice> struct FillFunc;
+
+namespace {
+
+template <typename T>
+inline void initialize(T* dst, std::span<const size_t, 1> dimensions, std::span<const ssize_t, 1> strides, const T& init)
+{
+  for (size_t i = 0; i < dimensions[0]; i++, dst += strides[0])
+    *dst = init;
+}
+
+template <typename T, size_t N>
+inline void initialize(T* dst, std::span<const size_t, N> dimensions, std::span<const ssize_t, N> strides, const T& init)
+{
+  for (size_t i = 0; i < dimensions[0]; i++, dst += strides[0])
+    initialize(dst,
+        std::span<const size_t, N - 1>(dimensions.begin() + 1, dimensions.end()),
+        std::span<const ssize_t, N - 1>(strides.begin() + 1, strides.end()),
+        init);
+}
+
+}
+
+
+// FIXME: the coordinates of the first tensor must be added to the
+template <>
+struct FillFunc<device::CPU>
+{
+  template<typename T, std::output_iterator<const T&> O, std::sentinel_for<O> S>
+  constexpr O operator()(O first, S last, const T& value) const
+  {
+    constexpr size_t rank = O::rank;
+
+    // TODO, identify if first is {0} and skip loop
+    auto dimensions = last.Coordinates();
+    auto& subtrahend = first.Coordinates();
+    for (size_t i = 0; i < rank; i++)
+      dimensions[i] -= subtrahend[i];
+
+    initialize(&*first, std::span<const size_t, rank>{dimensions}, std::span{first.Strides()}, value);
+    return first;
+  }
+
+  template<typename T, std::ranges::output_range<const T&> R>
+  constexpr std::ranges::borrowed_iterator_t<R> operator()(R&& r, const T& value) const
+  {
+    return (*this)(std::ranges::begin(r), std::ranges::end(r), value);
+  }
+};
+
+template <typename TDevice> inline constexpr FillFunc<TDevice> Fill;
 
 /// Tensor implements an "AI Tensor" that follows more typical AI implementations rather than
 /// mathematical or physical definition.
@@ -60,7 +111,6 @@ class Tensor : public Array<T, TMemory>
 {
   template <PrimitiveTensor P, size_t R> friend class TensorView;
 
-  template <typename TDevice> static constexpr FillFunc<TDevice> Fill;
 
 
   // helper to extract the template parameters for StaticMemory
