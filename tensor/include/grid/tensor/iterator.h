@@ -135,6 +135,13 @@ class ConstIterator
 
   // Note that ranges iterators must be default-initializable, so cannot use reference for Tensor
   ConstIterator(const TTensor* tensor, const_pointer data)
+  requires (rank == 0)
+    : ptr_(data),
+      data_(data),
+      tensor_(tensor)
+  {}
+
+  ConstIterator(const TTensor* tensor, const_pointer data)
     : coordinates_{0},
       ptr_(data),
       data_(data),
@@ -224,6 +231,13 @@ class ConstIterator
   const TTensor*            tensor_;
 };
 
+//  ambiguous deduction in CLANG https://cplusplus.github.io/CWG/issues/2628.html
+#ifdef __clang__
+template <typename TTensor> requires (std::remove_cvref_t<TTensor>::rank == 0)
+ConstIterator(const TTensor* tensor, typename std::remove_cvref_t<TTensor>::const_pointer data) -> ConstIterator<TTensor>;
+template <typename TTensor>
+ConstIterator(const TTensor* tensor, typename std::remove_cvref_t<TTensor>::const_pointer data) -> ConstIterator<TTensor>;
+#endif
 
 } // end of namespace details
 } // end of namespace grid
