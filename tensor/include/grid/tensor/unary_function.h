@@ -20,6 +20,7 @@
 #include "base/unary_operators.h"
 #include "base/rms_norm.h"
 #include "base/softmax.h"
+#include "base/silu.h"
 
 namespace grid {
 
@@ -100,6 +101,13 @@ auto SoftMax(TTensor&& tensor)
   return UnaryFunction(SoftMaxOperator{}, std::forward<TTensor>(tensor));
 }
 
+
+/// @brief Silu returns a tensor with SiLU activation applied to the provided tensor.
+template <TensorConvertible TTensor>
+auto Silu(TTensor&& tensor)
+{
+  return UnaryFunction(SiluOperator{}, std::forward<TTensor>(tensor));
+}
 
 
 } // end of namespace grd

@@ -27,11 +27,6 @@
 
 namespace grid {
 
-// The arithmetic declaraions must be specialized for different tensor types, which supports
-// specializations for accelerators.
-
-template <template <typename, size_t, typename> typename, typename, size_t, typename... > class TensorSilu;
-
 //
 // Tensor
 //
