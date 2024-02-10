@@ -33,7 +33,8 @@ class MatMulFunction
   using const_pointer = const value_type*;
   constexpr static size_t tensor1_rank = tensor1_type::rank;
   constexpr static size_t tensor2_rank = tensor2_type::rank;
-  constexpr static size_t rank = std::max(tensor1_type::rank, tensor2_type::rank);
+  // TODO: OK for combination of rank-2 and rank-1 but maybe not rank-3 and higher?
+  constexpr static size_t rank = std::min(tensor1_type::rank, tensor2_type::rank);
 
   template <typename T1, typename T2>
   requires (tensor1_rank > 0 && tensor2_rank > 0)
