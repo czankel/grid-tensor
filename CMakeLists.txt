@@ -93,7 +93,7 @@ endif()
 # Compiler flags
 
 if(NOT MSVC)
-  string(APPEND CMAKE_CXX_FLAGS " -O2 -fPIC")
+  string(APPEND CMAKE_CXX_FLAGS " -O3 -fPIC -ffast-math")
   string(APPEND CMAKE_CXX_FLAGS " -Wno-narrowing")
   # Eigen fails to build with some versions, so convert this to a warning
   # Details at http://eigen.tuxfamily.org/bz/show_bug.cgi?id=1459
@@ -194,7 +194,8 @@ if(NOT MSVC)
     check_cxx_compiler_flag_and_append("-Wno-unused-but-set-variable")
     check_cxx_compiler_flag_and_append("-Wno-maybe-uninitialized")
   endif()
-  string(APPEND CMAKE_CXX_FLAGS_DEBUG " -fno-omit-frame-pointer -g -O0")
+  string(APPEND CMAKE_CXX_FLAGS_DEBUG " -fno-omit-frame-pointer -g -O3 -ffast-math")
+
   string(APPEND CMAKE_LINKER_FLAGS_DEBUG " -fno-omit-frame-pointer -O0")
   # -ldflags="-X github.com/czankel//config.CneVersion=${VERSION}" FIXME.. or --defsym? -X is not default??
   check_cxx_compiler_flag_and_append("-fno-math-errno")
