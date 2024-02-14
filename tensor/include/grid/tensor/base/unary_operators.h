@@ -39,9 +39,9 @@ class UnaryOperator
   // operation on a single dimension (unoptimized)
   template <typename const_pointer, typename pointer>
   inline void eval(pointer dest, const_pointer src,
-                  std::span<const size_t,  1> dimensions,
-                  std::span<const ssize_t, 1>,
-                  std::span<const ssize_t, 1> strides1) const
+                   std::span<const size_t,  1> dimensions,
+                   std::span<const ssize_t, 1>,
+                   std::span<const ssize_t, 1> strides1) const
   {
     for (size_t i = 0; i < dimensions[0]; i++)
     {
@@ -54,17 +54,17 @@ class UnaryOperator
   template <size_t N, typename const_pointer, typename pointer> inline
   //template <size_t N> inline
   void eval(pointer dest, const_pointer src,
-           std::span<const size_t,  N> dimensions,
-           std::span<const ssize_t, N> strides0,
-           std::span<const ssize_t, N> strides1) const
+            std::span<const size_t,  N> dimensions,
+            std::span<const ssize_t, N> strides0,
+            std::span<const ssize_t, N> strides1) const
   {
     static_assert(N != std::dynamic_extent, "dynamic_extent not allowed");
     for (size_t i = 0; i < dimensions[0]; i++)
     {
       eval(dest, src,
-          std::span<const size_t,  N - 1>(dimensions.begin() + 1, N - 1),
-          std::span<const ssize_t, N - 1>(strides0.begin() + 1, N - 1),
-          std::span<const ssize_t, N - 1>(strides1.begin() + 1, N - 1));
+           std::span<const size_t,  N - 1>(dimensions.begin() + 1, N - 1),
+           std::span<const ssize_t, N - 1>(strides0.begin() + 1, N - 1),
+           std::span<const ssize_t, N - 1>(strides1.begin() + 1, N - 1));
 
       dest += strides0[0];
       src += strides1[0];
@@ -79,24 +79,15 @@ class UnaryOperator
                   const std::array<ssize_t, TRank>& strides1)
   {
     eval(dst, src,
-      std::span<const size_t, TRank>(dimensions),
-      std::span<const ssize_t, TRank>(strides0),
-      std::span<const ssize_t, TRank>(strides1));
+         std::span<const size_t, TRank>(dimensions),
+         std::span<const ssize_t, TRank>(strides0),
+         std::span<const ssize_t, TRank>(strides1));
   }
 };
 
 //
 // Operators
 //
-
-#if 0
-struct FillOperator
-{
-  // scalar X scalar
-  template<typename T>
-  static inline void eval(T* dest, const T value) { *dest = value; }
-};
-#endif
 
 struct CopyOperator
 {
