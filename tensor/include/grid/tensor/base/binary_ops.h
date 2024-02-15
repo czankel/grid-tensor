@@ -105,6 +105,7 @@ class BinaryOperator
                    std::span<const ssize_t, N> strides2) const
   {
     static_assert(N != std::dynamic_extent, "dynamic_extent not allowed");
+
     // "fold" one rank
     if (strides0[N - 2] - dimensions[N - 1] == 0 &&
         strides1[N - 2] - dimensions[N - 1] == 0 &&
@@ -147,13 +148,15 @@ class BinaryOperator
       if (strides0[TRank - 2] - dimensions[TRank - 1] == 0 &&
           strides1[TRank - 2] - dimensions[TRank - 1] == 0 &&
           strides2[TRank - 2] - dimensions[TRank - 1] == 0)
+      {
         eval(dst, src1, src2,
              dimensions[TRank - 1],
              std::span<const size_t,  TRank - 1>(dimensions.begin(), TRank - 1),
              std::span<const ssize_t, TRank - 1>(strides0.begin(), TRank - 1),
              std::span<const ssize_t, TRank - 1>(strides1.begin(), TRank - 1),
              std::span<const ssize_t, TRank - 1>(strides2.begin(), TRank - 1));
-      return;
+        return;
+      }
     }
 
 

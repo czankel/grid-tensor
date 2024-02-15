@@ -134,12 +134,20 @@ auto Mul(T scalar, TTensor&& tensor)
   return BinaryFunction(BinaryOperator<MulOperator>{}, std::forward<TTensor>(tensor), Tensor(scalar));
 }
 
-/// @brief Div multiplies two tensors element-wise (lazily).
+/// @brief Div divides the first tensors element-wise with the seonc tensor.
 template <TensorConvertible TTensor1, TensorConvertible TTensor2>
 auto Div(TTensor1&& tensor1, TTensor2&& tensor2)
 {
   return BinaryFunction(BinaryOperator<DivOperator>{}, std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
 }
+
+/// @brief Div divides a tensor by a scalar.
+template <TensorConvertible TTensor, Arithmetic T>
+auto Div(TTensor&& tensor, T scalar)
+{
+  return BinaryFunction(BinaryOperator<DivOperator>{}, std::forward<TTensor>(tensor), Tensor(scalar));
+}
+
 
 
 } // end of namespace grd

@@ -257,7 +257,7 @@ const std::type_info& GgmlFile::DataType() const
   switch (ftype_)
   {
     case kGgmlDataTypeF32:  return typeid(float);
-    case kGgmlDataTypeF16:  return typeid(grid::float16_t);
+    case kGgmlDataTypeF16:  return TypeID<grid::float16_t>();
     default: throw std::runtime_error("DataType not supported");
   }
 }

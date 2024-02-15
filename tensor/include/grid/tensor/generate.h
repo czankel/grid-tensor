@@ -71,7 +71,7 @@ class GenerateFunction
 
     // TODO: support implementation optimizations in provided generator: if constexpr (generator_has_extra_args) std::invoke(gen, &*first, dimensions, first.Strides());
     generate(&*first, std::span<const size_t, rank>{dimensions}, std::span{first.Strides()}, std::move(gen));
-   
+
     first += dimensions;
 
     return std::move(first);

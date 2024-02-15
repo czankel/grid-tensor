@@ -16,6 +16,7 @@
 #include <grid/models/llama.h>
 #include <grid/tensor/mmap.h>
 #include <grid/tensor/tensor.h>
+#include <grid/tensor/type_traits.h>
 
 #include "llama_vocab.h"
 
@@ -91,53 +92,6 @@ enum GgmlDataType
   kGgmlDataTypeCount,
 };
 
-using float16_t=int16_t;
-
-const size_t kQuantsQ4_0 = 32;
-struct BlockQ4_0
-{
-  float16_t delta;
-  uint8_t qs[kQuantsQ4_0 / 2];
-};
-
-const size_t kQuantsQ4_1 = 32;
-struct BlockQ4_1
-{
-  float16_t delta;
-  float16_t min;
-  uint8_t qs[kQuantsQ4_1 / 2];
-};
-
-const size_t kQuantsQ5_0 = 32;
-struct BlockQ5_0
-{
-  float16_t delta;
-  uint8_t qh[4];          // 5th bit of quants
-  uint8_t qs[kQuantsQ5_0 / 2];
-};
-
-const size_t kQuantsQ5_1 = 32;
-struct BlockQ5_1 {
-  float16_t delta;
-  float16_t min;
-  uint8_t qh[4];          // 5th bit of quants
-  uint8_t qs[kQuantsQ5_0 / 2];
-};
-
-const size_t kQuantsQ8_0 = 32;
-struct BlockQ8_0
-{
-  float16_t delta;
-  uint8_t qs[kQuantsQ8_0];
-};
-
-const size_t kQuantsQ8_1 = 32;
-struct BlockQ8_1 {
-  float16_t delta;
-  float16_t min;
-  uint8_t qs[kQuantsQ8_1];
-};
-
 static const size_t GgmlFileTypeSize[kGgmlDataTypeCount] =
 {
   /* kF32 */  sizeof(float),
@@ -171,14 +125,14 @@ static const size_t QuantSize[kGgmlDataTypeCount] =
 {
   /* kGgmlDataTypeF32           */  1,
   /* kGgmlDataTypeF16           */  1,
-  /* kGgmlDataTypeQ4_0          */  kQuantsQ4_0,
-  /* kGgmlDataTypeQ4_1          */  kQuantsQ4_1,
+  /* kGgmlDataTypeQ4_0          */  BlockQ4_0::size,
+  /* kGgmlDataTypeQ4_1          */  BlockQ4_1::size,
   /* unused                     */  0,
   /* unused                     */  0,
-  /* kGgmlDataTypeQ5_0          */  kQuantsQ5_0,
-  /* kGgmlDataTypeQ5_1          */  kQuantsQ5_1,
-  /* kGgmlDataTypeQ8_0          */  kQuantsQ8_0,
-  /* kGgmlDataTypeQ8_1          */  kQuantsQ8_1,
+  /* kGgmlDataTypeQ5_0          */  BlockQ5_0::size,
+  /* kGgmlDataTypeQ5_1          */  BlockQ5_1::size,
+  /* kGgmlDataTypeQ8_0          */  BlockQ8_0::size,
+  /* kGgmlDataTypeQ8_1          */  BlockQ8_1::size,
   /* kGgmlDataTypeQ2_K          */  kQuantsQK_K,
   /* kGgmlDataTypeQ3_K          */  kQuantsQK_K,
   /* kGgmlDataTypeQ4_K          */  kQuantsQK_K,

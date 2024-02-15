@@ -326,11 +326,8 @@ void LLaMAModelT<T>::Forward(LLaMAVocab::token token, size_t pos)
       //   softmax(K [:pos+1, head:head+head_size] @ q [head:head+head_size] @ V [:pos+1, head:head+head_size]
       scores_.View(Extent(head_offset, head_size)) =
         MatMul(
-          SoftMax(
-            MatMul(
-              l.key_cache_.View(Extent(pos + 1), Extent(kv_head_offset, head_size)),
-              l.q_.View(Extent(head_offset, head_size))) *
-            (static_cast<T>(1) / sqrt(static_cast<T>(head_size)))),
+          SoftMax(MatMul(l.key_cache_.View(Extent(pos + 1), Extent(kv_head_offset, head_size)),
+                         l.q_.View(Extent(head_offset, head_size))) / sqrt(static_cast<T>(head_size))),
           l.value_cache_.View(Extent(pos + 1), Extent(kv_head_offset, head_size)));
     }
 

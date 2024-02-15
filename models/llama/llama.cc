@@ -80,10 +80,13 @@ LLaMAModel* LLaMAModel::Load(LLaMAFile& file, bool mmap)
 
   // TODO: because the model is templated, all supported data types need to be specialized here.
   auto& data_type =  file.DataType();
-  if (data_type != typeid(float))
-    throw std::runtime_error("invalid data type, only float is supported");
+  if (data_type == typeid(float))
+    return LLaMAModelT<float>::Load(file);
+  else if (data_type == TypeID<float16_t>())
+    return LLaMAModelT<float16_t>::Load(file);
 
-  return LLaMAModelT<float>::Load(file);
+  throw std::runtime_error("invalid data type, only float is supported");
+
 }
 
 } // end of namespace grid

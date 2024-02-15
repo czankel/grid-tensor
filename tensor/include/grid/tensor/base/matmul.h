@@ -19,6 +19,29 @@ namespace grid {
 class MatMulOperator
 {
  private:
+  template <typename T>
+  inline T VecDot(const T* src1, const T* src2, size_t dimensions) const
+  {
+    T sum{0};
+    for (size_t i = 0; i < dimensions; i++)
+      sum += src1[i] * src2[i];
+    return sum;
+  }
+
+  template <typename T>
+  inline T VecDot(const T* src1, const T* src2,
+                  size_t dimensions, ssize_t strides1, ssize_t strides2) const
+  {
+    T sum{0};
+    for (size_t i = 0; i < dimensions; i++)
+    {
+      sum += *src1 * *src2;
+      src1 += strides1;
+      src2 += strides2;
+    }
+    return sum;
+  }
+
   // Note that dimensions are mkn: M_m_k * M_k_n -> M(m,n)
   // Note that strides for all tensors (destination and sources) are:
   //    [0] row: m -> m + 1,  [1] col: n -> n + 1
@@ -41,12 +64,7 @@ class MatMulOperator
           strides2[1] - dimensions[1] == 0)
       {
         for (size_t i = 0; i < dimensions[0] * dimensions[2]; i++)
-        {
-          T sum{0};
-          for (size_t k = 0; k < dimensions[1]; k++)
-            sum += src1[k] * src2[k];
-          dest[i] = sum;
-        }
+          dest[i] = VecDot(src1, src2, dimensions[1]);
       }
       // inner vector dot
       else
@@ -103,22 +121,10 @@ class MatMulOperator
   void operator()(T* dst, const T* src1, const T* src2,
                   const size_t dimensions, const ssize_t strides1, const ssize_t strides2)
   {
-    T sum{0};
     if (strides1 == 1 && strides2 == 1)
-    {
-      for (size_t i = 0; i < dimensions; i++)
-        sum += src1[i] * src2[i];
-    }
+      *dst = VecDot(src1, src2, dimensions);
     else
-    {
-      for (size_t i = 0; i < dimensions; i++)
-      {
-        sum += *src1 * *src2;
-        src1 += strides1;
-        src2 += strides2;
-      }
-    }
-    *dst = sum;
+      *dst = VecDot(src1, src2, dimensions, strides1, strides2);
   }
 
   // matmul

@@ -10,6 +10,7 @@
 #define GRID_TENSOR_CONCEPTS_H
 
 #include "memory.h"
+#include "type_traits.h"
 
 namespace grid {
 
@@ -78,7 +79,9 @@ template <typename TTensor> using tensor_data_return_type = decltype(std::declva
 
 template<class TTensor> struct tensor_is_primitive_helper :
   std::integral_constant<bool, std::is_pointer_v<tensor_data_return_type<TTensor>> &&
-                               std::is_arithmetic_v<std::remove_pointer_t<tensor_data_return_type<TTensor>>>> {};
+                               (std::is_arithmetic_v<std::remove_pointer_t<tensor_data_return_type<TTensor>>> ||
+                                std::is_same_v<std::remove_pointer_t<tensor_data_return_type<TTensor>>, int>)
+                                > {};
 
 template<class TTensor>
 struct tensor_is_primitive : tensor_is_primitive_helper<std::remove_reference_t<TTensor>> {};
@@ -89,7 +92,7 @@ struct tensor_is_primitive : tensor_is_primitive_helper<std::remove_reference_t<
 
 /// Arithmetic defines an arithmetic type, such as integer, float, etc.
 template <typename T>
-concept Arithmetic = std::is_arithmetic_v<T>;
+concept Arithmetic = std::is_arithmetic_v<T> || std::is_same_v<T, float16_t>;
 
 /// PrimitiveTensor requires that the buffer is directly accessible and consists of primitive types,
 template <typename TTensor>
