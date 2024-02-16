@@ -26,7 +26,7 @@ int main(int argc, char** argv)
   int                   steps = 256;
   bool                  show_info = false;
 
-  while ((opt = getopt(argc, argv, "vhim:s:t:")) != -1)
+  while ((opt = getopt(argc, argv, "vhic:m:s:t:")) != -1)
   {
     switch (opt)
     {
@@ -35,8 +35,12 @@ int main(int argc, char** argv)
         std::cout << "Help : TODO" << std::endl;
         exit(0);
 
-      case 'i': // info
+      case 'i': // info (model, CPU, etc.)
         show_info = true;
+        break;
+
+      case 'c': // cpu features
+                // TODO
         break;
 
       case 'v': // version
@@ -52,6 +56,14 @@ int main(int argc, char** argv)
         steps = std::strtol(optarg, NULL, 0);
         break;
 
+      case ':':
+        printf("COLON\n");
+        break;
+
+      case '?':
+        printf("QUEST\n");
+        break;
+
       case 't': // file type/format
         std::string type(optarg);
         if (type == "karpathy")
@@ -59,6 +71,13 @@ int main(int argc, char** argv)
         break;
     }
   }
+
+  if (show_info)
+  {
+    if (model_path.empty())
+      exit(1);
+  }
+
 
   if (model_path.empty())
   {

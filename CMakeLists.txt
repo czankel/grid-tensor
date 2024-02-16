@@ -237,6 +237,12 @@ set(gridtensor_HEADER_DIRS
 )
 
 ##
+## 3rd-party
+##
+
+add_subdirectory(3rdparty/cpu_features)
+
+##
 ## Target libraries
 ##
 
@@ -262,7 +268,7 @@ target_include_directories(gridtensor PUBLIC ${gridtensor_HEADER_DIRS})
 
 add_executable(llama tools/llama.cc models/llama/llama.cc models/llama/karpathy.cc models/llama/ggml.cc)
 target_include_directories(llama PUBLIC ${gridtensor_HEADER_DIRS})
-target_link_libraries(llama gridtensor)
+target_link_libraries(llama gridtensor CpuFeatures::cpu_features)
 
 ##
 ## Install libraries and header files
