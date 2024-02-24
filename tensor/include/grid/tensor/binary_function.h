@@ -15,14 +15,12 @@
 
 #include "concepts.h"
 
-// TODO: remove when operators are device templated
-#include "base/binary_ops.h"
-
 namespace grid {
 
 template <typename, size_t, typename> class Tensor;
 template <PrimitiveTensor, size_t> class TensorView;
 
+template <typename, typename> class BinaryOperator;
 
 /// @brief BinaryFunction<Operator> implements lazy element-wise binary operations of two tensors.
 ///
@@ -78,7 +76,8 @@ class BinaryFunction
   auto operator()() const
   {
     auto [dimensions, strides1, strides2] = Broadcast(tensor1_, tensor2_);
-    auto result = Tensor(dimensions, Uninitialized<value_type>{});
+    using ResultTensor = Tensor<value_type, rank, DynamicMemory<tensor_device_t<TTensor1>>>;
+    auto result = ResultTensor(dimensions, Uninitialized<value_type>{});
 
     TOperator{}(result.Data(), tensor1_.Data(), tensor2_.Data(),
                 dimensions, result.Strides(), strides1, strides2);
@@ -95,6 +94,36 @@ class BinaryFunction
 template <typename TOp, typename T1, typename T2> BinaryFunction(TOp, T1&&, T2&&)
   -> BinaryFunction<TOp, typename to_tensor<T1>::type, typename to_tensor<T2>::type>;
 
+  
+//
+// Operators
+//
+
+struct AddOperator
+{
+  template<typename T>
+  inline void operator()(T* dest, const T* src1, const T* src2, const size_t i) { dest[i] = src1[i] + src2[i]; }
+};
+
+struct SubOperator
+{
+  template<typename T>
+  inline void operator()(T* dest, const T* src1, const T* src2, const size_t i) { dest[i] = src1[i] - src2[i]; }
+};
+
+struct MulOperator
+{
+  template<typename T>
+  inline void operator()(T* dest, const T* src1, const T* src2, const size_t i) { dest[i] = src1[i] * src2[i]; }
+};
+
+struct DivOperator
+{
+  template<typename T>
+  inline void operator()(T* dest, const T* src1, const T* src2, const size_t i) { dest[i] = src1[i] / src2[i]; }
+};
+
+
 //
 // Exported binary functions
 //
@@ -103,42 +132,48 @@ template <typename TOp, typename T1, typename T2> BinaryFunction(TOp, T1&&, T2&&
 template <TensorConvertible TTensor1, TensorConvertible TTensor2>
 auto Add(TTensor1&& tensor1, TTensor2&& tensor2)
 {
-  return BinaryFunction(BinaryOperator<AddOperator>{}, std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
+  return BinaryFunction(BinaryOperator<tensor_device_t<TTensor1>, AddOperator>{},
+      std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
 }
 
 /// @brief Sub subtracts two tensors element-wise (lazily).
 template <TensorConvertible TTensor1, TensorConvertible TTensor2>
 auto Sub(TTensor1&& tensor1, TTensor2&& tensor2)
 {
-  return BinaryFunction(BinaryOperator<SubOperator>{}, std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
+  return BinaryFunction(BinaryOperator<tensor_device_t<TTensor1>, SubOperator>{},
+      std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
 }
 
 /// @brief Mul multiplies two tensors element-wise (lazily).
 template <TensorConvertible TTensor1, TensorConvertible TTensor2>
 auto Mul(TTensor1&& tensor1, TTensor2&& tensor2)
 {
-  return BinaryFunction(BinaryOperator<MulOperator>{}, std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
+  return BinaryFunction(BinaryOperator<tensor_device_t<TTensor1>, MulOperator>{},
+      std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
 }
 
 /// @brief Mul multiplies a tensors with a scalar.
 template <TensorConvertible TTensor, Arithmetic T>
 auto Mul(TTensor&& tensor, T scalar)
 {
-  return BinaryFunction(BinaryOperator<MulOperator>{}, std::forward<TTensor>(tensor), Tensor(scalar));
+  return BinaryFunction(BinaryOperator<tensor_device_t<TTensor>, MulOperator>{},
+      std::forward<TTensor>(tensor), Tensor(scalar));
 }
 
 /// @brief Mul multiplies a scalar with a tensors.
 template <Arithmetic T, TensorConvertible TTensor>
 auto Mul(T scalar, TTensor&& tensor)
 {
-  return BinaryFunction(BinaryOperator<MulOperator>{}, std::forward<TTensor>(tensor), Tensor(scalar));
+  return BinaryFunction(BinaryOperator<tensor_device_t<TTensor>, MulOperator>{},
+      std::forward<TTensor>(tensor), Tensor(scalar));
 }
 
 /// @brief Div multiplies two tensors element-wise (lazily).
 template <TensorConvertible TTensor1, TensorConvertible TTensor2>
 auto Div(TTensor1&& tensor1, TTensor2&& tensor2)
 {
-  return BinaryFunction(BinaryOperator<DivOperator>{}, std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
+  return BinaryFunction(BinaryOperator<tensor_device_t<TTensor1>, DivOperator>{},
+      std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
 }
 
 

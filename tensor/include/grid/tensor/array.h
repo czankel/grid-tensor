@@ -9,10 +9,42 @@
 #ifndef GRID_TENSOR_ARRAY_H
 #define GRID_TENSOR_ARRAY_H
 
-#include "tensor_parameters.h"
+#include "concepts.h"
+#include "device.h"
 
 namespace grid {
 
+template <typename, typename> class Array;
+
+/// Array specialization for storing a single scalar
+template <typename T>
+class Array<T, Scalar>
+{
+ public:
+  using value_type = T;
+  using pointer = value_type*;
+  using const_pointer = const value_type*;
+
+ public:
+  Array() = default;
+
+  // @brief Initializes the data value to init.
+  Array(value_type init) : data_(init) {}
+
+  /// Size returns the size of the entire buffer.
+  size_t Size() const                                     { return sizeof(value_type); }
+
+  /// Data returns a pointer to the data buffer.
+  pointer Data()                                          { return &data_; }
+
+  /// Data returns a pointer to the data buffer.
+  const_pointer Data() const                              { return &data_; }
+
+ protected:
+  value_type  data_;
+};
+
+#if 0
 template <typename T, size_t TRank>
 class ArrayView
 {
@@ -76,7 +108,7 @@ class ArrayView
   size_t                      size_;
   pointer                     data_;
 };
-
+#endif
 } // end of namespace grid
 
 #endif // GRID_TENSOR_ARRAY_H

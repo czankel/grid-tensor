@@ -12,6 +12,13 @@
 namespace grid {
 namespace device {
 
+class Base;
+class Metal;
+
+class Device
+{
+};
+
 // TODO: placeholder structure
 struct CPU {};
 

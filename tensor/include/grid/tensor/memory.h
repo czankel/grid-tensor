@@ -12,7 +12,8 @@
 namespace grid {
 
 /// DynamicMemory defines a dynamically allocated buffer with the standard allocator.
-struct DynamicMemory {};
+/// FIXME: rename to DeviceMemory?
+template <typename TDevice> struct DynamicMemory {};
 
 /// StaticMemory defines constant static memory in the RO section.
 template <size_t...> struct StaticMemory {};

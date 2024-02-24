@@ -6,6 +6,10 @@
 
 add_subdirectory(source)
 
+if(BUILD_METAL)
+  add_subdirectory(metal)
+endif()
+
 if(BUILD_TEST)
   add_subdirectory(unittest)
 endif()

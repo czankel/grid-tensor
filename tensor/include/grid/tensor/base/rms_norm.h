@@ -15,6 +15,7 @@
 #include <tuple>
 
 #include "binary_ops.h"
+#include "device.h"
 
 namespace grid {
 
@@ -74,7 +75,7 @@ class RmsNormOperator
     auto [value, count] = SumSquare(src, std::span(dimensions), std::span(strides1));
     T scale = 1.0f/sqrtf(value / count + eps);
     auto strides2 = std::array<ssize_t, TRank>{0};
-    BinaryOperator<MulOperator>{}(dst, src, &scale, dimensions, strides0, strides1, strides2);
+    BinaryOperator<device::Base, MulOperator>{}(dst, src, &scale, dimensions, strides0, strides1, strides2);
   }
 };
 

@@ -8,14 +8,16 @@
 
 // DO NOT INCLUDE THIS FILE DIRECTLY
 
-#ifndef GRID_TENSOR_BINARY_OP_H
-#define GRID_TENSOR_BINARY_OP_H
+#ifndef GRID_TENSOR_BASE_BINARY_OPS_H
+#define GRID_TENSOR_BASE_BINARY_OPS_H
 
 #include <span>
 #include <algorithm>
 #include <ranges>
 
+#include "../binary_function.h"
 #include "../concepts.h"
+#include "device.h"
 
 namespace grid {
 
@@ -25,7 +27,7 @@ namespace grid {
 ///
 ///  @tparm TOperator binary operator
 template <typename TOperator>
-class BinaryOperator
+class BinaryOperator<device::Base, TOperator>
 {
  private:
 
@@ -37,7 +39,8 @@ class BinaryOperator
                   std::span<const ssize_t, 0>,
                   std::span<const ssize_t, 0>) const
   {
-    TOperator::eval(dest, src1, src2, 0);
+    // FIXME: instead of using type, should use 'instance'
+    TOperator{}(dest, src1, src2, 0);
   }
 
   // operation on a single dimension (unoptimized)
@@ -50,7 +53,7 @@ class BinaryOperator
   {
     for (size_t i = 0; i < dimensions[0]; i++)
     {
-      TOperator::eval(dest, src1, src2, 0);
+      TOperator{}(dest, src1, src2, 0);
       dest += strides0[0];
       src1 += strides1[0];
       src2 += strides2[0];
@@ -156,7 +159,6 @@ class BinaryOperator
       return;
     }
 
-
     eval(dst, src1, src2,
          std::span<const size_t,  TRank>(dimensions),
          std::span<const ssize_t, TRank>(strides0),
@@ -165,39 +167,7 @@ class BinaryOperator
   }
 };
 
-//
-// Operators
-//
-
-struct AddOperator
-{
-  // scalar X scalar
-  template<typename T>
-  static inline void eval(T* dest, const T* src1, const T* src2, const size_t i) { dest[i] = src1[i] + src2[i]; }
-};
-
-struct SubOperator
-{
-  // scalar X scalar
-  template<typename T>
-  static inline void eval(T* dest, const T* src1, const T* src2, const size_t i) { dest[i] = src1[i] - src2[i]; }
-};
-
-struct MulOperator
-{
-  // scalar X scalar
-  template<typename T>
-  static inline void eval(T* dest, const T* src1, const T* src2, const size_t i) { dest[i] = src1[i] * src2[i]; }
-};
-
-struct DivOperator
-{
-  // scalar X scalar
-  template<typename T>
-  static inline void eval(T* dest, const T* src1, const T* src2, const size_t i) { dest[i] = src1[i] / src2[i]; }
-};
-
 
 } // end of namespace grid
 
-#endif // GRID_TENSOR_BINARY_OP_H
+#endif // GRID_TENSOR_BASE_BINARY_OPS_H
