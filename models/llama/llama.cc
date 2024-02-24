@@ -83,7 +83,7 @@ LLaMAModel* LLaMAModel::Load(LLaMAFile& file, bool mmap)
   if (data_type != typeid(float))
     throw std::runtime_error("invalid data type, only float is supported");
 
-  return LLaMAModelT<float>::Load(file);
+  return LLaMAModelT<float, device::Base>::Load(file);
 }
 
 } // end of namespace grid

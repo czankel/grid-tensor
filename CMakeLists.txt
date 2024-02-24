@@ -14,17 +14,19 @@ cmake_policy(SET CMP0010 NEW)
 # https://cmake.org/cmake/help/latest/policy/CMP0025.html
 cmake_policy(SET CMP0025 NEW)
 
+
 ##
 ## Project
 ##
 
 project(gridtensor CXX C)
 
-if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
-  set(LINUX TRUE)
-else()
-  set(LINUX FALSE)
-endif()
+# FIXME not needed, remove
+#if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+#  set(LINUX TRUE)
+#else()
+#  set(LINUX FALSE)
+#endif()
 
 ##
 ## Project Options and configurations
@@ -34,7 +36,9 @@ endif()
 option(BUILD_TEST "Build C++ test binaries (need gtest and gbenchmark)" OFF)
 option(BUILD_DOCS "Build documentation" OFF)
 option(BUILD_DEB_PACKAGE "Build a debian package" OFF)
-option(BUILD_RPM_PACKAGE "Build an RPM package" OFF)
+if (LINUX)
+  option(BUILD_RPM_PACKAGE "Build an RPM package" OFF)
+endif()
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 option(BUILD_STATIC_LIBS "Build static libraries" OFF)
 
@@ -42,6 +46,11 @@ option(USE_COLORIZE_OUTPUT "Colorize output during compilation" ON)
 option(USE_CPP_CODE_COVERAGE "Compile C/C++ with code coverage flags" OFF)
 option(USE_CCACHE "" OFF)
 option(USE_GOLD_LINKER "Use gold linkder" OFF)
+
+if (APPLE)
+  option(BUILD_METAL "Build with support for Apple's Metal" ON)
+endif()
+
 
 ##
 ## Include helper functions
@@ -93,7 +102,7 @@ endif()
 # Compiler flags
 
 if(NOT MSVC)
-  string(APPEND CMAKE_CXX_FLAGS " -O3 -fPIC -ffast-math")
+  string(APPEND CMAKE_CXX_FLAGS " -O3 -fPIC")
   string(APPEND CMAKE_CXX_FLAGS " -Wno-narrowing")
   # Eigen fails to build with some versions, so convert this to a warning
   # Details at http://eigen.tuxfamily.org/bz/show_bug.cgi?id=1459
@@ -194,7 +203,7 @@ if(NOT MSVC)
     check_cxx_compiler_flag_and_append("-Wno-unused-but-set-variable")
     check_cxx_compiler_flag_and_append("-Wno-maybe-uninitialized")
   endif()
-  string(APPEND CMAKE_CXX_FLAGS_DEBUG " -fno-omit-frame-pointer -g -O3 -ffast-math")
+  string(APPEND CMAKE_CXX_FLAGS_DEBUG " -fno-omit-frame-pointer -g -O3")
 
   string(APPEND CMAKE_LINKER_FLAGS_DEBUG " -fno-omit-frame-pointer -O0")
   # -ldflags="-X github.com/czankel//config.CneVersion=${VERSION}" FIXME.. or --defsym? -X is not default??
@@ -224,6 +233,7 @@ if (BUILD_TEST)
   FetchContent_MakeAvailable(googletest)
 endif()
 
+
 ##
 ## Add CMakeLists from sub-directories
 ##
@@ -235,6 +245,69 @@ set(gridtensor_HEADER_DIRS
   "models/include"	# FIXME
   "util/include"	# FIXME
 )
+
+##
+## 3rd-party - cpu-features
+##
+
+#add_subdirectory(3rdparty/cpu_features)
+#add_dependencies(
+#  gridtensor
+#  gridtensor.metallb
+#)
+
+
+##
+## Metal-CPP
+##
+
+if(BUILD_METAL)
+
+  install(
+    FILES ${TENSOR_METAL_PATH}/gridtensor.metallib
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    COMPONENT metallib
+  )
+
+  message(STATUS "Building METAL sources")
+  add_compile_definitions(_METAL_)
+
+  # Throw an error if xcrun not found
+  execute_process(COMMAND zsh "-c" "/usr/bin/xcrun -sdk macosx --show-sdk-version"
+                  OUTPUT_VARIABLE MACOS_VERSION
+                  COMMAND_ERROR_IS_FATAL ANY)
+
+  message(STATUS "Building with SDK for macOS version ${MACOS_VERSION}")
+
+  if (${MACOS_VERSION} GREATER_EQUAL 14.2)
+    set(METAL_CPP_URL https://developer.apple.com/metal/cpp/files/metal-cpp_macOS14.2_iOS17.2.zip)
+  elseif (${MACOS_VERSION} GREATER_EQUAL 14.0)
+    set(METAL_CPP_URL https://developer.apple.com/metal/cpp/files/metal-cpp_macOS14_iOS17-beta.zip)
+  elseif (${MACOS_VERSION} GREATER_EQUAL 13.3)
+    set(METAL_CPP_URL https://developer.apple.com/metal/cpp/files/metal-cpp_macOS13.3_iOS16.4.zip)
+  else()
+    message(FATAL_ERROR "METAL support requires macOS >= 13.4 to be built with BUILD_METAL=ON" )
+  endif()
+
+  option(CMAKE_TLS_VERIFY "Verify SSL certificates" ON)
+  set_property(DIRECTORY PROPERTY EP_UPDATE_DISCONNECTED true)
+
+  include(FetchContent)
+  FetchContent_Declare(
+    metal_cpp
+    URL ${METAL_CPP_URL}
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+  )
+
+  FetchContent_MakeAvailable(metal_cpp)
+  set(gridtensor_HEADER_DIRS ${gridtensor_HEADER_DIRS} ${metal_cpp_SOURCE_DIR})
+
+  find_library(METAL_LIB Metal)
+  find_library(FOUNDATION_LIB Foundation)
+  find_library(QUARTZ_LIB QuartzCore)
+
+endif()
+
 
 ##
 ## Target libraries
@@ -256,17 +329,24 @@ endif()
 
 target_include_directories(gridtensor PUBLIC ${gridtensor_HEADER_DIRS})
 
+if (BUILD_METAL)
+  target_link_libraries(gridtensor ${METAL_LIB} ${FOUNDATION_LIB} ${QUARTZ_LIB})
+endif()
+
 ##
 ## Target Tools
 ##
 
 add_executable(llama tools/llama.cc models/llama/llama.cc models/llama/karpathy.cc models/llama/ggml.cc)
 target_include_directories(llama PUBLIC ${gridtensor_HEADER_DIRS})
-target_link_libraries(llama gridtensor)
+# FIXME: ...
+##target_link_libraries(llama gridtensor CpuFeatures::cpu_features)
 
 ##
 ## Install libraries and header files
 ##
+
+include(GNUInstallDirs)
 
 if (BUILD_SHARED_LIBS)
   install(TARGETS gridtensor LIBRARY DESTINATION lib)
@@ -306,6 +386,19 @@ if (ANDROID_SDK_DIR AND ANDROID_PLATFORM)
   install(DIRECTORY grid/include/grid DESTINATION ${ANDROID_SDK_DIR}/include)
 endif()
 
+
+#get_property(metal_cpp_SOURCES GLOBAL PROPERTY metal_cpp_SOURCES)
+#target_include_directories(
+#  gridtensor PUBLIC
+#  $<BUILD_INTERFACE:${metal_cpp_SOURCES}>
+#  $<INSTALL_INTERFACE:include/metal_cpp>
+#)
+
+add_dependencies(
+  gridtensor
+  gridtensor_metallib
+)
+
 ##
 ## GoogleTest
 ##
@@ -316,6 +409,12 @@ if (BUILD_TEST)
   target_link_libraries(gridtensor_test gridtensor gtest gtest_main)
   target_include_directories(gridtensor_test PRIVATE ${googletest_SOURCE_DIR}/googletest/include)
   target_include_directories(gridtensor_test PRIVATE ${googletest_SOURCE_DIR}/googlemock/include)
+
+  ## FIXME: use a generic GRID_TENSOR_LIBRARIES
+  #if (BUILD_METAL)
+  #  target_link_libraries(gridtensor_test ${METAL_LIB} ${FOUNDATION_LIB} ${QUARTZ_LIB})
+  #endif()
+
 endif()
 
 ##
