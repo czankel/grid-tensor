@@ -6,6 +6,15 @@
 // The contents of this file are confidential and proprietary to Chris Zankel.
 //
 
+#define NS_PRIVATE_IMPLEMENTATION
+#define CA_PRIVATE_IMPLEMENTATION
+#define MTL_PRIVATE_IMPLEMENTATION
+
+#include <Foundation/Foundation.hpp>
+#include <Metal/Metal.hpp>
+#include <QuartzCore/QuartzCore.hpp>
+
+
 #include <grid/tensor/metal/device.h>
 
 using namespace grid::device;
@@ -17,7 +26,13 @@ Metal::Metal()
   if (!mtl_device_)
     throw std::runtime_error("Failed to load device");
 
-#if 0
+  auto library = NS::String::string(METAL_PATH, NS::UTF8StringEncoding);
+  NS::Error* error = nullptr;
+  library_ = mtl_device_->newLibrary(library, &error);
+  if (error != nullptr)
+    throw std::runtime_error("failed to create metal library");
+
+#if 0 // FIXME
   NS::AutoreleasePool* pool_;
   pool_ = NS::AutoreleasePool::alloc()->init();
 #endif

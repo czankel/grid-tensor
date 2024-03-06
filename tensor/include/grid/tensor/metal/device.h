@@ -9,31 +9,81 @@
 #ifndef GRID_TENSOR_METAL_DEVICE_H
 #define GRID_TENSOR_METAL_DEVICE_H
 
-#define NS_PRIVATE_IMPLEMENTATION
-#define CA_PRIVATE_IMPLEMENTATION
-#define MTL_PRIVATE_IMPLEMENTATION
-
 #include <Metal/Metal.hpp>
-
 #include <grid/tensor/device.h>
+
+#include <string>
 
 namespace grid::device {
 
+/// Metal is a ... singleton FIXME
 class Metal : public Device
 {
-  Metal();
+  // Private constructor
+  Metal();// = delete;
+
+  Metal(Metal&) = delete;
+  Metal& operator=(Metal&) = delete;
 
  public:
+  // FIXME: move to sources
+  ~Metal()
+  {
+    for (auto& k : kernels_) {
+      k.second->release();
+    }
+  }
+
   static Metal& GetDevice();
 
+  // FIXME: need to release...?? shared or unique ptr?
   MTL::Buffer* NewBuffer(size_t length, MTL::ResourceOptions options)
   {
     return mtl_device_->newBuffer(length, options);
   }
 
+  MTL::ComputePipelineState* GetKernel(const std::string& name)
+  {
+    if (auto it = kernels_.find(name); it != kernels_.end())
+      return it->second;
+
+    printf("NEW KERNEL %p %s\n", this, name.c_str());
+   
+    auto function_name = NS::String::string(name.c_str(), NS::ASCIIStringEncoding);
+    auto mtl_function = library_->newFunction(function_name);
+    if (!mtl_function)
+      throw std::runtime_error("Failed to find metal function: " + name);
+
+    NS::Error* error = nullptr;
+    auto kernel = mtl_device_->newComputePipelineState(mtl_function, &error);
+    if (error)
+      throw std::runtime_error(error->localizedDescription()->utf8String());
+
+    kernels_.insert({name, kernel});
+
+    return kernel;
+  }
+
+  // FIXME cache or auto-releas?
+  // FIXME: one queue per "stream"
+  MTL::CommandQueue* NewQueue()
+  {
+    if (queue_ == nullptr)
+    {
+      // FIXME auto thread_pool = Metal::new_scoped_memory_pool();
+      // protect using a lock!! FIXME  
+      queue_ = mtl_device_->newCommandQueue();
+    }
+    return queue_;
+  }
+
  private:
   static Metal* g_device_;
   MTL::Device* mtl_device_;
+
+  MTL::Library* library_;
+  std::unordered_map<std::string, MTL::ComputePipelineState*> kernels_;
+  MTL::CommandQueue* queue_; // FIXME: map, one entry per stream
 };
 
 } // end of namespace grid::device
@@ -67,7 +117,6 @@ class Metal : public Device
   std::unordered_map<int32_t, MTL::CommandQueue*> queue_map_;
   std::unordered_map<int32_t, std::pair<int, MTL::CommandBuffer*>> buffer_map_;
   std::unordered_map<int32_t, MTL::ComputeCommandEncoder*> encoder_map_;
-  std::unordered_map<std::string, MTL::ComputePipelineState*> kernel_map_;
   std::unordered_map<std::string, MTL::Library*> library_map_;
   std::mutex mutex_;
 };
@@ -93,20 +142,16 @@ static std::string LoadLibrary(const std::string_view name)
 
   return "";
 }
-
 {
     static MTL::Device* device;
-
     /*
     metal_adder* adder = new metal_adder();
     adder->init_with_device(device);
     adder->prepare_data();
     adder->send_compute_command();
     */
-
-//    NS::Error* error;
-    //this->_device = device;
-
+    // NS::Error* error;
+    // this->_device = device;
     auto lib = _device->newDefaultLibrary();
     if (!lib)
     throw std::runtime_error("Failed to load default library");
@@ -135,9 +180,6 @@ auto GetKernel(std::string_view name)
   for (auto& e : encoder_map_) {
     e.second->release();
   }
-  for (auto& k : kernel_map_) {
-    k.second->release();
-  }
   for (auto& l : library_map_) {
     l.second->release();
   }
@@ -145,8 +187,6 @@ auto GetKernel(std::string_view name)
 
   // per device or per allocation?
   pool_->release();}
-
-
 
 std::shared_ptr<void> CreatePool()
 {

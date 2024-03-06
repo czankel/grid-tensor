@@ -35,6 +35,11 @@ std::remove_pointer_t<T>* pointer_cast(S pointer)
 
 } // end of namespace
 
+/*
+template<typename T>
+concept DeviceMemoryTensor = requires(T t) { t.Buffer(); };
+*/
+
 
 /// TensorView<Tensor, Rank> implements a view of a tensor.
 ///
@@ -46,8 +51,10 @@ class TensorView
   using value_type = typename TTensor::value_type;
   using pointer = decltype(std::declval<TTensor>().Data());
   using reference = decltype(*std::declval<TTensor>().Data());
-  using const_pointer = typename TTensor::const_pointer;
-  using const_reference = typename TTensor::const_reference;
+  using const_pointer = decltype(std::declval<const TTensor>().Data());
+  using const_reference = decltype(*std::declval<const TTensor>().Data());
+
+  //using const_buffer = const decltype(std::declval<TTensor>().Buffer());
   constexpr static size_t rank = TViewRank;
 
   /// Default constructor
@@ -110,6 +117,13 @@ class TensorView
   /// Data returns a pointer to the data buffer.
   pointer Data()                                          { return data_; }
   const_pointer Data() const                              { return data_; }
+
+  template <typename = void> requires requires (TTensor&& t) {t.Buffer();}
+  auto Buffer()                                           { return tensor_.Buffer(); }
+
+  template <typename = void> requires requires (TTensor&& t) {t.Buffer();}
+  auto Buffer() const                                     { return tensor_.Buffer(); }
+
 
  private:
   TTensor&                        tensor_;

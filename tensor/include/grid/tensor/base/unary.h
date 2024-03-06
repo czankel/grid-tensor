@@ -8,22 +8,23 @@
 
 // DO NOT INCLUDE THIS FILE DIRECTLY
 
-#ifndef GRID_TENSOR_UNARY_OP_H
-#define GRID_TENSOR_UNARY_OP_H
+#ifndef GRID_TENSOR_BASE_UNARY__H
+#define GRID_TENSOR_BASE_UNARY_H
 
 #include <span>
 #include <algorithm>
 #include <ranges>
 
 #include "../concepts.h"
+#include "../device.h"
 
 namespace grid {
 
 /// UnaryOperator<Operator> implements element-wise unary operation on a tensors.
 ///
 ///  @tparm TOperator binary operator
-template <typename TOperator>
-class UnaryOperator
+template <template <typename> typename TOperator, typename T>
+class UnaryOperator<TOperator<device::Base>, T>
 {
  private:
   // operation on a single element
@@ -33,7 +34,7 @@ class UnaryOperator
                   std::span<const ssize_t, 0>,
                   std::span<const ssize_t, 0>) const
   {
-    TOperator::eval(dest, src);
+    TOperator<device::Base>()(dest, src);
   }
 
   // operation on a single dimension (unoptimized)
@@ -45,7 +46,7 @@ class UnaryOperator
   {
     for (size_t i = 0; i < dimensions[0]; i++)
     {
-      TOperator::eval(dest + i, src);
+      TOperator<device::Base>()(dest + i, src);
       src += strides1[0];
     }
   }
@@ -72,12 +73,14 @@ class UnaryOperator
   }
 
  public:
-  template <typename T, size_t TRank>
-  void operator()(T* dst, const T* src,
+  template <typename TTensor0, typename TTensor1, size_t TRank>
+  void operator()(TTensor0& result, const TTensor1& tensor,
                   const std::array<size_t, TRank>& dimensions,
                   const std::array<ssize_t, TRank>& strides0,
-                  const std::array<ssize_t, TRank>& strides1)
+                  const std::array<ssize_t, TRank>& strides1) const
   {
+    typename TTensor0::pointer dst = result.Data();
+    typename TTensor1::const_pointer src = tensor.Data();
     eval(dst, src,
          std::span<const size_t, TRank>(dimensions),
          std::span<const ssize_t, TRank>(strides0),
@@ -85,18 +88,19 @@ class UnaryOperator
   }
 };
 
+
 //
 // Operators
 //
 
-struct CopyOperator
+template <> class CopyOperator<device::Base>
 {
   // scalar X scalar
   template<typename T>
-  static inline void eval(T* dest, const T* src) { *dest = *src; }
+  static inline void operator()(T* dest, const T* src) { *dest = *src; }
 };
 
-struct NegOperator
+template <> class NegOperator<device::Base>
 {
   // scalar X scalar
   template<typename T>
@@ -106,4 +110,4 @@ struct NegOperator
 
 } // end of namespace grid
 
-#endif // GRID_TENSOR_UNARY_OP_H
+#endif // GRID_TENSOR_BASE_UNARY_H

@@ -22,7 +22,7 @@ struct TensorMetalType
 
 struct TensorMetalType
 {
-  template <typename T, size_t TRank, typename TMemory>
+  template <typename T, size_t TRank, typename TMemory = grid::DynamicMemory<De>
   class Tensor : public grid::Tensor<T, TRank, TMemory>
   {
    public:
@@ -77,6 +77,11 @@ struct TensorMetalType
   explicit Tensor(std::array<size_t, N>, grid::Uninitialized<T>) -> Tensor<T, N, grid::DynamicMemory<grid::device::Metal>>;
   template <typename T, size_t N>
   explicit Tensor(std::array<size_t, N>, std::array<ssize_t, N>, grid::Uninitialized<T>) -> Tensor<T, N, grid::DynamicMemory<grid::device::Metal>>;
+
+  // Operator
+  template <grid::AnyOperator TOperator>
+  Tensor(const TOperator&) -> Tensor<typename TOperator::value_type, TOperator::rank, grid::DynamicMemory<grid::device::Metal>>;
+
 
 };
 

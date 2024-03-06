@@ -6,13 +6,13 @@
 // The contents of this file are confidential and proprietary to Chris Zankel.
 //
 
+#include <grid/tensor/device.h>
+
 #include <grid/tensor/tensor.h>
 #include <grid/tensor/base/tensor.h>
 
-#include <grid/tensor/binary_function.h>
-#include <grid/tensor/base/binary_ops.h>
+#include <grid/tensor/base/binary.h>
 #include <grid/tensor/base/comparison.h>
-
 
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"

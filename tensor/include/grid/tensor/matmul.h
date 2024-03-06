@@ -15,16 +15,22 @@
 
 #include "concepts.h"
 
-// TODO: remove when operators are device templated
-#include "base/matmul.h"
-
 namespace grid {
+
+//
+// Device-specific operator
+//
+
+template <typename, typename> class MatmulOperator;
+
 
 template <typename, size_t, typename> class Tensor;
 
 template <AnyTensor TTensor1, AnyTensor TTensor2>
-class MatMulFunction
+class MatmulFunction
 {
+  using device = tensor_device_t<TTensor1>;
+
  public:
   using tensor1_type = std::remove_reference_t<TTensor1>;
   using tensor2_type = std::remove_reference_t<TTensor2>;
@@ -35,10 +41,11 @@ class MatMulFunction
   constexpr static size_t tensor2_rank = tensor2_type::rank;
   // TODO: OK for combination of rank-2 and rank-1 but maybe not rank-3 and higher?
   constexpr static size_t rank = std::min(tensor1_type::rank, tensor2_type::rank);
+  static constexpr MatmulOperator<device, value_type> Operator;
 
   template <typename T1, typename T2>
   requires (tensor1_rank > 0 && tensor2_rank > 0)
-  MatMulFunction(T1&& tensor1, T2&& tensor2)
+  MatmulFunction(T1&& tensor1, T2&& tensor2)
    : tensor1_(std::forward<T1>(tensor1)),
      tensor2_(std::forward<T2>(tensor2))
   {
@@ -54,22 +61,18 @@ class MatMulFunction
   }
 
   // delete assignment and copy/move constructors
-  MatMulFunction() = delete;
-  MatMulFunction(const MatMulFunction& other) = delete;
-  MatMulFunction(MatMulFunction&& other) = delete;
-  MatMulFunction& operator=(const MatMulFunction& other) = delete;
-  MatMulFunction& operator=(MatMulFunction&& other) = delete;
-
+  MatmulFunction() = delete;
+  MatmulFunction(const MatmulFunction& other) = delete;
+  MatmulFunction& operator=(const MatmulFunction& other) = delete;
 
   /// operator()() executes and returns a (scalar) tensor with the 'vector dot' multiplication.
   auto operator()() const requires (tensor1_rank == 1 && tensor2_rank == 1)
   {
-    auto result = value_type{0};
+    auto result = Tensor{value_type{0}};
 
-    MatMulOperator{}(&result, tensor1_.Data(), tensor2_.Data(),
-                     tensor1_.Dimensions()[0], tensor1_.Strides()[0], tensor2_.Strides()[0]);
+    Operator(result, tensor1_, tensor2_, tensor1_.Dimensions()[0], tensor1_.Strides()[0], tensor2_.Strides()[0]);
 
-    return Tensor{result};
+    return result; // FIXME Tensor{result};
   }
 
   /// operator()() executes and returns a (matrix) tensor for a mtrix multiplication.
@@ -80,8 +83,7 @@ class MatMulFunction
     std::array<size_t, 3> dimensions{dimensions1[0], dimensions1[1], dimensions2[1]};
     auto result = Tensor({dimensions1[0], dimensions2[1]}, Uninitialized<value_type>{});
 
-    MatMulOperator{}(result.Data(), tensor1_.Data(), tensor2_.Data(),
-                     dimensions, result.Strides(), tensor1_.Strides(), tensor2_.Strides());
+    Operator(result, tensor1_, tensor2_, dimensions, result.Strides(), tensor1_.Strides(), tensor2_.Strides());
 
     return result;
   }
@@ -97,8 +99,8 @@ class MatMulFunction
     std::array<ssize_t, 2> strides2{tensor2_.Strides()[0], 0};
 
     // Use: M_m_n * V_n = M_m_n * V_n_1 -> V_m
-    MatMulOperator{}(result.Data(), tensor1_.Data(), tensor2_.Data(),
-                     dimensions, strides0, tensor1_.Strides(), strides2);
+    Operator(result, tensor1_, tensor2_,
+             dimensions, strides0, tensor1_.Strides(), strides2);
 
     return result;
   }
@@ -114,7 +116,7 @@ class MatMulFunction
     std::array<ssize_t, 2> strides1{0L, tensor1_.Strides()[0]};
 
     // Use V_m * M_m_n = V_1_m * M_m_n -> V_n
-    MatMulOperator{}(result.Data(), tensor1_.Data(), tensor2_.Data(),
+    Operator(result, tensor1_, tensor2_,
                      dimensions, strides0, strides1, tensor2_.Strides());
 
     return result;
@@ -125,14 +127,14 @@ class MatMulFunction
   TTensor2 tensor2_;
 };
 
-template <typename T1, typename T2> MatMulFunction(T1&&, T2&&)
-  -> MatMulFunction<typename to_tensor<T1>::type, typename to_tensor<T2>::type>;
+template <typename T1, typename T2> MatmulFunction(T1&&, T2&&)
+  -> MatmulFunction<typename to_tensor<T1>::type, typename to_tensor<T2>::type>;
 
 template <TensorConvertible TTensor1, TensorConvertible TTensor2>
 requires (std::remove_cvref_t<TTensor1>::rank > 0 && std::remove_cvref_t<TTensor2>::rank > 0)
-auto MatMul(TTensor1&& tensor1, TTensor2&& tensor2)
+auto Matmul(TTensor1&& tensor1, TTensor2&& tensor2)
 {
-  return MatMulFunction(std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
+  return MatmulFunction(std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
 }
 
 } // end of namespace grd

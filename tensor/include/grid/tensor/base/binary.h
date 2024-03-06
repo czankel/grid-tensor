@@ -8,16 +8,15 @@
 
 // DO NOT INCLUDE THIS FILE DIRECTLY
 
-#ifndef GRID_TENSOR_BASE_BINARY_OPS_H
-#define GRID_TENSOR_BASE_BINARY_OPS_H
+#ifndef GRID_TENSOR_BASE_BINARY_H
+#define GRID_TENSOR_BASE_BINARY_H
 
 #include <span>
 #include <algorithm>
 #include <ranges>
 
-#include "../binary_function.h"
 #include "../concepts.h"
-#include "device.h"
+#include "../device.h"
 
 namespace grid {
 
@@ -26,10 +25,10 @@ namespace grid {
 /// The resulting rank is the maximum of the tensor ranks.
 ///
 ///  @tparm TOperator binary operator
-template <typename TOperator>
-class BinaryOperator<device::Base, TOperator>
+template <template <typename> typename TOperator, typename T>
+class BinaryOperator<TOperator<device::Base>, T>
 {
- private:
+  static constexpr TOperator<device::Base> Operator();
 
   // operation on a single element
   template <typename const_pointer, typename pointer>
@@ -39,8 +38,7 @@ class BinaryOperator<device::Base, TOperator>
                   std::span<const ssize_t, 0>,
                   std::span<const ssize_t, 0>) const
   {
-    // FIXME: instead of using type, should use 'instance'
-    TOperator{}(dest, src1, src2, 0);
+    Operator(dest, src1, src2, 0);
   }
 
   // operation on a single dimension (unoptimized)
@@ -53,7 +51,7 @@ class BinaryOperator<device::Base, TOperator>
   {
     for (size_t i = 0; i < dimensions[0]; i++)
     {
-      TOperator{}(dest, src1, src2, 0);
+      TOperator<device::Base>{}(dest, src1, src2, 0);
       dest += strides0[0];
       src1 += strides1[0];
       src2 += strides2[0];
@@ -94,7 +92,7 @@ class BinaryOperator<device::Base, TOperator>
                    std::span<const ssize_t, 0>)
   {
     for (size_t i = 0; i < dimensions0; i++)
-      TOperator::eval(dest, src1, src2, i);
+      TOperator<device::Base>::eval(dest, src1, src2, i);
   }
 
 
@@ -138,13 +136,16 @@ class BinaryOperator<device::Base, TOperator>
   }
 
  public:
-  template <typename T, size_t TRank>
-  void operator()(T* dst, const T* src1, const T* src2,
-                  const std::array<size_t, TRank>& dimensions,
+  template <typename TTensor0, typename TTensor1, typename TTensor2, size_t TRank>
+  void operator()(TTensor0& result, const TTensor1& tensor1, const TTensor2& tensor2,
+                  const std::array<size_t,  TRank>& dimensions,
                   const std::array<ssize_t, TRank>& strides0,
                   const std::array<ssize_t, TRank>& strides1,
-                  const std::array<ssize_t, TRank>& strides2)
+                  const std::array<ssize_t, TRank>& strides2) const
   {
+    typename TTensor0::pointer dst = result.Data();
+    typename TTensor1::const_pointer src1 = tensor1.Data();
+    typename TTensor2::const_pointer src2 = tensor2.Data();
     if constexpr (TRank > 2)
     {
       if (strides0[TRank - 2] - dimensions[TRank - 1] == 0 &&
@@ -168,6 +169,35 @@ class BinaryOperator<device::Base, TOperator>
 };
 
 
+//
+// Operators
+//
+
+template<> struct AddOperator<device::Base>
+{
+  template<typename T>
+  inline void operator()(T* dest, const T* src1, const T* src2, const size_t i) { dest[i] = src1[i] + src2[i]; }
+};
+
+template<> struct SubOperator<device::Base>
+{
+  template<typename T>
+  inline void operator()(T* dest, const T* src1, const T* src2, const size_t i) { dest[i] = src1[i] - src2[i]; }
+};
+
+template<> struct MulOperator<device::Base>
+{
+  template<typename T>
+  inline void operator()(T* dest, const T* src1, const T* src2, const size_t i) { dest[i] = src1[i] * src2[i]; }
+};
+
+template<> struct DivOperator<device::Base>
+{
+  template<typename T>
+  inline void operator()(T* dest, const T* src1, const T* src2, const size_t i) { dest[i] = src1[i] / src2[i]; }
+};
+
+
 } // end of namespace grid
 
-#endif // GRID_TENSOR_BASE_BINARY_OPS_H
+#endif // GRID_TENSOR_BASE_BINARY_H

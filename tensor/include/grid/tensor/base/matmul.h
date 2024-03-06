@@ -11,19 +11,20 @@
 #ifndef GRID_TENSOR_BASE_MATMUL_H
 #define GRID_TENSOR_BASE_MATMUL_H
 
+#include "../device.h"
+
 namespace grid {
 
+/// MatmulOperator implements a multiplication operation for tensors
+/// different ranks, such as matrix multiplication (Matmul) and vector dot-product (VecDot).
 
-/// MatMulOperator implements a multiplication operation for tensors
-/// different ranks, such as matrix multiplication (MatMul) and vector dot-product (VecDot).
-class MatMulOperator
+template <typename T> class MatmulOperator<device::Base, T>
 {
- private:
   // Note that dimensions are mkn: M_m_k * M_k_n -> M(m,n)
   // Note that strides for all tensors (destination and sources) are:
   //    [0] row: m -> m + 1,  [1] col: n -> n + 1
-  template <typename T>
-  inline void MatMul(T* dest, const T* src1, const T* src2,
+  // FIXME template <typename T>
+  inline void Matmul(T* dest, const T* src1, const T* src2,
                      std::span<const size_t,  3> dimensions,
                      std::span<const ssize_t, 2> strides0,
                      std::span<const ssize_t, 2> strides1,
@@ -98,11 +99,14 @@ class MatMulOperator
   }
 
  public:
-  // vecdot
-  template <typename T>
-  void operator()(T* dst, const T* src1, const T* src2,
-                  const size_t dimensions, const ssize_t strides1, const ssize_t strides2)
+  // operator() for a vector dot product
+  template <typename T0, typename T1, typename T2>
+  void operator()(T0& tensor0, const T1& tensor1, const T2& tensor2,
+                  const size_t dimensions, const ssize_t strides1, const ssize_t strides2) const
   {
+    T* dst = tensor0.Data();
+    const T* src1 = tensor1.Data();
+    const T* src2 = tensor2.Data();
     T sum{0};
     if (strides1 == 1 && strides2 == 1)
     {
@@ -122,15 +126,15 @@ class MatMulOperator
   }
 
   // matmul
-  template <typename T, size_t TRank>
+  template <typename T0, typename T1, typename T2, size_t TRank>
   requires (TRank > 1)
-  void operator()(T* dst, const T* src1, const T* src2,
+  void operator()(T0& dst, const T1& src1, const T2& src2,
                   const std::array<size_t, TRank+1>& dimensions,
                   const std::array<ssize_t, TRank>& strides0,
                   const std::array<ssize_t, TRank>& strides1,
-                  const std::array<ssize_t, TRank>& strides2)
+                  const std::array<ssize_t, TRank>& strides2) const
   {
-    MatMul(dst, src1, src2,
+    Matmul(dst.Data(), src1.Data(), src2.Data(),
       std::span<const size_t,  TRank+1>(dimensions),
       std::span<const ssize_t, TRank>(strides0),
       std::span<const ssize_t, TRank>(strides1),

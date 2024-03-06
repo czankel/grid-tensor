@@ -15,15 +15,15 @@
 #include <math.h>
 #include <tuple>
 
-#include "binary_ops.h"
+#include "binary.h"
+#include "../device.h"
 
 namespace grid {
 
-/// SoftMaxOperator implements the softmax operator.
-class SoftMaxOperator
+/// SoftmaxOperator implements the softmax operator.
+template <> class SoftmaxOperator<device::Base>
 {
  private:
-
   template <typename T>
   inline auto
   Max(const T* src,
@@ -98,21 +98,26 @@ class SoftMaxOperator
 
   /// operator()() executes the operation and returns a tensor.
   // TODO: make eps a parameter, see also definition in rms_norm
-  template <typename T, size_t TRank>
-  auto operator()(T* dst, const T* src,
+  template <typename TTensor0, typename TTensor1, size_t TRank>
+  auto operator()(TTensor0& result, const TTensor1& tensor1,
                   const std::array<size_t,  TRank>& dimensions,
                   const std::array<ssize_t, TRank>& strides0,
-                  const std::array<ssize_t, TRank>& strides1)
+                  const std::array<ssize_t, TRank>& strides1) const
   {
-    constexpr T eps = std::numeric_limits<T>::epsilon();
+    using value_type = typename TTensor0::value_type;
+    constexpr value_type eps = std::numeric_limits<value_type>::epsilon();
+
+    typename TTensor0::pointer dst = result.Data();
+    typename TTensor1::const_pointer src = tensor1.Data();
 
     auto max = Max(src, std::span(dimensions), std::span(strides1));
     auto sum = SumExp(dst, src, max, std::span(dimensions), std::span(strides1));
 
-    T scale = static_cast<T>(1)/(sum + eps);
+    value_type scale = static_cast<value_type>(1)/(sum + eps);
 
     auto strides2 = std::array<ssize_t, TRank>{0};
-    BinaryOperator<device::Base, MulOperator>{}(dst, dst, &scale, dimensions, strides0, strides0, strides2);
+    BinaryOperator<MulOperator<device::Base>, value_type>()(
+        result, result, Tensor{scale}, dimensions, strides0, strides0, strides2);
   }
 };
 

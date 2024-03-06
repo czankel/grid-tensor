@@ -7,16 +7,14 @@
 //
 
 #include <grid/tensor/tensor.h>
-
 #include <grid/tensor/metal/tensor.h>
-#include <grid/tensor/metal/binary.h>
 #include <grid/tensor/metal/comparison.h>
+#include <grid/tensor/metal/matmul.h>
 
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
 
-#include "addition.h"
+#include "multiplication.h"
 #include "tensor_metal.h"
 
-
-INSTANTIATE_TYPED_TEST_SUITE_P(AdditionTestMetal, AdditionTestSuite, TensorMetalType);
+INSTANTIATE_TYPED_TEST_SUITE_P(MultiplicationTestMetal, MultiplicationTestSuite, TensorMetalType);

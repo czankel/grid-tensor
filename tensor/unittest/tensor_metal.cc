@@ -18,3 +18,4 @@
 #include "tensor_metal.h"
 
 INSTANTIATE_TYPED_TEST_SUITE_P(TensorTestMetal, TensorTestSuite, TensorMetalType);
+

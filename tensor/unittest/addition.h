@@ -42,42 +42,44 @@ TYPED_TEST_P(AdditionTestSuite, TensorAdd)
 
 TYPED_TEST_P(AdditionTestSuite, TensorAdd)
 {
-  typename TypeParam::Tensor t21(4UL, 5UL, 1.1);
-  typename TypeParam::Tensor t22(4UL, 5UL, 2.4);
+  typename TypeParam::Tensor t21(4UL, 5UL, 1.1f);
+  typename TypeParam::Tensor t22(4UL, 5UL, 2.4f);
 
   auto op2 = std::move(t21) + std::move(t22);
   auto res2 = op2();
+  std::cout << res2 << std::endl;
 
-  typename TypeParam::Tensor v2(4UL, 5UL, 3.5);
+  typename TypeParam::Tensor v2(4UL, 5UL, 3.5f);
   EXPECT_EQ(res2, v2);
 }
 
 TYPED_TEST_P(AdditionTestSuite, TensorAddAdd)
 {
-  typename TypeParam::Tensor tensor1(4UL, 3UL, 2.1);
-  typename TypeParam::Tensor tensor2(4UL, 3UL, 1.3);
-  typename TypeParam::Tensor tensor3(4UL, 3UL, 2.2);
-  typename TypeParam::Tensor expected(4UL, 3UL, 5.6);
-  auto&& oper = tensor1 + tensor2 + tensor3;
+  typename TypeParam::Tensor tensor1(4UL, 3UL, 2.1f);
+  typename TypeParam::Tensor tensor2(4UL, 3UL, 1.3f);
+  typename TypeParam::Tensor tensor3(4UL, 3UL, 2.2f);
+  typename TypeParam::Tensor expected(4UL, 3UL, 5.6f);
+  auto&& oper = tensor1 + tensor2;// + tensor3;
   auto result = oper();
+  std::cout << result << std::endl;
   EXPECT_EQ(result, expected);
 }
 
 TYPED_TEST_P(AdditionTestSuite, TensorAddMatVecBroadcast)
 {
-  typename TypeParam::Tensor tensor1(4UL, 1.1);
-  typename TypeParam::Tensor tensor2(4UL, 5UL, 4.4);
+  typename TypeParam::Tensor tensor1(4UL, 1.1f);
+  typename TypeParam::Tensor tensor2(4UL, 5UL, 4.4f);
   typename TypeParam::Tensor result = tensor2 + tensor1.View(grid::view::Slice{}, grid::view::NewAxis);
-  typename TypeParam::Tensor expected(4UL, 5UL, 5.5);
+  typename TypeParam::Tensor expected(4UL, 5UL, 5.5f);
   EXPECT_EQ(result, expected);
 }
 
 TYPED_TEST_P(AdditionTestSuite, TensorAddBroadcast)
 {
-  typename TypeParam::Tensor tensor1(5UL, 1.1);
-  typename TypeParam::Tensor tensor2(4UL, 5UL, 4.4);
+  typename TypeParam::Tensor tensor1(5UL, 1.1f);
+  typename TypeParam::Tensor tensor2(4UL, 5UL, 4.4f);
   typename TypeParam::Tensor result = Add(tensor1, tensor2);
-  typename TypeParam::Tensor expected(4UL, 5UL, 5.5);
+  typename TypeParam::Tensor expected(4UL, 5UL, 5.5f);
   EXPECT_EQ(result, expected);
 }
 

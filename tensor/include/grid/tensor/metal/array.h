@@ -26,7 +26,7 @@ class Array<T, DynamicMemory<device::Metal>>
 
   inline MTL::Buffer* Allocate(size_t size)
   {
-    // Align up memory
+    // Align up memory FIXME only for larger sizes not < page_size?
     if (size > vm_page_size)
       size = vm_page_size * ((size + vm_page_size - 1) / vm_page_size);
 
@@ -34,13 +34,13 @@ class Array<T, DynamicMemory<device::Metal>>
 
     // Allocate new buffer
     size_t mode = MTL::ResourceStorageModeShared | MTL::ResourceHazardTrackingModeTracked;
-    auto device = device::Metal::GetDevice();
+    auto& device = device::Metal::GetDevice();
     return device.NewBuffer(size, mode);
   }
 
   inline void Free(MTL::Buffer* buffer)
   {
-    buffer->release();
+    //buffer->release();
   }
 
 
@@ -99,8 +99,14 @@ class Array<T, DynamicMemory<device::Metal>>
   /// Data returns a pointer to the data buffer.
   pointer Data()                                          { return static_cast<pointer>(buffer_->contents()); }
 
-  /// Data returns a pointer to the data buffer.
+  /// Data returns a const_pointer to the data buffer.
   const_pointer Data() const                              { return static_cast<const_pointer>(buffer_->contents()); }
+
+  // Buffer returns the MTL buffer - internal use only
+  MTL::Buffer* Buffer()                                    { return buffer_; }
+
+  // Buffer returns the MTL buffer - internal use only
+  const MTL::Buffer* Buffer() const                        { return buffer_; }
 
  protected:
   size_t  size_;

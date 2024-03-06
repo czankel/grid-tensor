@@ -13,14 +13,14 @@ template <typename _T> constexpr size_t size(size_t count) { return sizeof(_T) *
 }
 
 
-template <typename T> class SoftMaxTestSuite : public testing::Test {};
-TYPED_TEST_SUITE_P(SoftMaxTestSuite);
+template <typename T> class SoftmaxTestSuite : public testing::Test {};
+TYPED_TEST_SUITE_P(SoftmaxTestSuite);
 
 
-TYPED_TEST_P(SoftMaxTestSuite, TensorSoftMaxRank1)
+TYPED_TEST_P(SoftmaxTestSuite, TensorSoftmaxRank1)
 {
   typename TypeParam::Tensor tensor{ 1.618, 2., 3.14, 5.382, -8.5, 1.3, -2.1, 3.477, 5.5 };
-  typename TypeParam::Tensor result = grid::SoftMax(tensor);
+  typename TypeParam::Tensor result = grid::Softmax(tensor);
   typename TypeParam::Tensor expected
   { 0.944665670912764495e-02, 0.138413555743161758e-01, 0.432787127410648800e-01,
     0.407345162648720671e-00, 0.381141786703997885e-06, 0.687341376275671639e-02,
@@ -30,5 +30,5 @@ TYPED_TEST_P(SoftMaxTestSuite, TensorSoftMaxRank1)
 }
 
 
-REGISTER_TYPED_TEST_SUITE_P(SoftMaxTestSuite,
-    TensorSoftMaxRank1);
+REGISTER_TYPED_TEST_SUITE_P(SoftmaxTestSuite,
+    TensorSoftmaxRank1);

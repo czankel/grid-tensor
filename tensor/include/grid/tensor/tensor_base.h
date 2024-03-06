@@ -15,11 +15,12 @@
 
 #include "base/tensor.h"
 
-#include "base/binary_ops.h"
+#include "base/binary_operators.h"
 #include "base/comparison.h"
 #include "base/matmul.h"
 #include "base/rms_norm.h"
 #include "base/softmax.h"
 #include "base/silu.h"
+#include "base/unary_operators.h"
 
 #endif  // GRID_TENSOR_TENSOR_BASE_H

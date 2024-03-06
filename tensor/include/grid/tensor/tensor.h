@@ -15,16 +15,19 @@
 #include <numeric>
 
 #include "array.h"
-#include "binary_function.h"
+#include "binary.h"
 #include "concepts.h"
 #include "device.h"
 #include "iterator.h"
 #include "generate.h"
 #include "matmul.h"
 #include "memory.h"
+#include "rms_norm.h"
+#include "silu.h"
+#include "softmax.h"
 #include "tensor_parameters.h"
 #include "tensor_view.h"
-#include "unary_function.h"
+#include "unary.h"
 
 namespace grid {
 
@@ -60,8 +63,6 @@ class Tensor : public Array<T, TMemory>
 {
   template <PrimitiveTensor P, size_t R> friend class TensorView;
 
-
-
   // helper to extract the template parameters for StaticMemory
   template <typename> struct mem_ext;
   template <size_t... Ns> struct mem_ext<grid::StaticMemory<Ns...>>
@@ -78,6 +79,7 @@ class Tensor : public Array<T, TMemory>
   using const_pointer = const value_type*;
   using const_reference = const value_type&;
   using array_type = Array<value_type, memory_type>;
+  using device = tensor_device<Tensor<T, TRank, TMemory>>;  // FIXME
   constexpr static size_t rank = TRank;
 
 
@@ -253,7 +255,7 @@ class Tensor : public Array<T, TMemory>
       dimensions_{other.Dimensions()},
       strides_{other.Strides()}
   {
-    Transform(other, begin(), UnaryOperator<CopyOperator>{});
+    Transform(other, begin(), UnaryOperator<CopyOperator<device>, value_type>());
   }
 
   /// Move constructor
@@ -278,7 +280,7 @@ class Tensor : public Array<T, TMemory>
     array_type::Realloc(other.Size());
     dimensions_ = other.Dimensions();
     strides_ = other.Strides();
-    Transform(other, begin(), UnaryOperator<CopyOperator>{});
+    Transform(other, begin(), UnaryOperator<CopyOperator<device>, value_type>()); // FIXME: drop UnaryOperator...??
 
     return *this;
   }

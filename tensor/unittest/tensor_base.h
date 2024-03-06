@@ -96,16 +96,9 @@ struct TensorBaseType
   Tensor(const TensorView<TTensor, TRank>&) -> Tensor<typename TTensor::value_type, TRank, grid::DynamicMemory<grid::device::Base>>;
 
   //  operators
-  template <template <template <typename, size_t, typename...> typename, typename, size_t, typename...> typename Operator,
-            template <typename, size_t, typename...> typename TTensor, typename T, size_t TRank, typename... TTensors>
-  Tensor(Operator<TTensor, T, TRank, TTensors...>&&) -> Tensor<T, TRank, grid::DynamicMemory<grid::device::Base>>;
-
-  template <template <template <typename, size_t, typename...> typename, typename, size_t, typename...> typename Operator,
-  template <typename, size_t, typename...> typename TTensor, typename T, size_t TRank, typename... TTensors>
-  Tensor(const Operator<TTensor, T,  TRank, TTensors...>&) -> Tensor<T, TRank, grid::DynamicMemory<grid::device::Base>>;
-
   template <grid::AnyOperator TOperator>
-  Tensor(const TOperator&) -> Tensor<typename TOperator::value_type, TOperator::rank, grid::DynamicMemory<grid::device::Base>>;
+  Tensor(const TOperator&) ->
+    Tensor<typename TOperator::value_type, TOperator::rank, grid::DynamicMemory<grid::device::Base>>;
 };
 
 #endif

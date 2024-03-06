@@ -14,8 +14,8 @@
 #include <math.h>
 #include <tuple>
 
-#include "binary_ops.h"
-#include "device.h"
+#include "binary.h"
+#include "../device.h"
 
 namespace grid {
 
@@ -26,7 +26,7 @@ namespace {
 }
 
 // requires (std::is_floating_point_v<value_type> && rank > 0)
-class RmsNormOperator
+template <> class RmsNormOperator<device::Base>
 {
  private:
   template <typename T>
@@ -63,19 +63,20 @@ class RmsNormOperator
   }
 
  public:
-
   /// operator()() executes and returns a tensor with the RMS norm of the stored vector.
-  template <typename T, size_t TRank>
-  void operator()(T* dst, const T* src,
+  template <typename TTensor0, typename TTensor1, size_t TRank>
+  void operator()(TTensor0& result, const TTensor1& tensor1,
                   const std::array<size_t,  TRank>& dimensions,
                   const std::array<ssize_t, TRank>& strides0,
                   const std::array<ssize_t, TRank>& strides1,
-                  T eps = Eps<T>::default_value)
+                  typename TTensor0::value_type eps = Eps<typename TTensor0::value_type>::default_value) const
   {
-    auto [value, count] = SumSquare(src, std::span(dimensions), std::span(strides1));
-    T scale = 1.0f/sqrtf(value / count + eps);
+    using value_type = typename TTensor0::value_type;
+    auto [value, count] = SumSquare(tensor1.Data(), std::span(dimensions), std::span(strides1));
+    value_type scale = 1.0f/sqrtf(value / count + eps);
     auto strides2 = std::array<ssize_t, TRank>{0};
-    BinaryOperator<device::Base, MulOperator>{}(dst, src, &scale, dimensions, strides0, strides1, strides2);
+    BinaryOperator<MulOperator<device::Base>, value_type>()(
+        result, tensor1, Tensor{scale}, dimensions, strides0, strides1, strides2);
   }
 };
 

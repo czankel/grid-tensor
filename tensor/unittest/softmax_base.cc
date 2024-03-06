@@ -8,6 +8,7 @@
 
 #include <grid/tensor/tensor.h>
 #include <grid/tensor/base/tensor.h>
+
 #include <grid/tensor/base/comparison.h>
 #include <grid/tensor/base/softmax.h>
 
@@ -17,4 +18,4 @@
 #include "softmax.h"
 #include "tensor_base.h"
 
-INSTANTIATE_TYPED_TEST_SUITE_P(SoftMaxTestBase, SoftMaxTestSuite, TensorBaseType);
+INSTANTIATE_TYPED_TEST_SUITE_P(SoftmaxTestBase, SoftmaxTestSuite, TensorBaseType);

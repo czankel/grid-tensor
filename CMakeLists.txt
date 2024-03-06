@@ -263,8 +263,10 @@ set(gridtensor_HEADER_DIRS
 
 if(BUILD_METAL)
 
+  get_property(GRIDTENSOR_METAL_PATH GLOBAL PROPERTY GRIDTENSOR_METAL_PATH)
+
   install(
-    FILES ${TENSOR_METAL_PATH}/gridtensor.metallib
+    FILES ${GRIDTENSOR_METAL_PATH}/gridtensor.metallib
     DESTINATION ${CMAKE_INSTALL_LIBDIR}
     COMPONENT metallib
   )
@@ -399,6 +401,11 @@ add_dependencies(
   gridtensor_metallib
 )
 
+#set(GRIDTENSOR_METAL_PATH ${CMAKE_CURRENT_BINARY_DIR}/)
+target_compile_definitions(
+  gridtensor PUBLIC METAL_PATH="${GRIDTENSOR_METAL_PATH}/gridtensor.metallib"
+)
+
 ##
 ## GoogleTest
 ##
@@ -409,12 +416,6 @@ if (BUILD_TEST)
   target_link_libraries(gridtensor_test gridtensor gtest gtest_main)
   target_include_directories(gridtensor_test PRIVATE ${googletest_SOURCE_DIR}/googletest/include)
   target_include_directories(gridtensor_test PRIVATE ${googletest_SOURCE_DIR}/googlemock/include)
-
-  ## FIXME: use a generic GRID_TENSOR_LIBRARIES
-  #if (BUILD_METAL)
-  #  target_link_libraries(gridtensor_test ${METAL_LIB} ${FOUNDATION_LIB} ${QUARTZ_LIB})
-  #endif()
-
 endif()
 
 ##

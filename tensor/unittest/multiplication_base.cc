@@ -8,6 +8,8 @@
 
 #include <grid/tensor/tensor.h>
 #include <grid/tensor/base/tensor.h>
+
+#include <grid/tensor/base/binary.h>
 #include <grid/tensor/base/comparison.h>
 #include <grid/tensor/base/matmul.h>
 

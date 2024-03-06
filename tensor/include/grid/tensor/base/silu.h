@@ -15,12 +15,13 @@
 #include <math.h>
 #include <tuple>
 
-#include "binary_ops.h"
+#include "../device.h"
+#include "binary_operators.h"
 
 namespace grid {
 
 /// Silu implements the SiLU activation function operator.
-class SiluOperator
+template <> class SiluOperator<device::Base>
 {
  private:
 
@@ -62,13 +63,13 @@ class SiluOperator
 
  public:
   /// operator()() executes the operation and returns a tensor.
-  template <typename T, size_t TRank>
-  auto operator()(T* dst, const T* src,
+  template <typename TTensor0, typename TTensor1, size_t TRank>
+  auto operator()(TTensor0& result, const TTensor1& tensor1,
                   const std::array<size_t,  TRank>& dimensions,
                   const std::array<ssize_t, TRank>& strides0,
                   const std::array<ssize_t, TRank>& strides1)
   {
-    Silu(dst, src, dimensions, strides0, strides1);
+    Silu(result.Data(), tensor1.Data(), dimensions, strides0, strides1);
   }
 };
 

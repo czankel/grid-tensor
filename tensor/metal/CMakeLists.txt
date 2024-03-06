@@ -1,9 +1,10 @@
 
-set(TENSOR_METAL_PATH ${CMAKE_CURRENT_BINARY_DIR}/)
+set(GRIDTENSOR_METAL_PATH ${CMAKE_CURRENT_BINARY_DIR})
+set_property(GLOBAL PROPERTY GRIDTENSOR_METAL_PATH ${CMAKE_CURRENT_BINARY_DIR})
 
 set(
   KERNELS
-  "unary"
+  "binary"
 )
 
 function(build_kernel TARGET SRCFILE)
@@ -28,8 +29,8 @@ foreach(KERNEL ${KERNELS})
 endforeach()
 
 add_custom_command(
-  OUTPUT ${TENSOR_METAL_PATH}/gridtensor.metallib
-  COMMAND xcrun -sdk macosx metallib ${KERNELS_AIR} -o ${TENSOR_METAL_PATH}/gridtensor.metallib
+  OUTPUT ${GRIDTENSOR_METAL_PATH}/gridtensor.metallib
+  COMMAND xcrun -sdk macosx metallib ${KERNELS_AIR} -o ${GRIDTENSOR_METAL_PATH}/gridtensor.metallib
   DEPENDS ${KERNELS_AIR}
   COMMENT "Building gridtensor.metallib"
   VERBATIM
@@ -37,9 +38,10 @@ add_custom_command(
 
 add_custom_target(
   gridtensor_metallib
-  DEPENDS ${TENSOR_METAL_PATH}/gridtensor.metallib
+  DEPENDS ${GRIDTENSOR_METAL_PATH}/gridtensor.metallib
 )
 
+# FIXME remove?
 # Metal cpp library (linker)
 #target_link_libraries(METAL_CPP
 #        "-framework Metal"
