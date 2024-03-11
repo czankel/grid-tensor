@@ -9,6 +9,7 @@
 // Important: Class template argument deduction for alias templates P1814R0 not supported on all
 // compilers. This requires to duplicate *all* deduction rules in slowcpu/tensor.h
 
+#include <grid/tensor/concepts.h>
 
 #if __cpp_deduction_guides >= 201907L
 
@@ -22,13 +23,25 @@ struct TensorBaseType
 
 struct TensorBaseType
 {
+#if 0
+  template <typename T, size_t TRank>
+  class DeviceTensor : public grid::Tensor<T, TRank, grid::DynamicMemory<grid::device::Base>>
+  {
+   public:
+    using grid::Tensor<T, TRank, grid::DynamicMemory<grid::device::Base>>::Tensor;
+  };
+#endif
+  // FIXME: why is this even all needed?
   template <typename T, size_t TRank, typename TMemory>
   class Tensor : public grid::Tensor<T, TRank, TMemory>
   {
    public:
     using grid::Tensor<T, TRank, TMemory>::Tensor;
   };
-
+#if 1
+  template <grid::AnyTensor T>
+  Tensor(const T&) -> Tensor<typename std::remove_cvref_t<T>::value_type, std::remove_cvref_t<T>::rank, grid::DynamicMemory<grid::device::Base>>;
+#endif
   // rank-0 tensor
   template <typename T>
   explicit Tensor(T) -> Tensor<T, 0, grid::Scalar>;
@@ -38,6 +51,8 @@ struct TensorBaseType
   // static tensors
   template <typename T, typename... Ts>
   explicit Tensor(T, Ts...) -> Tensor<std::common_type_t<T, Ts...>, 1, grid::StaticMemory<sizeof...(Ts)+1>>;
+  template <typename T, size_t N>
+  explicit Tensor(T(&&)[N]) -> Tensor<T, 1, grid::StaticMemory<N>>;
   template <typename T, size_t... N>
   explicit Tensor(T(&&... l)[N]) -> Tensor<T, 2, grid::StaticMemory<sizeof...(N), std::max({N...})>>;
   template <typename T, size_t... M, size_t... N>

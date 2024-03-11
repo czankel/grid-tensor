@@ -13,6 +13,17 @@
 #include <algorithm>
 #include <ranges>
 
+#if 0
+namespace grid {
+template <typename, typename> class MatmulOperator;
+}
+
+
+#include "metal/device.h"
+#include "base/matmul.h"
+#include "metal/matmul.h"
+#endif
+
 #include "concepts.h"
 
 namespace grid {
@@ -22,8 +33,6 @@ namespace grid {
 //
 
 template <typename, typename> class MatmulOperator;
-
-
 template <typename, size_t, typename> class Tensor;
 
 template <AnyTensor TTensor1, AnyTensor TTensor2>
@@ -41,7 +50,6 @@ class MatmulFunction
   constexpr static size_t tensor2_rank = tensor2_type::rank;
   // TODO: OK for combination of rank-2 and rank-1 but maybe not rank-3 and higher?
   constexpr static size_t rank = std::min(tensor1_type::rank, tensor2_type::rank);
-  static constexpr MatmulOperator<device, value_type> Operator;
 
   template <typename T1, typename T2>
   requires (tensor1_rank > 0 && tensor2_rank > 0)
@@ -70,7 +78,7 @@ class MatmulFunction
   {
     auto result = Tensor{value_type{0}};
 
-    Operator(result, tensor1_, tensor2_, tensor1_.Dimensions()[0], tensor1_.Strides()[0], tensor2_.Strides()[0]);
+    //operator_(result, tensor1_, tensor2_, tensor1_.Dimensions()[0], tensor1_.Strides()[0], tensor2_.Strides()[0]);
 
     return result; // FIXME Tensor{result};
   }
@@ -81,9 +89,9 @@ class MatmulFunction
     auto&& dimensions1 = tensor1_.Dimensions();
     auto&& dimensions2 = tensor2_.Dimensions();
     std::array<size_t, 3> dimensions{dimensions1[0], dimensions1[1], dimensions2[1]};
-    auto result = Tensor({dimensions1[0], dimensions2[1]}, Uninitialized<value_type>{});
-
-    Operator(result, tensor1_, tensor2_, dimensions, result.Strides(), tensor1_.Strides(), tensor2_.Strides());
+    auto result = Tensor<value_type, 2, DynamicMemory<device>>({dimensions1[0], dimensions2[1]}, Uninitialized<value_type>{});
+// FIXME: strides can be used from the tensors directly, no broadcasting here?
+    operator_(result, tensor1_, tensor2_, dimensions, result.Strides(), tensor1_.Strides(), tensor2_.Strides());
 
     return result;
   }
@@ -99,8 +107,7 @@ class MatmulFunction
     std::array<ssize_t, 2> strides2{tensor2_.Strides()[0], 0};
 
     // Use: M_m_n * V_n = M_m_n * V_n_1 -> V_m
-    Operator(result, tensor1_, tensor2_,
-             dimensions, strides0, tensor1_.Strides(), strides2);
+    operator_(result, tensor1_, tensor2_, dimensions, strides0, tensor1_.Strides(), strides2);
 
     return result;
   }
@@ -116,13 +123,13 @@ class MatmulFunction
     std::array<ssize_t, 2> strides1{0L, tensor1_.Strides()[0]};
 
     // Use V_m * M_m_n = V_1_m * M_m_n -> V_n
-    Operator(result, tensor1_, tensor2_,
-                     dimensions, strides0, strides1, tensor2_.Strides());
+    operator_(result, tensor1_, tensor2_, dimensions, strides0, strides1, tensor2_.Strides());
 
     return result;
   }
 
  private:
+  MatmulOperator<device, value_type> operator_;
   TTensor1 tensor1_;
   TTensor2 tensor2_;
 };

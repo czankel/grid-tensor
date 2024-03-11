@@ -15,8 +15,8 @@
 
 #include "../device.h"
 
-namespace grid {
 
+namespace grid {
 
 /// MatmulOperator implements a multiplication operation for tensors
 /// different ranks, such as matrix multiplication (Matmul) and vector dot-product (VecDot).
@@ -32,6 +32,9 @@ template <typename T> class MatmulOperator<device::Metal, T>
       auto& dev = device::Metal::GetDevice();
       //std::string op_name(TOperator<device::Metal>::kernel_name);
       std::string op_name = grid::Demangle(typeid(T).name());
+      // FIXME
+      if (op_name == "int")
+        op_name = "int64_t";
 
       kernel_ = dev.GetKernel(std::string("GemmOperatorMM" + op_name));
 
@@ -44,6 +47,7 @@ template <typename T> class MatmulOperator<device::Metal, T>
         throw std::runtime_error("Failed to create queue");
     }
   }
+
 #if 0
  private:
   // Note that dimensions are mkn: M_m_k * M_k_n -> M(m,n)
@@ -81,32 +85,55 @@ template <typename T> class MatmulOperator<device::Metal, T>
   }
 #endif
  public:
-  // vecdot
-  template <typename T0, typename T1, typename T2>
-  void operator()(T0& tensor0, const T1& tensor1, const T2& tensor2,
-                  const size_t dimensions, const ssize_t strides1, const ssize_t strides2) const
+  // vecdot FIXME
+  template <typename T0, typename T1, typename T2, size_t TRank>
+  void operator()(T0& result, const T1& tensor1, const T2& tensor2,
+                  const std::array<size_t, TRank+1>& dimensions,
+                  const std::array<ssize_t, TRank>& strides0,
+                  const std::array<ssize_t, TRank>& strides1,
+                  const std::array<ssize_t, TRank>& strides2) const
   {
-    T* dst = tensor0.Data();
-    const T* src1 = tensor1.Data();
-    const T* src2 = tensor2.Data();
-    T sum{0};
-    if (strides1 == 1 && strides2 == 1)
-    {
-      for (size_t i = 0; i < dimensions; i++)
-        sum += src1[i] * src2[i];
-    }
-    else
-    {
-      for (size_t i = 0; i < dimensions; i++)
-      {
-        sum += *src1 * *src2;
-        src1 += strides1;
-        src2 += strides2;
-      }
-    }
-    *dst = sum;
-  }
+    MTL::CommandBuffer* command_buffer = queue_->commandBufferWithUnretainedReferences();
+    if (!command_buffer)
+      throw std::runtime_error("failed to create command buffer");
 
+    command_buffer->retain();
+
+    MTL::ComputeCommandEncoder* enc = command_buffer->computeCommandEncoder();
+    enc->retain();
+
+    enc->setComputePipelineState(kernel_);
+    enc->setBuffer(tensor1.Buffer(), 0, 0);
+    enc->setBuffer(tensor2.Buffer(), 0, 1);
+    enc->setBuffer(result.Buffer(), 0, 2);
+
+    enc->setBytes(&dimensions[1], sizeof(size_t), 3);
+    enc->setBytes(&result.Strides(), 2 * sizeof(size_t), 4);
+    enc->setBytes(&strides1, 2 * sizeof(size_t), 5);
+    enc->setBytes(&strides2, 2 * sizeof(size_t), 6);
+
+    // FIXME: is it row/col or col/row? does it matter, i.e. align with kernel?
+    MTL::Size grid_size = MTL::Size(dimensions[0], dimensions[2], 1);
+
+  //set_array_buffer(compute_encoder, out, 1);
+  //compute_encoder->setBytes(&odd, sizeof(bool), 2);
+
+
+    NS::UInteger thread_group_size_ = std::min(dimensions[2], kernel_->maxTotalThreadsPerThreadgroup());
+    MTL::Size thread_group_size = MTL::Size(thread_group_size_, 1, 1);
+    enc->dispatchThreads(grid_size, thread_group_size);
+    enc->endEncoding();
+
+    command_buffer->commit();
+    command_buffer->waitUntilCompleted();
+
+    MTL::CommandBufferStatus status = command_buffer->status();
+    std::cout << "status: " << status << std::endl;
+
+    enc->release();
+    command_buffer->release();
+  }
+#if 0
   // matmul
   template <typename T0, typename T1, typename T2, size_t TRank>
   requires (TRank > 1)
@@ -116,6 +143,7 @@ template <typename T> class MatmulOperator<device::Metal, T>
                   const std::array<ssize_t, TRank>& strides1,
                   const std::array<ssize_t, TRank>& strides2) const
   {
+#if 0
     MTL::CommandBuffer* command_buffer = queue_->commandBufferWithUnretainedReferences();
     if (!command_buffer)
       throw std::runtime_error("failed to create command buffer");
@@ -158,12 +186,15 @@ template <typename T> class MatmulOperator<device::Metal, T>
     command_buffer->release();
 
     return;
+#endif
   }
-
+#endif
   static MTL::ComputePipelineState* kernel_;
   static MTL::CommandQueue* queue_;
 };
 
+template <typename T> MTL::ComputePipelineState* MatmulOperator<device::Metal, T>::kernel_;
+template <typename T> MTL::CommandQueue* MatmulOperator<device::Metal, T>::queue_;
 
 } // end of namespace grid
 

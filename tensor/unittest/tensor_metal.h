@@ -9,25 +9,47 @@
 // Important: Class template argument deduction for alias templates P1814R0 not supported on all
 // compilers. This requires to duplicate *all* deduction rules in slowcpu/tensor.h
 
+#include <grid/tensor/concepts.h>
 
 #if __cpp_deduction_guides >= 201907L
 
 struct TensorMetalType
 {
+  template <typename T, size_t N>
+  using DeviceTensor = grid::Tensor<T, N, device::Metal>
+
+  // FIXME: this is basically grid::Tensor .. use with .. DeviceTensor 
+  //FIXME: future could just be UseDevice(device::Metal); and Tensor a { ... };
   template <typename T, size_t N, typename M>
-  using Tensor = grid::Tensor<T, N, device::Metal>
+  using Tensor = grid::Tensor<T, N, M>;
+
+  template <grid::AnyTensor T>
+  DeviceTensor(T) -> DeviceTensor<typename std::remove_cvref_t<T>::value_type, std::remove_cvref_t<T>::rank>;
 };
 
 #else
 
 struct TensorMetalType
 {
-  template <typename T, size_t TRank, typename TMemory = grid::DynamicMemory<De>
+#if 0
+  template <typename T, size_t TRank>
+  class DeviceTensor : public grid::Tensor<T, TRank, grid::DynamicMemory<grid::device::Metal>>
+  {
+   public:
+    using grid::Tensor<T, TRank, grid::DynamicMemory<grid::device::Metal>>::Tensor;
+  };
+#endif
+  template <typename T, size_t TRank, typename TMemory>
   class Tensor : public grid::Tensor<T, TRank, TMemory>
   {
    public:
     using grid::Tensor<T, TRank, TMemory>::Tensor;
   };
+
+  template <grid::AnyTensor T>
+  Tensor(T) -> Tensor<typename std::remove_cvref_t<T>::value_type,
+                      std::remove_cvref_t<T>::rank,
+                      grid::DynamicMemory<grid::device::Metal>>;
 
   // rank-0 tensor (cpu)
   template <typename T>

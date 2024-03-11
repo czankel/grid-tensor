@@ -92,7 +92,14 @@ template <TensorConvertible TTensor> auto Neg(TTensor&& tensor)
 {
   return Unary(NegOperator<tensor_device_t<TTensor>>(), std::forward<TTensor>(tensor));
 }
-
+#if 0
+// FIXME: how to integrate this?
+/// @brief Softmax ... FIXME
+template <TensorConvertible TTensor> auto Softmax(TTensor&& tensor)
+{
+  return Unary(SoftmaxOperator<tensor_device_t<TTensor>>(), std::forward<TTensor>(tensor));
+}
+#endif
 
 } // end of namespace grd
 

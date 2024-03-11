@@ -7,9 +7,12 @@
 //
 
 #include <grid/tensor/tensor.h>
+#include <grid/tensor/binary.h>
+
 #include <grid/tensor/metal/tensor.h>
 #include <grid/tensor/metal/comparison.h>
 #include <grid/tensor/metal/matmul.h>
+#include <grid/tensor/metal/tensor.h>
 
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"

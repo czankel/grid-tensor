@@ -77,6 +77,7 @@ class BinaryOperator<TOperator<device::Metal>, T>
     enc->setBuffer(tensor2.Buffer(), 0, 1);
     enc->setBuffer(result.Buffer(), 0, 2);
 
+    // FIXME???
     size_t array_length = strides0[0] * dimensions[0];
     MTL::Size grid_size = MTL::Size(array_length, 1, 1);
 
@@ -93,31 +94,8 @@ class BinaryOperator<TOperator<device::Metal>, T>
 
     enc->release();
     command_buffer->release();
-
-    return;
-
-    /*
-    if constexpr (TRank > 2)
-    {
-      if (strides0[TRank - 2] - dimensions[TRank - 1] == 0 &&
-          strides1[TRank - 2] - dimensions[TRank - 1] == 0 &&
-          strides2[TRank - 2] - dimensions[TRank - 1] == 0)
-        eval(dst, src1, src2,
-             dimensions[TRank - 1],
-             std::span<const size_t,  TRank - 1>(dimensions.begin(), TRank - 1),
-             std::span<const ssize_t, TRank - 1>(strides0.begin(), TRank - 1),
-             std::span<const ssize_t, TRank - 1>(strides1.begin(), TRank - 1),
-             std::span<const ssize_t, TRank - 1>(strides2.begin(), TRank - 1));
-      return;
-    }
-
-    eval(dst, src1, src2,
-         std::span<const size_t,  TRank>(dimensions),
-         std::span<const ssize_t, TRank>(strides0),
-         std::span<const ssize_t, TRank>(strides1),
-         std::span<const ssize_t, TRank>(strides2));
-         */
   }
+
  private:
   static MTL::ComputePipelineState* kernel_vv_;
   static MTL::ComputePipelineState* kernel_vs_;

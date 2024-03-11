@@ -20,6 +20,10 @@
 
 namespace grid {
 
+// will this work?
+// #include "unary.h"
+// template <> class UnaryOperator<SoftmaxOperator<device::Base>> { ...
+
 /// SoftmaxOperator implements the softmax operator.
 template <> class SoftmaxOperator<device::Base>
 {

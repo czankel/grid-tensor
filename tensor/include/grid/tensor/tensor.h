@@ -94,19 +94,40 @@ class Tensor : public Array<T, TMemory>
 
 
   /// Constructor for a rank-1 tensor (vector) with static brace initialization.
-  explicit Tensor(std::initializer_list<value_type>&& init) requires (TRank > 0)
+  Tensor(std::initializer_list<value_type>&& init) requires (TRank > 0)
     : Array<value_type, memory_type>(get_array<value_type, mem_ext<memory_type>::array[0]>(std::move(init))),
       dimensions_(mem_ext<memory_type>::array),
       strides_{1}
   {}
 
+  template <Arithmetic TT, Arithmetic... Ts>
+  Tensor(TT&& t, Ts&&... ts)
+    : Array<std::common_type_t<TT, Ts...>, StaticMemory<sizeof...(Ts)+1>>(std::to_array({std::forward<TT>(t), std::forward<Ts>(ts)...})),
+      dimensions_(std::to_array({1 + sizeof...(Ts)})),
+      strides_{1}
+  {}
+#if 0
   /// Constructor for a rank-2 tensor (matrix) with static brace initialization.
-  explicit Tensor(std::initializer_list<std::initializer_list<value_type>>&& init)
+  Tensor(std::initializer_list<std::initializer_list<value_type>>&& init)
     : Array<value_type, memory_type>(
         get_array<value_type, mem_ext<memory_type>::array[0], mem_ext<memory_type>::array[1]>(std::move(init))),
       dimensions_(mem_ext<memory_type>::array),
       strides_{make_strides(dimensions_)}
   {}
+#endif
+#if 1
+  /// FIXME -> Tensor<T, 2, StaticMemory<sizeof...(N), std::max({N...})>>;
+  // Tensor(T(&&... l)[N]) -> Tensor<T, 2, StaticMemory<sizeof...(N), std::max({N...})>>;
+  template <Arithmetic TT, size_t... N>
+  Tensor(TT(&&... init)[N])
+    : Array<value_type, memory_type>(
+        get_array/*<value_type,
+                  mem_ext<memory_type>::array[0],
+                  mem_ext<memory_type>::array[1]> */(std::move(init)...)),
+      dimensions_(mem_ext<memory_type>::array),
+      strides_{make_strides(dimensions_)}
+  {}
+#endif
 
   /// Constructor for a rank-3 tensor with static brace initialization.
   explicit Tensor(std::initializer_list<std::initializer_list<std::initializer_list<value_type>>>&& init)
@@ -114,7 +135,8 @@ class Tensor : public Array<T, TMemory>
         get_array<value_type,
                   mem_ext<memory_type>::array[0],
                   mem_ext<memory_type>::array[1],
-                  mem_ext<memory_type>::array[2]>(std::move(init))),
+                  mem_ext<memory_type>::array[2]>(
+                    std::move(init))),
       dimensions_(mem_ext<memory_type>::array),
       strides_{make_strides(dimensions_)}
   {}
@@ -138,7 +160,7 @@ class Tensor : public Array<T, TMemory>
   {}
 
   /// Constructor for a rank-2 tensor (matrix) with a dynamically allocated buffer and no padding.
-  explicit Tensor(size_t dim_m, size_t dim_n, value_type init)
+  Tensor(size_t dim_m, size_t dim_n, value_type init)
     : Array<value_type, memory_type>(dim_m * dim_n * sizeof(value_type)),
       dimensions_{dim_m, dim_n},
       strides_{make_strides(dimensions_)}
@@ -258,6 +280,18 @@ class Tensor : public Array<T, TMemory>
     Transform(other, begin(), UnaryOperator<CopyOperator<device>, value_type>());
   }
 
+  // FIXME: even for Metal, static data should work (shared mem)? use array for that?
+  template <AnyTensor TTensor>
+  Tensor(const TTensor& other)
+    : Array<value_type, memory_type>(other.Size()),
+      dimensions_{other.Dimensions()},
+      strides_{other.Strides()}
+  {
+    // FIXME
+    memcpy(this->Data(), other.Data(), other.Size());
+    //Transform(other, begin(), UnaryOperator<CopyOperator<device>, value_type>());
+  }
+
   /// Move constructor
   Tensor(Tensor&& other)
     : Array<value_type, memory_type>(std::move(static_cast<Array<value_type, memory_type>&&>(other))),
@@ -277,6 +311,7 @@ class Tensor : public Array<T, TMemory>
   template <PrimitiveTensor TTensor>
   Tensor& operator=(const TTensor& other)
   {
+    printf("OPERATOR=&\n");
     array_type::Realloc(other.Size());
     dimensions_ = other.Dimensions();
     strides_ = other.Strides();
@@ -288,6 +323,7 @@ class Tensor : public Array<T, TMemory>
   /// Move-assign is only supported from the same type
   Tensor& operator=(Tensor&& other)
   {
+    printf("OPERATOR=&&&\n");
     dimensions_ = other.Dimensions();
     strides_ = other.Strides();
     Array<value_type, memory_type>::operator=(std::move(other));
@@ -507,7 +543,8 @@ class Tensor<T, TRank, MemoryMapped>
 // CTAD rules
 //
 
-// Rank-0
+
+// Rank-0 -- FIXME: drop rank 0 ? It's a scalar, then, it's useful for devices to pass a pointer? for folding??
 
 // Tensor{T} -> Rank-0 tensor with a static/local array
 template <Arithmetic T>
@@ -521,15 +558,23 @@ explicit Tensor(Uninitialized<T>) -> Tensor<T, 0, Scalar>;
 
 // Tensor{Ts...} -> Rank-1 tensor with a static/local array (brace-initializer).
 template <Arithmetic T, typename... Ts>
-explicit Tensor(T, Ts...) -> Tensor<std::common_type_t<T, Ts...>, 1, StaticMemory<sizeof...(Ts)+1>>;
+Tensor(T, Ts...) -> Tensor<std::common_type_t<T, Ts...>, 1, StaticMemory<sizeof...(Ts)+1>>;
+
+// Tensor({Ts...}) -> Rank-1 tensor with a static/local array (brace-initializer).
+template <Arithmetic T, size_t N>
+Tensor(T(&&)[N]) -> Tensor<T, 1, StaticMemory<N>>;
 
 // Tensor{{...},...} -> Rank-2 tensor with a static/local array (brace-initializer).
 template <Arithmetic T, size_t... N>
 Tensor(T(&&... l)[N]) -> Tensor<T, 2, StaticMemory<sizeof...(N), std::max({N...})>>;
 
+//template <Arithmetic T>
+//Tensor(std::initializer_list<std::initializer_list<T>>&& init) ->
+  //Tensor<T, 2, StaticMemory<3, 3>>;
+
 // Tensor{{{...},...},...} -> Rank-3 tensor with a static/local array (brace-initializer).
-template <Arithmetic T, size_t... M, size_t... N>
-explicit Tensor(T(&&... l)[M][N]) -> Tensor<T, 3, StaticMemory<sizeof...(M), std::max({M...}), std::max({N...})>>;
+//template <Arithmetic T, size_t... M, size_t... N>
+//explicit Tensor(T(&&... l)[M][N]) -> Tensor<T, 3, StaticMemory<sizeof...(M), std::max({M...}), std::max({N...})>>;
 
 // Tensor with Dynamic Allocator - Paremter List
 

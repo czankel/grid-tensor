@@ -58,4 +58,4 @@ template <typename Op, typename T, typename U>
 #define FUNCTION_OPS   Add, Sub, Mul, Div
 #define FUNCTION_TYPES uint8_t, uint16_t, uint32_t, uint64_t, int8_t, int16_t, int32_t, int64_t, half, float, bfloat 
 
-INSTANTIATE_FUNCTIONS(FUNCTION_TEMPLATE, (FUNCTION_RANKS), (FUNCTION_OPS), (FUNCTION_TYPES))
+INSTANTIATE3(FUNCTION_TEMPLATE, (FUNCTION_RANKS), (FUNCTION_OPS), (FUNCTION_TYPES))

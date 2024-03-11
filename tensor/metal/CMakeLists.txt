@@ -5,6 +5,7 @@ set_property(GLOBAL PROPERTY GRIDTENSOR_METAL_PATH ${CMAKE_CURRENT_BINARY_DIR})
 set(
   KERNELS
   "binary"
+  "gemm"
 )
 
 function(build_kernel TARGET SRCFILE)

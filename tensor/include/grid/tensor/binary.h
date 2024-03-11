@@ -161,6 +161,8 @@ auto Div(TTensor1&& tensor1, TTensor2&& tensor2)
 }
 
 
+// FIXME: add Softmax, etc. here? why duplicate code? Softmax is Unary...
+
 } // end of namespace grd
 
 #endif  // GRID_TENSOR_BINARY_FUNCTION_H

@@ -34,88 +34,106 @@
 // helper to extract the list of arguments passed to the macro. 
 #define ARG_LIST(...) __VA_ARGS__
 
-// Expand the argument type
-#define EXPAND_TYPE_1(FUNC, R, O, T, ...)   FUNC(R, O, T)
-#define EXPAND_TYPE_2(FUNC, R, O, T, ...)   FUNC(R, O, T) EXPAND_TYPE_1(FUNC, R, O, __VA_ARGS__)
-#define EXPAND_TYPE_3(FUNC, R, O, T, ...)   FUNC(R, O, T) EXPAND_TYPE_2(FUNC, R, O, __VA_ARGS__)
-#define EXPAND_TYPE_4(FUNC, R, O, T, ...)   FUNC(R, O, T) EXPAND_TYPE_3(FUNC, R, O, __VA_ARGS__)
-#define EXPAND_TYPE_5(FUNC, R, O, T, ...)   FUNC(R, O, T) EXPAND_TYPE_4(FUNC, R, O, __VA_ARGS__)
-#define EXPAND_TYPE_6(FUNC, R, O, T, ...)   FUNC(R, O, T) EXPAND_TYPE_5(FUNC, R, O, __VA_ARGS__)
-#define EXPAND_TYPE_7(FUNC, R, O, T, ...)   FUNC(R, O, T) EXPAND_TYPE_6(FUNC, R, O, __VA_ARGS__)
-#define EXPAND_TYPE_8(FUNC, R, O, T, ...)   FUNC(R, O, T) EXPAND_TYPE_7(FUNC, R, O, __VA_ARGS__)
-#define EXPAND_TYPE_9(FUNC, R, O, T, ...)   FUNC(R, O, T) EXPAND_TYPE_8(FUNC, R, O, __VA_ARGS__)
-#define EXPAND_TYPE_10(FUNC, R, O, T, ...)  FUNC(R, O, T) EXPAND_TYPE_9(FUNC, R, O, __VA_ARGS__)
-#define EXPAND_TYPE_11(FUNC, R, O, T, ...)  FUNC(R, O, T) EXPAND_TYPE_10(FUNC, R, O, __VA_ARGS__)
-#define EXPAND_TYPE_12(FUNC, R, O, T, ...)  FUNC(R, O, T) EXPAND_TYPE_11(FUNC, R, O, __VA_ARGS__)
-#define EXPAND_TYPE_13(FUNC, R, O, T, ...)  FUNC(R, O, T) EXPAND_TYPE_12(FUNC, R, O, __VA_ARGS__)
-#define EXPAND_TYPE_14(FUNC, R, O, T, ...)  FUNC(R, O, T) EXPAND_TYPE_13(FUNC, R, O, __VA_ARGS__)
-#define EXPAND_TYPE_15(FUNC, R, O, T, ...)  FUNC(R, O, T) EXPAND_TYPE_14(FUNC, R, O, __VA_ARGS__)
-#define EXPAND_TYPE_16(FUNC, R, O, T, ...)  FUNC(R, O, T) EXPAND_TYPE_15(FUNC, R, O, __VA_ARGS__)
-#define EXPAND_TYPE_17(FUNC, R, O, T, ...)  FUNC(R, O, T) EXPAND_TYPE_16(FUNC, R, O, __VA_ARGS__)
-#define EXPAND_TYPE_18(FUNC, R, O, T, ...)  FUNC(R, O, T) EXPAND_TYPE_17(FUNC, R, O, __VA_ARGS__)
-#define EXPAND_TYPE_19(FUNC, R, O, T, ...)  FUNC(R, O, T) EXPAND_TYPE_18(FUNC, R, O, __VA_ARGS__)
+// Instantiate the actual function for the number of iteration groups
 
-#define EXPAND_TYPE_(NARGS, ...)            EXPAND_TYPE_ ## NARGS(__VA_ARGS__)
-#define EXPAND_TYPE(NARGS, FUNC, R, O, T)   EXPAND_TYPE_(NARGS, FUNC, R, O, ARG_LIST T)
+#define DEFINE_1(FN, X, Y, Z) FN(Z)
+#define DEFINE_2(FN, X, Y, Z) FN(Y, Z)
+#define DEFINE_3(FN, X, Y, Z) FN(X, Y, Z)
 
-// Expand the operators
-#define EXPAND_OP_1(FUNC, R, T, O, ...)     EXPAND_TYPE(PP_NARG T, FUNC, R, O, T)
-#define EXPAND_OP_2(FUNC, R, T, O, ...)     EXPAND_TYPE(PP_NARG T, FUNC, R, O, T) EXPAND_OP_1(FUNC, R, T, __VA_ARGS__)
-#define EXPAND_OP_3(FUNC, R, T, O, ...)     EXPAND_TYPE(PP_NARG T, FUNC, R, O, T) EXPAND_OP_2(FUNC, R, T, __VA_ARGS__)
-#define EXPAND_OP_4(FUNC, R, T, O, ...)     EXPAND_TYPE(PP_NARG T, FUNC, R, O, T) EXPAND_OP_3(FUNC, R, T, __VA_ARGS__)
-#define EXPAND_OP_5(FUNC, R, T, O, ...)     EXPAND_TYPE(PP_NARG T, FUNC, R, O, T) EXPAND_OP_4(FUNC, R, T, __VA_ARGS__)
-#define EXPAND_OP_6(FUNC, R, T, O, ...)     EXPAND_TYPE(PP_NARG T, FUNC, R, O, T) EXPAND_OP_5(FUNC, R, T, __VA_ARGS__)
-#define EXPAND_OP_7(FUNC, R, T, O, ...)     EXPAND_TYPE(PP_NARG T, FUNC, R, O, T) EXPAND_OP_6(FUNC, R, T, __VA_ARGS__)
-#define EXPAND_OP_8(FUNC, R, T, O, ...)     EXPAND_TYPE(PP_NARG T, FUNC, R, O, T) EXPAND_OP_7(FUNC, R, T, __VA_ARGS__)
-#define EXPAND_OP_9(FUNC, R, T, O, ...)     EXPAND_TYPE(PP_NARG T, FUNC, R, O, T) EXPAND_OP_8(FUNC, R, T, __VA_ARGS__)
-#define EXPAND_OP_10(FUNC, R, T, O, ...)    EXPAND_TYPE(PP_NARG T, FUNC, R, O, T) EXPAND_OP_9(FUNC, R, T, __VA_ARGS__)
-#define EXPAND_OP_11(FUNC, R, T, O, ...)    EXPAND_TYPE(PP_NARG T, FUNC, R, O, T) EXPAND_OP_10(FUNC, R, T, __VA_ARGS__)
-#define EXPAND_OP_12(FUNC, R, T, O, ...)    EXPAND_TYPE(PP_NARG T, FUNC, R, O, T) EXPAND_OP_11(FUNC, R, T, __VA_ARGS__)
-#define EXPAND_OP_13(FUNC, R, T, O, ...)    EXPAND_TYPE(PP_NARG T, FUNC, R, O, T) EXPAND_OP_12(FUNC, R, T, __VA_ARGS__)
-#define EXPAND_OP_14(FUNC, R, T, O, ...)    EXPAND_TYPE(PP_NARG T, FUNC, R, O, T) EXPAND_OP_13(FUNC, R, T, __VA_ARGS__)
-#define EXPAND_OP_15(FUNC, R, T, O, ...)    EXPAND_TYPE(PP_NARG T, FUNC, R, O, T) EXPAND_OP_14(FUNC, R, T, __VA_ARGS__)
-#define EXPAND_OP_16(FUNC, R, T, O, ...)    EXPAND_TYPE(PP_NARG T, FUNC, R, O, T) EXPAND_OP_15(FUNC, R, T, __VA_ARGS__)
-#define EXPAND_OP_17(FUNC, R, T, O, ...)    EXPAND_TYPE(PP_NARG T, FUNC, R, O, T) EXPAND_OP_16(FUNC, R, T, __VA_ARGS__)
-#define EXPAND_OP_18(FUNC, R, T, O, ...)    EXPAND_TYPE(PP_NARG T, FUNC, R, O, T) EXPAND_OP_17(FUNC, R, T, __VA_ARGS__)
-#define EXPAND_OP_19(FUNC, R, T, O, ...)    EXPAND_TYPE(PP_NARG T, FUNC, R, O, T) EXPAND_OP_18(FUNC, R, T, __VA_ARGS__)
+// Expand one argument group
 
-#define EXPAND_OP_(NARGS, ...)              EXPAND_OP_ ## NARGS (__VA_ARGS__)
-#define EXPAND_OP(NARGS, FUNC, R, O, T)     EXPAND_OP_(NARGS, FUNC, R, T, ARG_LIST O)
+#define ITER1_1(FN, CARGS, X, Y, Z, ...)  DEFINE_##CARGS(FN, X, Y, Z)
+#define ITER1_2(FN, CARGS, X, Y, Z, ...)  DEFINE_##CARGS(FN, X, Y, Z) ITER1_1(FN, CARGS, X, Y, __VA_ARGS__)
+#define ITER1_3(FN, CARGS, X, Y, Z, ...)  DEFINE_##CARGS(FN, X, Y, Z) ITER1_2(FN, CARGS, X, Y, __VA_ARGS__)
+#define ITER1_4(FN, CARGS, X, Y, Z, ...)  DEFINE_##CARGS(FN, X, Y, Z) ITER1_3(FN, CARGS, X, Y, __VA_ARGS__)
+#define ITER1_5(FN, CARGS, X, Y, Z, ...)  DEFINE_##CARGS(FN, X, Y, Z) ITER1_4(FN, CARGS, X, Y, __VA_ARGS__)
+#define ITER1_6(FN, CARGS, X, Y, Z, ...)  DEFINE_##CARGS(FN, X, Y, Z) ITER1_5(FN, CARGS, X, Y, __VA_ARGS__)
+#define ITER1_7(FN, CARGS, X, Y, Z, ...)  DEFINE_##CARGS(FN, X, Y, Z) ITER1_6(FN, CARGS, X, Y, __VA_ARGS__)
+#define ITER1_8(FN, CARGS, X, Y, Z, ...)  DEFINE_##CARGS(FN, X, Y, Z) ITER1_7(FN, CARGS, X, Y, __VA_ARGS__)
+#define ITER1_9(FN, CARGS, X, Y, Z, ...)  DEFINE_##CARGS(FN, X, Y, Z) ITER1_8(FN, CARGS, X, Y, __VA_ARGS__)
+#define ITER1_10(FN, CARGS, X, Y, Z, ...) DEFINE_##CARGS(FN, X, Y, Z) ITER1_9(FN, CARGS, X, Y, __VA_ARGS__)
+#define ITER1_11(FN, CARGS, X, Y, Z, ...) DEFINE_##CARGS(FN, X, Y, Z) ITER1_10(FN, CARGS, X, Y, __VA_ARGS__)
+#define ITER1_12(FN, CARGS, X, Y, Z, ...) DEFINE_##CARGS(FN, X, Y, Z) ITER1_11(FN, CARGS, X, Y, __VA_ARGS__)
+#define ITER1_13(FN, CARGS, X, Y, Z, ...) DEFINE_##CARGS(FN, X, Y, Z) ITER1_12(FN, CARGS, X, Y, __VA_ARGS__)
+#define ITER1_14(FN, CARGS, X, Y, Z, ...) DEFINE_##CARGS(FN, X, Y, Z) ITER1_13(FN, CARGS, X, Y, __VA_ARGS__)
+#define ITER1_15(FN, CARGS, X, Y, Z, ...) DEFINE_##CARGS(FN, X, Y, Z) ITER1_14(FN, CARGS, X, Y, __VA_ARGS__)
+#define ITER1_16(FN, CARGS, X, Y, Z, ...) DEFINE_##CARGS(FN, X, Y, Z) ITER1_15(FN, CARGS, X, Y, __VA_ARGS__)
+#define ITER1_17(FN, CARGS, X, Y, Z, ...) DEFINE_##CARGS(FN, X, Y, Z) ITER1_16(FN, CARGS, X, Y, __VA_ARGS__)
+#define ITER1_18(FN, CARGS, X, Y, Z, ...) DEFINE_##CARGS(FN, X, Y, Z) ITER1_17(FN, CARGS, X, Y, __VA_ARGS__)
+#define ITER1_19(FN, CARGS, X, Y, Z, ...) DEFINE_##CARGS(FN, X, Y, Z) ITER1_18(FN, CARGS, X, Y, __VA_ARGS__)
 
-// Expand the function extension, for example, rank (vector vs scalar)
-#define EXPAND_EXT_1(FUNC, O, T, R, ...)    EXPAND_OP(PP_NARG O, FUNC, R, O, T)
-#define EXPAND_EXT_2(FUNC, O, T, R, ...)    EXPAND_OP(PP_NARG O, FUNC, R, O, T) EXPAND_EXT_1(FUNC, O, T, __VA_ARGS__)
-#define EXPAND_EXT_3(FUNC, O, T, R, ...)    EXPAND_OP(PP_NARG O, FUNC, R, O, T) EXPAND_EXT_2(FUNC, O, T, __VA_ARGS__)
-#define EXPAND_EXT_4(FUNC, O, T, R, ...)    EXPAND_OP(PP_NARG O, FUNC, R, O, T) EXPAND_EXT_3(FUNC, O, T, __VA_ARGS__)
-#define EXPAND_EXT_5(FUNC, O, T, R, ...)    EXPAND_OP(PP_NARG O, FUNC, R, O, T) EXPAND_EXT_4(FUNC, O, T, __VA_ARGS__)
-#define EXPAND_EXT_6(FUNC, O, T, R, ...)    EXPAND_OP(PP_NARG O, FUNC, R, O, T) EXPAND_EXT_5(FUNC, O, T, __VA_ARGS__)
-#define EXPAND_EXT_7(FUNC, O, T, R, ...)    EXPAND_OP(PP_NARG O, FUNC, R, O, T) EXPAND_EXT_6(FUNC, O, T, __VA_ARGS__)
-#define EXPAND_EXT_8(FUNC, O, T, R, ...)    EXPAND_OP(PP_NARG O, FUNC, R, O, T) EXPAND_EXT_7(FUNC, O, T, __VA_ARGS__)
-#define EXPAND_EXT_9(FUNC, O, T, R, ...)    EXPAND_OP(PP_NARG O, FUNC, R, O, T) EXPAND_EXT_8(FUNC, O, T, __VA_ARGS__)
-#define EXPAND_EXT_10(FUNC, O, T, R, ...)   EXPAND_OP(PP_NARG O, FUNC, R, O, T) EXPAND_EXT_9(FUNC, O, T, __VA_ARGS__)
-#define EXPAND_EXT_11(FUNC, O, T, R, ...)   EXPAND_OP(PP_NARG O, FUNC, R, O, T) EXPAND_EXT_10(FUNC, O, T, __VA_ARGS__)
-#define EXPAND_EXT_12(FUNC, O, T, R, ...)   EXPAND_OP(PP_NARG O, FUNC, R, O, T) EXPAND_EXT_11(FUNC, O, T, __VA_ARGS__)
-#define EXPAND_EXT_13(FUNC, O, T, R, ...)   EXPAND_OP(PP_NARG O, FUNC, R, O, T) EXPAND_EXT_12(FUNC, O, T, __VA_ARGS__)
-#define EXPAND_EXT_14(FUNC, O, T, R, ...)   EXPAND_OP(PP_NARG O, FUNC, R, O, T) EXPAND_EXT_13(FUNC, O, T, __VA_ARGS__)
-#define EXPAND_EXT_15(FUNC, O, T, R, ...)   EXPAND_OP(PP_NARG O, FUNC, R, O, T) EXPAND_EXT_14(FUNC, O, T, __VA_ARGS__)
-#define EXPAND_EXT_16(FUNC, O, T, R, ...)   EXPAND_OP(PP_NARG O, FUNC, R, O, T) EXPAND_EXT_15(FUNC, O, T, __VA_ARGS__)
-#define EXPAND_EXT_17(FUNC, O, T, R, ...)   EXPAND_OP(PP_NARG O, FUNC, R, O, T) EXPAND_EXT_16(FUNC, O, T, __VA_ARGS__)
-#define EXPAND_EXT_18(FUNC, O, T, R, ...)   EXPAND_OP(PP_NARG O, FUNC, R, O, T) EXPAND_EXT_17(FUNC, O, T, __VA_ARGS__)
-#define EXPAND_EXT_19(FUNC, O, T, R, ...)   EXPAND_OP(PP_NARG O, FUNC, R, O, T) EXPAND_EXT_18(FUNC, O, T, __VA_ARGS__)
+#define ITER1_(I, ...)                    ITER1_##I(__VA_ARGS__)
+#define ITER1(I, FN, CARGS, X, Y, Z)      ITER1_(I, FN, CARGS, X, Y, ARG_LIST Z)
 
-#define EXPAND_EXT_(NARGS, ...)             EXPAND_EXT_ ## NARGS (__VA_ARGS__)
-#define EXPAND_EXT(NARGS, FUNC, R, O, T)    EXPAND_EXT_(NARGS, FUNC, O, T, ARG_LIST R)
+// Expand two argument groups
+#define ITER2_1(FN, CARGS, X, Z, Y, ...)  ITER1(PP_NARG Z, FN, CARGS, X, Y, Z)
+#define ITER2_2(FN, CARGS, X, Z, Y, ...)  ITER1(PP_NARG Z, FN, CARGS, X, Y, Z) ITER2_1(FN, CARGS, X, Z, __VA_ARGS__)
+#define ITER2_3(FN, CARGS, X, Z, Y, ...)  ITER1(PP_NARG Z, FN, CARGS, X, Y, Z) ITER2_2(FN, CARGS, X, Z, __VA_ARGS__)
+#define ITER2_4(FN, CARGS, X, Z, Y, ...)  ITER1(PP_NARG Z, FN, CARGS, X, Y, Z) ITER2_3(FN, CARGS, X, Z, __VA_ARGS__)
+#define ITER2_5(FN, CARGS, X, Z, Y, ...)  ITER1(PP_NARG Z, FN, CARGS, X, Y, Z) ITER2_4(FN, CARGS, X, Z, __VA_ARGS__)
+#define ITER2_6(FN, CARGS, X, Z, Y, ...)  ITER1(PP_NARG Z, FN, CARGS, X, Y, Z) ITER2_5(FN, CARGS, X, Z, __VA_ARGS__)
+#define ITER2_7(FN, CARGS, X, Z, Y, ...)  ITER1(PP_NARG Z, FN, CARGS, X, Y, Z) ITER2_6(FN, CARGS, X, Z, __VA_ARGS__)
+#define ITER2_8(FN, CARGS, X, Z, Y, ...)  ITER1(PP_NARG Z, FN, CARGS, X, Y, Z) ITER2_7(FN, CARGS, X, Z, __VA_ARGS__)
+#define ITER2_9(FN, CARGS, X, Z, Y, ...)  ITER1(PP_NARG Z, FN, CARGS, X, Y, Z) ITER2_8(FN, CARGS, X, Z, __VA_ARGS__)
+#define ITER2_10(FN, CARGS, X, Z, Y, ...) ITER1(PP_NARG Z, FN, CARGS, X, Y, Z) ITER2_9(FN, CARGS, X, Z, __VA_ARGS__)
+#define ITER2_11(FN, CARGS, X, Z, Y, ...) ITER1(PP_NARG Z, FN, CARGS, X, Y, Z) ITER2_10(FN, CARGS, X, Z, __VA_ARGS__)
+#define ITER2_12(FN, CARGS, X, Z, Y, ...) ITER1(PP_NARG Z, FN, CARGS, X, Y, Z) ITER2_11(FN, CARGS, X, Z, __VA_ARGS__)
+#define ITER2_13(FN, CARGS, X, Z, Y, ...) ITER1(PP_NARG Z, FN, CARGS, X, Y, Z) ITER2_12(FN, CARGS, X, Z, __VA_ARGS__)
+#define ITER2_14(FN, CARGS, X, Z, Y, ...) ITER1(PP_NARG Z, FN, CARGS, X, Y, Z) ITER2_13(FN, CARGS, X, Z, __VA_ARGS__)
+#define ITER2_15(FN, CARGS, X, Z, Y, ...) ITER1(PP_NARG Z, FN, CARGS, X, Y, Z) ITER2_14(FN, CARGS, X, Z, __VA_ARGS__)
+#define ITER2_16(FN, CARGS, X, Z, Y, ...) ITER1(PP_NARG Z, FN, CARGS, X, Y, Z) ITER2_15(FN, CARGS, X, Z, __VA_ARGS__)
+#define ITER2_17(FN, CARGS, X, Z, Y, ...) ITER1(PP_NARG Z, FN, CARGS, X, Y, Z) ITER2_16(FN, CARGS, X, Z, __VA_ARGS__)
+#define ITER2_18(FN, CARGS, X, Z, Y, ...) ITER1(PP_NARG Z, FN, CARGS, X, Y, Z) ITER2_17(FN, CARGS, X, Z, __VA_ARGS__)
+#define ITER2_19(FN, CARGS, X, Z, Y, ...) ITER1(PP_NARG Z, FN, CARGS, X, Y, Z) ITER2_18(FN, CARGS, X, Z, __VA_ARGS__)
 
-// Instantiate the functions iteratively over three categories that are passed to the provided
-// function template. The macros use ext, op, and type for these categories, but they are freely
-// definable.
+#define ITER2_(I, ...)                    ITER2_##I(__VA_ARGS__)
+#define ITER2(I, FN, CARGS, X, Y, Z)      ITER2_(I, FN, CARGS, X, Z, ARG_LIST Y)
+
+// Expand three argument groups
+#define ITER3_1(FN, CARGS, Y, Z, X, ...)  ITER2(PP_NARG Y, FN, CARGS, X, Y, Z)
+#define ITER3_2(FN, CARGS, Y, Z, X, ...)  ITER2(PP_NARG Y, FN, CARGS, X, Y, Z) ITER3_1(FN, CARGS, Y, Z, __VA_ARGS__)
+#define ITER3_3(FN, CARGS, Y, Z, X, ...)  ITER2(PP_NARG Y, FN, CARGS, X, Y, Z) ITER3_2(FN, CARGS, Y, Z, __VA_ARGS__)
+#define ITER3_4(FN, CARGS, Y, Z, X, ...)  ITER2(PP_NARG Y, FN, CARGS, X, Y, Z) ITER3_3(FN, CARGS, Y, Z, __VA_ARGS__)
+#define ITER3_5(FN, CARGS, Y, Z, X, ...)  ITER2(PP_NARG Y, FN, CARGS, X, Y, Z) ITER3_4(FN, CARGS, Y, Z, __VA_ARGS__)
+#define ITER3_6(FN, CARGS, Y, Z, X, ...)  ITER2(PP_NARG Y, FN, CARGS, X, Y, Z) ITER3_5(FN, CARGS, Y, Z, __VA_ARGS__)
+#define ITER3_7(FN, CARGS, Y, Z, X, ...)  ITER2(PP_NARG Y, FN, CARGS, X, Y, Z) ITER3_6(FN, CARGS, Y, Z, __VA_ARGS__)
+#define ITER3_8(FN, CARGS, Y, Z, X, ...)  ITER2(PP_NARG Y, FN, CARGS, X, Y, Z) ITER3_7(FN, CARGS, Y, Z, __VA_ARGS__)
+#define ITER3_9(FN, CARGS, Y, Z, X, ...)  ITER2(PP_NARG Y, FN, CARGS, X, Y, Z) ITER3_8(FN, CARGS, Y, Z, __VA_ARGS__)
+#define ITER3_10(FN, CARGS, Y, Z, X, ...) ITER2(PP_NARG Y, FN, CARGS, X, Y, Z) ITER3_9(FN, CARGS, Y, Z, __VA_ARGS__)
+#define ITER3_11(FN, CARGS, Y, Z, X, ...) ITER2(PP_NARG Y, FN, CARGS, X, Y, Z) ITER3_10(FN, CARGS, Y, Z, __VA_ARGS__)
+#define ITER3_12(FN, CARGS, Y, Z, X, ...) ITER2(PP_NARG Y, FN, CARGS, X, Y, Z) ITER3_11(FN, CARGS, Y, Z, __VA_ARGS__)
+#define ITER3_13(FN, CARGS, Y, Z, X, ...) ITER2(PP_NARG Y, FN, CARGS, X, Y, Z) ITER3_12(FN, CARGS, Y, Z, __VA_ARGS__)
+#define ITER3_14(FN, CARGS, Y, Z, X, ...) ITER2(PP_NARG Y, FN, CARGS, X, Y, Z) ITER3_13(FN, CARGS, Y, Z, __VA_ARGS__)
+#define ITER3_15(FN, CARGS, Y, Z, X, ...) ITER2(PP_NARG Y, FN, CARGS, X, Y, Z) ITER3_14(FN, CARGS, Y, Z, __VA_ARGS__)
+#define ITER3_16(FN, CARGS, Y, Z, X, ...) ITER2(PP_NARG Y, FN, CARGS, X, Y, Z) ITER3_15(FN, CARGS, Y, Z, __VA_ARGS__)
+#define ITER3_17(FN, CARGS, Y, Z, X, ...) ITER2(PP_NARG Y, FN, CARGS, X, Y, Z) ITER3_16(FN, CARGS, Y, Z, __VA_ARGS__)
+#define ITER3_18(FN, CARGS, Y, Z, X, ...) ITER2(PP_NARG Y, FN, CARGS, X, Y, Z) ITER3_17(FN, CARGS, Y, Z, __VA_ARGS__)
+#define ITER3_19(FN, CARGS, Y, Z, X, ...) ITER2(PP_NARG Y, FN, CARGS, X, Y, Z) ITER3_18(FN, CARGS, Y, Z, __VA_ARGS__)
+
+#define ITER3_(I, ...)                    ITER3_##I(__VA_ARGS__)
+#define ITER3(I, FN, CARGS, X, Y, Z)      ITER3_(I, FN, CARGS, Y, Z, ARG_LIST X)
+
+// INSTANTIATE<X> instantiate the provided functions with up to three iteration groups.
+//
+// The iteration arguments must be passed in braces, for example: "( Arg1, Arg2 )"
 //
 // The arguments could be, for example, the "rank" (scalar vs vector), operator (Add, Sub), and
 // argument type (float, int, etc.). The values to iterate over must be provided in parenthesis,
 // for example:
 //
-//   INSTANTIATE_FUNCTIONS(binary-function-template, (SV, VS), (Add, Sub), (float, int))
+//   INSTANTIATE_FUNCTIONS(BinaryFunctionTemplate, (ScalarVector, VectorScalar), (Add, Sub), (float, int))
 //
-#define INSTANTIATE_FUNCTIONS(FUNC, R, O, T)  EXPAND_EXT(PP_NARG R, FUNC, R, O, T)
+// This instantiates 6 functions (2 * 2 * 2 arguments):
+//
+//   BinaryFunctionTemplate(ScalarVector, Add, float);
+//   BinaryFunctionTemplate(ScalarVector, Add, int);
+//   ...
+//   BinaryFunctionTemplate(VectorScalar, Sub, int);
+//
+//
+
+#define INSTANTIATE3(FN, X, Y, Z) ITER3(PP_NARG X, FN, 3, X, Y, Z)
+#define INSTANTIATE2(FN, X, Y)    ITER2(PP_NARG X, FN, 2,  , X, Y)
+#define INSTANTIATE1(FN, X)       ITER1(PP_NARG X, FN, 1,  ,  , X)
 
 #endif  // TENSOR_METAL_KERNELS_UTILS_H

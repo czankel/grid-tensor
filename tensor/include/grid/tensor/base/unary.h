@@ -8,7 +8,7 @@
 
 // DO NOT INCLUDE THIS FILE DIRECTLY
 
-#ifndef GRID_TENSOR_BASE_UNARY__H
+#ifndef GRID_TENSOR_BASE_UNARY_H
 #define GRID_TENSOR_BASE_UNARY_H
 
 #include <span>
@@ -19,7 +19,7 @@
 #include "../device.h"
 
 namespace grid {
-
+// FIXME: template arg T not used
 /// UnaryOperator<Operator> implements element-wise unary operation on a tensors.
 ///
 ///  @tparm TOperator binary operator

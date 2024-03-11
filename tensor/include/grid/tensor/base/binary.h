@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <ranges>
 
+#include "../binary.h"
 #include "../concepts.h"
 #include "../device.h"
 

@@ -16,7 +16,7 @@
 #include <tuple>
 
 #include "../device.h"
-#include "binary_operators.h"
+#include "binary.h"
 
 namespace grid {
 

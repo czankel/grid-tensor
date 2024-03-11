@@ -43,6 +43,24 @@ get_array(std::initializer_list<std::initializer_list<T>>&& init)
   return arr;
 }
 
+// get_array(T(&&)[N]...)
+template <typename T, size_t... N>
+inline constexpr std::array<T, (N + ...)>
+get_array(T(&&... init)[N])
+{
+  constexpr size_t cols = std::max({N...});
+  std::array<T, sizeof...(N) * cols> arr{};
+  auto line_it = arr.begin();
+
+  auto apply = [&] <typename U> (U&& value) -> void {
+    for (size_t i = 0; i < cols; i++, ++line_it)
+      *line_it = value[i];
+  };
+
+  (apply(std::forward<T[N]>(init)),...);
+  return arr;
+}
+
 // get_array(initializer_list<initializer_list<initializer_list>>) returns a std::array from a
 // 3-dimensional initializer list.
 template <typename T, size_t C, size_t M, size_t N>
