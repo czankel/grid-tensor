@@ -17,7 +17,7 @@
 #include "transform.h"
 
 // TODO: remove when operators are device templated
-#include "base/unary_operators.h"
+#include "base/unary.h"
 #include "base/rms_norm.h"
 #include "base/softmax.h"
 #include "base/silu.h"
