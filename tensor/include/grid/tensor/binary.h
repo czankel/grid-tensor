@@ -6,8 +6,8 @@
 // The contents of this file are confidential and proprietary to Chris Zankel.
 //
 
-#ifndef GRID_TENSOR_BINARY_FUNCTION_H
-#define GRID_TENSOR_BINARY_FUNCTION_H
+#ifndef GRID_TENSOR_BINARY__
+#define GRID_TENSOR_BINARY__
 
 #include <span>
 #include <algorithm>
@@ -144,4 +144,4 @@ auto Div(TTensor1&& tensor1, TTensor2&& tensor2)
 
 } // end of namespace grd
 
-#endif  // GRID_TENSOR_BINARY_FUNCTION_H
+#endif  // GRID_TENSOR_BINARY__

@@ -6,8 +6,8 @@
 // The contents of this file are confidential and proprietary to Chris Zankel.
 //
 
-#ifndef GRID_TENSOR_UNARY_FUNCTION_H
-#define GRID_TENSOR_UNARY_FUNCTION_H
+#ifndef GRID_TENSOR_UNARY_H
+#define GRID_TENSOR_UNARY_H
 
 #include <algorithm>
 #include <ranges>
@@ -112,4 +112,4 @@ auto Silu(TTensor&& tensor)
 
 } // end of namespace grd
 
-#endif  // GRID_TENSOR_UNARY_FUNCTION_H
+#endif  // GRID_TENSOR_UNARY_H

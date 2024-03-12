@@ -14,7 +14,7 @@
 #include <iostream>
 #include <numeric>
 
-#include "binary_function.h"
+#include "binary.h"
 #include "concepts.h"
 #include "device.h"
 #include "iterator.h"
@@ -23,7 +23,7 @@
 #include "memory.h"
 #include "tensor_parameters.h"
 #include "tensor_view.h"
-#include "unary_function.h"
+#include "unary.h"
 
 namespace grid {
 
