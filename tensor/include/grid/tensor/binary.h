@@ -16,7 +16,7 @@
 #include "concepts.h"
 
 // TODO: remove when operators are device templated
-#include "base/binary_ops.h"
+#include "base/binary.h"
 
 namespace grid {
 

@@ -14,7 +14,7 @@
 #include <math.h>
 #include <tuple>
 
-#include "binary_ops.h"
+#include "binary.h"
 
 namespace grid {
 
