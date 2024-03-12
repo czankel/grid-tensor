@@ -9,73 +9,84 @@
 #ifndef GRID_TENSOR_ARRAY_H
 #define GRID_TENSOR_ARRAY_H
 
-#include "tensor_parameters.h"
+#include "memory.h"
 
 namespace grid {
 
-template <typename T, size_t TRank>
-class ArrayView
+/// Array manages a buffer of elements of a specific type.
+///
+/// The buffer can be statically or dynamically allocated, and in system memory or device memory.
+template <typename, typename> class Array;
+
+
+/// Array specialization for storing a single scalar
+template <typename T>
+class Array<T, Scalar>
 {
  public:
   using value_type = T;
-  using pointer = T*;
-  using const_pointer = const T*;
+  using pointer = value_type*;
+  using const_pointer = const value_type*;
 
-  /// Constructor for an array on a given data buffer with specified dimensions and strides.
-  ArrayView(pointer data, const std::array<size_t, TRank>&dimensions, const std::array<ssize_t, TRank>&strides)
-    : dimensions_(dimensions),
-      strides_(strides),
-      size_(get_buffer_size(dimensions_, strides_)),
-      data_(data)
-  {}
-  /// Constructor for an array on a given data buffer with specified dimensions and strides.
-  ArrayView(pointer data, const size_t(&dimensions)[TRank], const ssize_t(&strides)[TRank])
-    : dimensions_(get_array<size_t, TRank>(dimensions)),
-      strides_(get_array<ssize_t, TRank>(strides)),
-      size_(get_buffer_size(dimensions_, strides_)),
-      data_(data)
-  {}
+ public:
+  Array() = default;
 
-  /// Constructor for an array on a given data buffer with specified dimensions.
-  ArrayView(pointer data, const std::array<size_t, TRank>& dimensions)
-    : dimensions_(dimensions),
-      strides_(make_strides<value_type>(dimensions_)),
-      size_(get_buffer_size(dimensions_, strides_)),
-      data_(data)
-  {}
-
-
-  /// Constructor for an array on a given data buffer with specified dimensions.
-  ArrayView(pointer data, const size_t(&dimensions)[TRank])
-    : dimensions_(get_array<size_t, TRank>(dimensions)),
-      strides_(make_strides<value_type>(dimensions_)),
-      size_(get_buffer_size(dimensions_, strides_)),
-      data_(data)
-  {}
-
-
-  /// Rank returns the rank of the tensor.
-  constexpr static size_t Rank()                          { return TRank; }
-
-  /// Dimensions returns the dimensions for the axis.
-  const std::array<size_t, TRank>& Dimensions() const     { return dimensions_; }
-
-  /// Strides returns the strides for the axis.
-  const std::array<ssize_t, TRank>& Strides() const       { return strides_; }
+  // @brief Initializes the data value to init.
+  Array(value_type init) : data_(init) {}
 
   /// Size returns the size of the entire buffer.
-  size_t Size() const                                     { return size_; }
+  size_t Size() const                                     { return sizeof(value_type); }
 
   /// Data returns a pointer to the data buffer.
-  pointer Data()                                          { return data_; }
-  const_pointer Data() const                              { return data_; }
+  pointer Data()                                          { return &data_; }
 
- private:
-  std::array<size_t, TRank>   dimensions_;
-  std::array<ssize_t, TRank>  strides_;
-  size_t                      size_;
-  pointer                     data_;
+  /// Data returns a pointer to the data buffer.
+  const_pointer Data() const                              { return &data_; }
+
+ protected:
+  value_type  data_;
 };
+
+
+/// Array specialization for static data.
+template <typename T, size_t... Ns>
+class Array<T, StaticMemory<Ns...>>
+{
+ public:
+  using value_type = T;
+  using pointer = const value_type*;
+  using const_pointer = const value_type*;
+  static constexpr size_t size = (... * Ns);
+
+
+ public:
+  Array() = default;
+
+  // Explicity disallow copy construction as Array isn't fully aware of any buffer structure.
+  Array(const Array& other) = delete;
+
+  // @brief Move constructor.
+  Array(Array&& other) = delete; // : size_(other.size_), data_(std::move(other.data_)) { other.data_ = nullptr; }
+
+  // @brief Allocates a buffer of the provided size. FIXME
+  Array(std::array<T, size>&& array) : array_(array) {}
+  Array& operator=(Array&& other) = delete;
+  Array& operator=(const Array& other) = delete;
+
+
+  /// Size returns the size of the entire buffer.
+  size_t Size() const                                     { return sizeof(value_type) * size; }
+
+  /// Data returns a pointer to the data buffer.
+  pointer Data()                                          { return array_.data(); }
+
+  /// Data returns a pointer to the data buffer.
+  const_pointer Data() const                              { return array_.data(); }
+
+ protected:
+  std::array<value_type, size>  array_;
+};
+
 
 } // end of namespace grid
 

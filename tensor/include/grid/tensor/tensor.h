@@ -14,6 +14,7 @@
 #include <iostream>
 #include <numeric>
 
+#include "array.h"
 #include "binary.h"
 #include "concepts.h"
 #include "device.h"
@@ -30,8 +31,6 @@ namespace grid {
 //
 // Tensor
 //
-
-template <typename, typename> class Array;
 
 /// Tensor implements an "AI Tensor" that follows more typical AI implementations rather than
 /// mathematical or physical definition.
