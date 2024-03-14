@@ -109,72 +109,62 @@ size_t get_buffer_size(U&& dimensions, V&& strides)
   return size * sizeof(T);
 }
 
-// Broadcast expands dimensions ("broadcasting") of the tensors to make them the same rank.
-template <typename T1, typename T2, size_t Rank>
-inline auto BroadcastDimensions(std::array<size_t, Rank>& dimensions,
-                                const T1& tensor1,
-                                const T2& tensor2)
-{
-  constexpr int rank_diff = T1::rank - T2::rank;
-  const auto& dimensions1 = tensor1.Dimensions();
-  const auto& dimensions2 = tensor2.Dimensions();
-
-  std::generate(dimensions.begin(), dimensions.end(), [n = 0, &dimensions1, &dimensions2]() mutable -> size_t
-  {
-    int k = n++;
-
-    if (k < rank_diff || dimensions2[k-rank_diff] == 1)
-      return dimensions1[k];
-    else if (dimensions1[k] == 1 || dimensions1[k] == dimensions2[k-rank_diff])
-      return dimensions2[k-rank_diff];
-    else
-      throw std::runtime_error("broadcast failed");
-  });
-}
-
+// Broadcast expands dimensions ("broadcasting") of the left tensor to match the right tensor
 template <typename TTensor1, typename TTensor2>
-inline auto Broadcast(const TTensor1& tensor1, const TTensor2& tensor2)
+inline auto BroadcastDimensions(const TTensor1& tensor1, const TTensor2& tensor2)
 {
   constexpr size_t rank1 = TTensor1::rank;
   constexpr size_t rank2 = TTensor2::rank;
-  constexpr size_t rank = std::max(rank1, rank2);
-  constexpr int rank_diff = static_cast<int>(rank1) - static_cast<int>(rank2);
+  constexpr size_t drank1 = rank2 > rank1 ? rank2 - rank1 : 0UL;
+  constexpr size_t drank2 = rank1 > rank2 ? rank1 - rank2 : 0UL;
 
-  if constexpr (rank1 == 0 && rank2 == 0)
-  {
-    return std::make_tuple(tensor2.Dimensions(), std::array<ssize_t, 0>{}, std::array<ssize_t, 0>{});
-  }
-  else if constexpr (rank1 == 0)
-  {
-    return std::make_tuple(tensor2.Dimensions(), std::array<ssize_t, rank2>{0}, std::cref(tensor2.Strides()));
-  }
+  if constexpr (rank1 == 0)
+    return tensor2.Dimensions();
   else if constexpr (rank2 == 0)
+    return tensor1.Dimensions();
+  else
   {
-    return std::make_tuple(tensor1.Dimensions(), std::cref(tensor1.Strides()), std::array<ssize_t, rank1>{0});
+    const auto& dimensions1 = tensor1.Dimensions();
+    const auto& dimensions2 = tensor2.Dimensions();
+
+    std::array<size_t, std::max(rank1, rank2)> dimensions;
+    std::generate(dimensions.begin(), dimensions.end(), [n = 0, &dimensions1, &dimensions2]() mutable -> size_t
+    {
+      size_t k = n++;
+      if (k < drank1 || dimensions1[k - drank1] == 1)
+        return dimensions2[k - drank2];
+      else if (k < drank2 || dimensions2[k - drank2] == 1 || dimensions2[k - drank2] == dimensions1[k - drank1])
+        return dimensions1[k - drank1];
+      else
+        throw std::runtime_error("broadcast failed");
+    });
+    return dimensions;
   }
-  else if constexpr (rank_diff == 0)
+}
+
+template <typename TTensor1, typename TTensor2>
+inline auto BroadcastStrides(const TTensor1& tensor1, const TTensor2& tensor2)
+{
+  constexpr size_t rank1 = TTensor1::rank;
+  constexpr size_t rank2 = TTensor2::rank;
+
+  if constexpr (rank1 == rank2)
+    return std::make_tuple(std::cref(tensor1.Strides()), std::cref(tensor2.Strides()));
+  else if constexpr (rank1 == 0)
+    return std::make_tuple(std::array<ssize_t, rank2>{0}, std::cref(tensor2.Strides()));
+  else if constexpr (rank2 == 0)
+    return std::make_tuple(std::cref(tensor1.Strides()), std::array<ssize_t, rank1>{0});
+  else if constexpr (rank2 > rank1)
   {
-    std::array<size_t, rank> dimensions;
-    BroadcastDimensions(dimensions, tensor1, tensor2);
-    return std::make_tuple(dimensions, std::cref(tensor1.Strides()), std::cref(tensor2.Strides()));
-  }
-  else if constexpr (rank_diff > 0)
-  {
-    std::array<size_t, rank> dimensions;
-    const auto& strides2 = tensor2.Strides();
-    std::array<ssize_t, rank> strides{0};
-    std::copy(strides2.begin(), strides2.end(), strides.begin() + rank_diff);
-    BroadcastDimensions(dimensions, tensor1, tensor2);
-    return std::make_tuple(dimensions, std::cref(tensor1.Strides()), strides);
+    std::array<ssize_t, rank2> strides{0};
+    std::ranges::copy(tensor1.Strides(), strides.begin() + rank2 - rank1);
+    return std::make_tuple(strides, std::cref(tensor2.Strides()));
   }
   else
   {
-    std::array<size_t, rank> dimensions;
-    const auto& strides1 = tensor1.Strides();
-    std::array<ssize_t, rank> strides{0};
-    std::copy(strides1.begin(), strides1.end(), strides.begin() + (-rank_diff));
-    BroadcastDimensions(dimensions, tensor2, tensor1);
-    return std::make_tuple(dimensions, strides, std::cref(tensor2.Strides()));
+    std::array<ssize_t, rank1> strides{0};
+    std::ranges::copy(tensor2.Strides(), strides.begin() + rank1 - rank2);
+    return std::make_tuple(std::cref(tensor1.Strides()), strides);
   }
 }
 

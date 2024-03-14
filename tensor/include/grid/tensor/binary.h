@@ -77,7 +77,8 @@ class BinaryFunction
   /// operator()() evaluates the binary operator and returns a tensor.
   auto operator()() const
   {
-    auto [dimensions, strides1, strides2] = Broadcast(tensor1_, tensor2_);
+    auto dimensions = BroadcastDimensions(tensor1_, tensor2_);
+    auto [strides1, strides2] = BroadcastStrides(tensor1_, tensor2_);
     auto result = Tensor(dimensions, Uninitialized<value_type>{});
 
     TOperator{}(result.Data(), tensor1_.Data(), tensor2_.Data(),

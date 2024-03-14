@@ -337,6 +337,7 @@ class Tensor : public Array<T, TMemory>
   /// begin returns an iterator for the begin of the Tensor array
   auto begin()                        { return details::Iterator(this, array_type::Data()); }
 
+  // FIXME: reutnr "sentinel"!!
   /// end returns the sentinel for the end of the Tensor array
   auto end()                          { return details::Iterator(this, array_type::Data(), Dimensions()); }
 
