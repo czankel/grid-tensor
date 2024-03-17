@@ -143,11 +143,28 @@ class Tensor : public Array<T, TMemory>
   }
 
   /// Constructor for a rank-2 tensor (matrix) with a dynamically allocated uninitialized buffer.
-  explicit Tensor(size_t dim_m, int dim_n, Uninitialized<value_type>)
+  explicit Tensor(size_t dim_m, size_t dim_n, Uninitialized<value_type>)
     : Array<value_type, memory_type>(dim_m * dim_n * sizeof(value_type)),
       dimensions_{dim_m, dim_n},
       strides_{make_strides(dimensions_)}
   {}
+
+  /// Constructor for a rank-3 tensor (matrix) with a dynamically allocated buffer and no padding.
+  explicit Tensor(size_t dim_m, size_t dim_n, size_t dim_u, value_type init)
+    : Array<value_type, memory_type>(dim_m * dim_n * dim_u * sizeof(value_type)),
+      dimensions_{dim_m, dim_n, dim_u},
+      strides_{make_strides(dimensions_)}
+  {
+    Generate(*this, [init] { return init; });
+  }
+
+  /// Constructor for a rank-3 tensor (matrix) with a dynamically allocated uninitialized buffer.
+  explicit Tensor(size_t dim_m, size_t dim_n, size_t dim_u, Uninitialized<value_type>)
+    : Array<value_type, memory_type>(dim_m * dim_n * dim_u * sizeof(value_type)),
+      dimensions_{dim_m, dim_n, dim_u},
+      strides_{make_strides(dimensions_)}
+  {}
+
 
   /// Constructor for any rank tensor with a dynamically allocated initialized buffer
   explicit Tensor(std::initializer_list<size_t>&& dimensions, value_type init)
@@ -530,21 +547,30 @@ explicit Tensor(T(&&... l)[M][N]) -> Tensor<T, 3, StaticMemory<sizeof...(M), std
 
 // Tensor with Dynamic Allocator - Paremter List
 
-// Tensor(uint,T) -> Rank-1 tensor with a dynamically allocated buffer.
+// Tensor(size_t,T) -> Rank-1 tensor with a dynamically allocated buffer.
 template <Arithmetic T>
 explicit Tensor(size_t, T) -> Tensor<T, 1, DynamicMemory>;
 
-// Tensor(uint, Uninitialized<T>) -> Rank-1 tensor with a dynamically allocated uninitialized buffer.
+// Tensor(size_t, Uninitialized<T>) -> Rank-1 tensor with a dynamically allocated uninitialized buffer.
 template <Arithmetic T>
 explicit Tensor(size_t, Uninitialized<T>) -> Tensor<T, 1, DynamicMemory>;
 
-// Tensor(uint, uint, T) -> Rank-2 tensor with a dynamically allocated buffer.
+// Tensor(size_t, size_t, T) -> Rank-2 tensor with a dynamically allocated buffer.
 template <Arithmetic T>
 explicit Tensor(size_t, size_t, T) -> Tensor<T, 2, DynamicMemory>;
 
-// Tensor(uint, Uninitialized<T>) -> Rank-2 tensor with a dynamically allocated uninitialized buffer.
+// Tensor(size_t, size_t, Uninitialized<T>) -> Rank-2 tensor with a dynamically allocated uninitialized buffer.
 template <Arithmetic T>
 explicit Tensor(size_t, size_t, Uninitialized<T>) -> Tensor<T, 2, DynamicMemory>;
+
+// Tensor(size_t, size_t, size_t, Uninitialized<T>) -> Rank-3 tensor with a dynamically allocated uninitialized buffer.
+template <Arithmetic T>
+explicit Tensor(size_t, size_t, size_t, T) -> Tensor<T, 3, DynamicMemory>;
+
+// Tensor(size_t, size_t, size_t, Uninitialized<T>) -> Rank-3 tensor with a dynamically allocated uninitialized buffer.
+template <Arithmetic T>
+explicit Tensor(size_t, size_t, size_t, Uninitialized<T>) -> Tensor<T, 3, DynamicMemory>;
+
 
 // Tensor(&[], &[], T) -> Rank-N tensor with a dynamically allocated initialized buffer.
 template <Arithmetic T, size_t N>

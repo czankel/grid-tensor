@@ -52,6 +52,10 @@ struct TensorBaseType
   explicit Tensor(size_t, size_t, T) -> Tensor<T, 2, grid::DynamicMemory>;
   template <typename T>
   explicit Tensor(size_t, size_t, grid::Uninitialized<T>) -> Tensor<T, 2, grid::DynamicMemory>;
+  template <typename T>
+  explicit Tensor(size_t, size_t, size_t, T) -> Tensor<T, 3, grid::DynamicMemory>;
+  template <typename T>
+  explicit Tensor(size_t, size_t, size_t, grid::Uninitialized<T>) -> Tensor<T, 3, grid::DynamicMemory>;
   template <typename T, size_t N>
   explicit Tensor(const size_t(&)[N], const ssize_t(&)[N], T) -> Tensor<T, N, grid::DynamicMemory>;
   template <typename T, size_t N>
