@@ -51,6 +51,15 @@ TYPED_TEST_P(AdditionTestSuite, TensorAdd)
   EXPECT_EQ(res2, v2);
 }
 
+TYPED_TEST_P(AdditionTestSuite, TensorAddRank3)
+{
+  typename TypeParam::Tensor tensor1(4UL, 3UL, 5UL, 2.1);
+  typename TypeParam::Tensor tensor2(4UL, 3UL, 5UL, 1.3);
+  typename TypeParam::Tensor expected(4UL, 3UL, 5UL, 3.4);
+  typename TypeParam::Tensor result = tensor1 + tensor2;
+  EXPECT_EQ(result, expected);
+}
+
 TYPED_TEST_P(AdditionTestSuite, TensorAddAdd)
 {
   typename TypeParam::Tensor tensor1(4UL, 3UL, 2.1);
@@ -87,6 +96,7 @@ TYPED_TEST_P(AdditionTestSuite, TensorAddBroadcast)
 REGISTER_TYPED_TEST_SUITE_P(AdditionTestSuite,
     TensorAddRank0,
     TensorAdd,
+    TensorAddRank3,
     TensorAddAdd,
     TensorAddMatVecBroadcast,
     TensorAddBroadcast);
