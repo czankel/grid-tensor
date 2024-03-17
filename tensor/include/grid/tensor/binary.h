@@ -78,20 +78,22 @@ class BinaryFunction
   auto operator()() const
   {
     auto dimensions = BroadcastDimensions(tensor1_, tensor2_);
-    auto [strides1, strides2] = BroadcastStrides(tensor1_, tensor2_);
     auto result = Tensor(dimensions, Uninitialized<value_type>{});
 
-    TOperator{}(result.Data(), tensor1_.Data(), tensor2_.Data(),
-                dimensions, result.Strides(), strides1, strides2);
+    operator_(tensor1_, tensor2_, result.begin());
 
     return result;
   }
 
  private:
+  static TOperator operator_;
   TTensor1 tensor1_;
   TTensor2 tensor2_;
 };
 
+
+template <typename TOperator, AnyTensor TTensor1, AnyTensor TTensor2>
+TOperator BinaryFunction<TOperator, TTensor1, TTensor2>::operator_;
 
 template <typename TOp, typename T1, typename T2> BinaryFunction(TOp, T1&&, T2&&)
   -> BinaryFunction<TOp, typename to_tensor<T1>::type, typename to_tensor<T2>::type>;
@@ -104,21 +106,21 @@ template <typename TOp, typename T1, typename T2> BinaryFunction(TOp, T1&&, T2&&
 template <TensorConvertible TTensor1, TensorConvertible TTensor2>
 auto Add(TTensor1&& tensor1, TTensor2&& tensor2)
 {
-  return BinaryFunction(BinaryOperator<AddOperator>{}, std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
+  return BinaryFunction(BinaryOperator<AddOperator>(), std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
 }
 
 /// @brief Sub subtracts two tensors element-wise (lazily).
 template <TensorConvertible TTensor1, TensorConvertible TTensor2>
 auto Sub(TTensor1&& tensor1, TTensor2&& tensor2)
 {
-  return BinaryFunction(BinaryOperator<SubOperator>{}, std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
+  return BinaryFunction(BinaryOperator<SubOperator>(), std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
 }
 
 /// @brief Mul multiplies two tensors element-wise (lazily).
 template <TensorConvertible TTensor1, TensorConvertible TTensor2>
 auto Mul(TTensor1&& tensor1, TTensor2&& tensor2)
 {
-  return BinaryFunction(BinaryOperator<MulOperator>{}, std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
+  return BinaryFunction(BinaryOperator<MulOperator>(), std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
 }
 
 /// @brief Mul multiplies a tensors with a scalar.
