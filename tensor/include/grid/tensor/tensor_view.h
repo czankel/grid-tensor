@@ -83,16 +83,16 @@ class TensorView
 
 
   /// begin returns an iterator for the begin of the Tensor array
-  auto begin()                        { return details::Iterator(this, data_); }
+  auto begin()                        { return details::Iterator(*this); }
 
   /// end returns the sentinel for the end of the Tensor array
-  auto end()                          { return details::Iterator(this, data_, Dimensions()); }
+  auto end()                          { return details::Iterator(*this, Dimensions()); }
 
   /// begin returns an iterator for the begin of the Tensor array
-  auto begin() const                  { return details::ConstIterator(this, data_); }
+  auto begin() const                  { return details::ConstIterator(*this); }
 
   /// end returns the sentinel for the end of the Tensor array
-  auto end() const                    { return details::ConstIterator(this, data_, Dimensions()); }
+  auto end() const                    { return details::ConstIterator(*this, Dimensions()); }
 
 
   /// Rank returns the rank of the tensor.

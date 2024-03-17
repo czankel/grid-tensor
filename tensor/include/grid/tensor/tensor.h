@@ -352,17 +352,17 @@ class Tensor : public Array<T, TMemory>
 
 
   /// begin returns an iterator for the begin of the Tensor array
-  auto begin()                        { return details::Iterator(this, array_type::Data()); }
+  auto begin()                        { return details::Iterator(*this); }
 
   // FIXME: reutnr "sentinel"!!
   /// end returns the sentinel for the end of the Tensor array
-  auto end()                          { return details::Iterator(this, array_type::Data(), Dimensions()); }
+  auto end()                          { return details::Iterator(*this, Dimensions()); }
 
   /// begin returns an iterator for the begin of the Tensor array
-  auto begin() const                  { return details::ConstIterator(this, array_type::Data()); }
+  auto begin() const                  { return details::ConstIterator(*this); }
 
   /// end returns the sentinel for the end of the Tensor array
-  auto end() const                    { return details::ConstIterator(this, array_type::Data(), Dimensions()); }
+  auto end() const                    { return details::ConstIterator(*this, Dimensions()); }
 
 
   /// Rank returns the rank of the tensor.
@@ -485,10 +485,10 @@ class Tensor<T, TRank, MemoryMapped>
 
 
   /// begin returns an iterator for the begin of the Tensor array
-  auto begin() const                  { return details::ConstIterator(this, Data()); }
+  auto begin() const                  { return details::ConstIterator(*this); }
 
   /// end returns the sentinel for the end of the Tensor array
-  auto end() const                    { return details::ConstIterator(this, Data(), Dimensions()); }
+  auto end() const                    { return details::ConstIterator(*this, Dimensions()); }
 
 
   /// Rank returns the rank of the tensor.

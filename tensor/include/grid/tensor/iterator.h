@@ -17,6 +17,7 @@ namespace details {
 class Tensor;
 
 // TODO: ConstIterator is mostly a duplicate for Iterator but for const_pointer
+// TODO: operator++/-- are slow; can optimize by folding indices
 
 /// Iterator implements a bidirection iterator for tensors.
 template <typename TTensor>
@@ -33,32 +34,42 @@ class Iterator
   Iterator() = default;
 
   // Note that ranges iterators must be default-initializable, so cannot use reference for Tensor
-  Iterator(const TTensor* tensor, pointer data) : coordinates_{0}, ptr_(data), data_(data), tensor_(tensor) {}
+  Iterator(TTensor& tensor) : coordinates_{0}, tensor_(&tensor), index_(0) {}
 
-  // FIXME: dimensions are a position and the position must be added to ptr_
-  Iterator(const TTensor* tensor, pointer data, const std::array<size_t, rank>& dimensions)
+  Iterator(TTensor& tensor, const std::array<size_t, rank>& dimensions)
     : coordinates_(dimensions),
-      ptr_(data),
-      data_(data),
-      tensor_(tensor)
-  {}
+      tensor_(&tensor),
+      index_(0)
+  {
+    auto& strides = tensor_->Strides();
+    for (ssize_t axis = rank-1; axis >= 0; axis--)
+      index_ += coordinates_[axis] * strides[axis];
+  }
 
-  reference operator*() const                     { return *ptr_; }
+  // TODO provide Iterator for initializatin with 'coordinates'?
 
-  // TODO: unrol loops?
+  reference operator*() const                     { return tensor_->Data()[index_]; }
+
   Iterator& operator++()
   {
     auto& extents = tensor_->Dimensions();
     auto& strides = tensor_->Strides();
 
-    ptr_++;
-    size_t index = 0;
-    for (; index < rank && ++coordinates_[index] == extents[index]; index++)
-      coordinates_[index] = 0;
-    // non-contiguous, note that all coordinate's so far are 0
-    if (index > 0)
-      for (ptr_ = data_; index < rank; index++)
-        reinterpret_cast<char*&>(ptr_) += coordinates_[index] * strides[index];
+    // most-common case
+    ssize_t axis = rank - 1;
+    index_ += strides[axis];
+    if (++coordinates_[axis] < extents[axis])
+      return *this;
+
+    coordinates_[axis--] = 0;
+    for (; axis >= 0 && ++coordinates_[axis] == extents[axis]; axis--)
+      coordinates_[axis] = 0;
+
+    if (axis == -1)
+      throw std::runtime_error("index out of bounds");
+
+    for (index_ = 0; axis >= 0; axis--)
+      index_ += coordinates_[axis] * strides[axis];
 
     return *this;
   }
@@ -68,21 +79,30 @@ class Iterator
     auto& extents = tensor_->Dimensions();
     auto& strides = tensor_->Strides();
 
-    // TODO: assert > data_
-    ptr_--;
-    size_t index = 0;
-    for (; index < rank && --coordinates_[index] == 0; index++)
-      coordinates_[index] = extents[index];
-    // non-contiguous, note that all coordinate's so far are 0
-    if (index > 0)
-      for (ptr_ = data_; index < rank; index++)
-        reinterpret_cast<char*&>(ptr_) += coordinates_[index] * strides[index];
+    // most-common case
+    ssize_t axis = rank - 1;
+    index_ += strides[axis];
+    if (--coordinates_[axis]-- != 0)
+      return *this;
+
+    coordinates_[axis] = extents[axis] - 1;
+    axis--;
+    for (; axis >= 0 && coordinates_[axis]-- == 0; axis--)
+      coordinates_[axis] = extents[axis] - 1;
+
+    if (axis == -1)
+      throw std::runtime_error("index out of bounds");
+
+    for (index_ = 0; axis >= 0; axis--)
+      index_ += coordinates_[axis] * strides[axis];
 
     return *this;
   }
 
+
   Iterator operator++(int)                        { Iterator tmp = *this; ++(*this); return tmp; }
   Iterator operator--(int)                        { Iterator tmp = *this; --(*this); return tmp; }
+
 
   /// @brief return a new iterator with added distances to the positions for the provided dimensions.
   template <size_t S>
@@ -103,7 +123,7 @@ class Iterator
     return *this;
   }
 
-  friend bool operator==(const Iterator& a, const Iterator& b) { return a.ptr_ == b.ptr_; }
+  friend bool operator==(const Iterator& a, const Iterator& b) { return a.index_ == b.index_; }
 
   // iterator extensions
   size_t                            Rank()              { return rank; }
@@ -113,9 +133,8 @@ class Iterator
 
  private:
   std::array<size_t, rank>  coordinates_;
-  pointer                   ptr_;
-  pointer                   data_;
-  const TTensor*            tensor_;
+  TTensor*                  tensor_;
+  size_t                    index_;
 };
 
 
@@ -133,45 +152,41 @@ class ConstIterator
 
   ConstIterator() = default;
 
-  // Note that ranges iterators must be default-initializable, so cannot use reference for Tensor
-  ConstIterator(const TTensor* tensor, const_pointer data)
-  requires (rank == 0)
-    : ptr_(data),
-      data_(data),
-      tensor_(tensor)
-  {}
+  ConstIterator(const TTensor& tensor) : coordinates_{0}, tensor_(&tensor), index_(0) {}
 
-  ConstIterator(const TTensor* tensor, const_pointer data)
-    : coordinates_{0},
-      ptr_(data),
-      data_(data),
-      tensor_(tensor)
-  {}
-
-  // FIXME: dimensions are a position and the position must be added to ptr_
-  ConstIterator(const TTensor* tensor, const_pointer data, const std::array<size_t, rank>& dimensions)
+  ConstIterator(const TTensor& tensor, const std::array<size_t, rank>& dimensions)
     : coordinates_(dimensions),
-      ptr_(data),
-      data_(data),
-      tensor_(tensor)
-  {}
+      tensor_(&tensor),
+      index_(0)
+  {
+    auto& strides = tensor_->Strides();
+    for (ssize_t axis = rank-1; axis >= 0; axis--)
+      index_ += coordinates_[axis] * strides[axis];
+  }
 
-  const_reference operator*() const                { return *ptr_; }
 
-  // TODO: unrol loops?
+  const_reference operator*() const               { return tensor_->Data()[index_]; }
+
   ConstIterator& operator++()
   {
     auto& extents = tensor_->Dimensions();
     auto& strides = tensor_->Strides();
 
-    ptr_++;
-    size_t index = 0;
-    for (; index < rank && ++coordinates_[index] == extents[index]; index++)
-      coordinates_[index] = 0;
-    // non-contiguous, note that all coordinate's so far are 0
-    if (index > 0)
-      for (ptr_ = data_; index < rank; index++)
-        reinterpret_cast<char*&>(ptr_) += coordinates_[index] * strides[index];
+    // most-common case
+    ssize_t axis = rank - 1;
+    index_ += strides[axis];
+    if (++coordinates_[axis] < extents[axis])
+      return *this;
+
+    coordinates_[axis--] = 0;
+    for (; axis >= 0 && ++coordinates_[axis] == extents[axis]; axis--)
+      coordinates_[axis] = 0;
+
+    if (axis == -1)
+      throw std::runtime_error("index out of bounds");
+
+    for (index_ = 0; axis >= 0; axis--)
+      index_ += coordinates_[axis] * strides[axis];
 
     return *this;
   }
@@ -181,21 +196,30 @@ class ConstIterator
     auto& extents = tensor_->Dimensions();
     auto& strides = tensor_->Strides();
 
-    // TODO: assert > data_
-    ptr_--;
-    size_t index = 0;
-    for (; index < rank && --coordinates_[index] == 0; index++)
-      coordinates_[index] = extents[index];
-    // non-contiguous, note that all coordinate's so far are 0
-    if (index > 0)
-      for (ptr_ = data_; index < rank; index++)
-        reinterpret_cast<char*&>(ptr_) += coordinates_[index] * strides[index];
+    // most-common case
+    ssize_t axis = rank - 1;
+    index_ += strides[axis];
+    if (--coordinates_[axis]-- != 0)
+      return *this;
+
+    coordinates_[axis] = extents[axis] - 1;
+    axis--;
+    for (; axis >= 0 && coordinates_[axis]-- == 0; axis--)
+      coordinates_[axis] = extents[axis] - 1;
+
+    if (axis == -1)
+      throw std::runtime_error("index out of bounds");
+
+    for (index_ = 0; axis >= 0; axis--)
+      index_ += coordinates_[axis] * strides[axis];
 
     return *this;
   }
 
+
   ConstIterator operator++(int)                  { ConstIterator tmp = *this; ++(*this); return tmp; }
   ConstIterator operator--(int)                  { ConstIterator tmp = *this; --(*this); return tmp; }
+
 
   /// @brief return a new iterator with added distances to the positions for the provided dimensions.
   template <size_t S>
@@ -216,7 +240,7 @@ class ConstIterator
     return *this;
   }
 
-  friend bool operator==(const ConstIterator& a, const ConstIterator& b) { return a.ptr_ == b.ptr_; }
+  friend bool operator==(const ConstIterator& a, const ConstIterator& b) { return a.index_ == b.index_; }
 
   // iterator extensions
   size_t                            Rank()              { return rank; }
@@ -226,18 +250,10 @@ class ConstIterator
 
  private:
   std::array<size_t, rank>  coordinates_;
-  const_pointer             ptr_;
-  const_pointer             data_;
   const TTensor*            tensor_;
+  size_t                    index_;
 };
 
-//  ambiguous deduction in CLANG https://cplusplus.github.io/CWG/issues/2628.html
-#ifdef __clang__
-template <typename TTensor> requires (std::remove_cvref_t<TTensor>::rank == 0)
-ConstIterator(const TTensor* tensor, typename std::remove_cvref_t<TTensor>::const_pointer data) -> ConstIterator<TTensor>;
-template <typename TTensor>
-ConstIterator(const TTensor* tensor, typename std::remove_cvref_t<TTensor>::const_pointer data) -> ConstIterator<TTensor>;
-#endif
 
 } // end of namespace details
 } // end of namespace grid
