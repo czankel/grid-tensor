@@ -28,10 +28,6 @@
 
 namespace grid {
 
-//
-// Tensor
-//
-
 /// Tensor implements an "AI Tensor" that follows more typical AI implementations rather than
 /// mathematical or physical definition.
 ///
@@ -57,8 +53,6 @@ template <typename T, size_t TRank, typename TMemory>
 class Tensor : public Array<T, TMemory>
 {
   template <PrimitiveTensor P, size_t R> friend class TensorView;
-
-
 
   // helper to extract the template parameters for StaticMemory
   template <typename> struct mem_ext;
@@ -547,98 +541,91 @@ explicit Tensor(T(&&... l)[M][N]) -> Tensor<T, 3, StaticMemory<sizeof...(M), std
 
 // Tensor with Dynamic Allocator - Paremter List
 
-// Tensor(size_t,T) -> Rank-1 tensor with a dynamically allocated buffer.
-template <Arithmetic T>
-explicit Tensor(size_t, T) -> Tensor<T, 1, DynamicMemory>;
+// Tensor(uint,T) -> Rank-1 tensor with a dynamically allocated buffer.
+template <Arithmetic T, typename Dev = device::Base>
+explicit Tensor(size_t, T) -> Tensor<T, 1, DeviceMemory<Dev>>;
 
-// Tensor(size_t, Uninitialized<T>) -> Rank-1 tensor with a dynamically allocated uninitialized buffer.
-template <Arithmetic T>
-explicit Tensor(size_t, Uninitialized<T>) -> Tensor<T, 1, DynamicMemory>;
+// Tensor(uint, Uninitialized<T>) -> Rank-1 tensor with a dynamically allocated uninitialized buffer.
+template <Arithmetic T, typename Dev = device::Base>
+explicit Tensor(size_t, Uninitialized<T>) -> Tensor<T, 1, DeviceMemory<Dev>>;
 
-// Tensor(size_t, size_t, T) -> Rank-2 tensor with a dynamically allocated buffer.
-template <Arithmetic T>
-explicit Tensor(size_t, size_t, T) -> Tensor<T, 2, DynamicMemory>;
+// Tensor(uint, uint, T) -> Rank-2 tensor with a dynamically allocated buffer.
+template <Arithmetic T, typename Dev = device::Base>
+explicit Tensor(size_t, size_t, T) -> Tensor<T, 2, DeviceMemory<Dev>>;
 
-// Tensor(size_t, size_t, Uninitialized<T>) -> Rank-2 tensor with a dynamically allocated uninitialized buffer.
-template <Arithmetic T>
-explicit Tensor(size_t, size_t, Uninitialized<T>) -> Tensor<T, 2, DynamicMemory>;
-
-// Tensor(size_t, size_t, size_t, Uninitialized<T>) -> Rank-3 tensor with a dynamically allocated uninitialized buffer.
-template <Arithmetic T>
-explicit Tensor(size_t, size_t, size_t, T) -> Tensor<T, 3, DynamicMemory>;
+// Tensor(uint, Uninitialized<T>) -> Rank-2 tensor with a dynamically allocated uninitialized buffer.
+template <Arithmetic T, typename Dev = device::Base>
+explicit Tensor(size_t, size_t, Uninitialized<T>) -> Tensor<T, 2, DeviceMemory<Dev>>;
 
 // Tensor(size_t, size_t, size_t, Uninitialized<T>) -> Rank-3 tensor with a dynamically allocated uninitialized buffer.
-template <Arithmetic T>
-explicit Tensor(size_t, size_t, size_t, Uninitialized<T>) -> Tensor<T, 3, DynamicMemory>;
+template <Arithmetic T, typename Dev = device::Base>
+explicit Tensor(size_t, size_t, size_t, T) -> Tensor<T, 3, DeviceMemory<Dev>>;
 
+// Tensor(size_t, size_t, size_t, Uninitialized<T>) -> Rank-3 tensor with a dynamically allocated uninitialized buffer.
+template <Arithmetic T, typename Dev = device::Base>
+explicit Tensor(size_t, size_t, size_t, Uninitialized<T>) -> Tensor<T, 3, DeviceMemory<Dev>>;
 
 // Tensor(&[], &[], T) -> Rank-N tensor with a dynamically allocated initialized buffer.
-template <Arithmetic T, size_t N>
-explicit Tensor(const size_t(&)[N], const ssize_t(&)[N], T) -> Tensor<T, N, DynamicMemory>;
+template <Arithmetic T, size_t N, typename Dev = device::Base>
+explicit Tensor(const size_t(&)[N], const ssize_t(&)[N], T) -> Tensor<T, N, DeviceMemory<Dev>>;
 
 // Tensor(&[], &[], Uninitialized<T>) -> Rank-N tensor with a dynamically allocated uninitialized buffer.
-template <Arithmetic T, size_t N>
-explicit Tensor(const size_t(&)[N], const ssize_t(&)[N], Uninitialized<T>) -> Tensor<T, N, DynamicMemory>;
+template <Arithmetic T, size_t N, typename Dev = device::Base>
+explicit Tensor(const size_t(&)[N], const ssize_t(&)[N], Uninitialized<T>) -> Tensor<T, N, DeviceMemory<Dev>>;
 
 // Tensor(&&[], &&[], T) -> Rank-N tensor with a dynamically allocated initialized buffer.
-template <Arithmetic T, size_t N>
-explicit Tensor(size_t(&&)[N], ssize_t(&&)[N], T) -> Tensor<T, N, DynamicMemory>;
+template <Arithmetic T, size_t N, typename Dev = device::Base>
+explicit Tensor(size_t(&&)[N], ssize_t(&&)[N], T) -> Tensor<T, N, DeviceMemory<Dev>>;
 
 // Tensor(&&[], &&[]) -> Rank-N tensor with a dynamically allocated uninitialized buffer.
-template <Arithmetic T, size_t N>
-explicit Tensor(size_t(&&)[N], ssize_t(&&)[N], Uninitialized<T>) -> Tensor<T, N, DynamicMemory>;
+template <Arithmetic T, size_t N, typename Dev = device::Base>
+explicit Tensor(size_t(&&)[N], ssize_t(&&)[N], Uninitialized<T>) -> Tensor<T, N, DeviceMemory<Dev>>;
 
 // Tensor(&[], T) -> Rank-N tensor with a dynamically allocated initialized buffer.
-template <Arithmetic T, size_t N>
-explicit Tensor(const size_t(&)[N], T) -> Tensor<T, N, DynamicMemory>;
+template <Arithmetic T, size_t N, typename Dev = device::Base>
+explicit Tensor(const size_t(&)[N], T) -> Tensor<T, N, DeviceMemory<Dev>>;
 
 // Tensor(&[], Uninitialized<T>) -> Rank-N tensor with a dynamically allocated uninitialized buffer.
-template <Arithmetic T, size_t N>
-explicit Tensor(const size_t(&)[N], Uninitialized<T>) -> Tensor<T, N, DynamicMemory>;
+template <Arithmetic T, size_t N, typename Dev = device::Base>
+explicit Tensor(const size_t(&)[N], Uninitialized<T>) -> Tensor<T, N, DeviceMemory<Dev>>;
 
 // Tensor(&&[], T) -> Rank-N tensor with a dynamically allocated initialized buffer.
-template <Arithmetic T, size_t N>
-explicit Tensor(const size_t(&&)[N], T) -> Tensor<T, N, DynamicMemory>;
+template <Arithmetic T, size_t N, typename Dev = device::Base>
+explicit Tensor(const size_t(&&)[N], T) -> Tensor<T, N, DeviceMemory<Dev>>;
 
 // Tensor(&&[], Uninitialized<T>) -> Rank-N tensor with a dynamically allocated uninitialized buffer.
-template <Arithmetic T, size_t N>
-explicit Tensor(const size_t(&&)[N], Uninitialized<T>) -> Tensor<T, N, DynamicMemory>;
+template <Arithmetic T, size_t N, typename Dev = device::Base>
+explicit Tensor(const size_t(&&)[N], Uninitialized<T>) -> Tensor<T, N, DeviceMemory<Dev>>;
 
 // Tensor(array, T)
-template <Arithmetic T, size_t N>
-Tensor(std::array<size_t, N>, T) -> Tensor<T, N, DynamicMemory>;
+template <Arithmetic T, size_t N, typename Dev = device::Base>
+Tensor(std::array<size_t, N>, T) -> Tensor<T, N, DeviceMemory<Dev>>;
 
 // Tensor(array, array, T)
-template <Arithmetic T, size_t N>
-explicit Tensor(std::array<size_t, N>, std::array<ssize_t, N>, T) -> Tensor<T, N, DynamicMemory>;
+template <Arithmetic T, size_t N, typename Dev = device::Base>
+explicit Tensor(std::array<size_t, N>, std::array<ssize_t, N>, T) -> Tensor<T, N, DeviceMemory<Dev>>;
 
 // Tensor(array, Uninitialized<T>)
-template <Arithmetic T, size_t N>
-explicit Tensor(std::array<size_t, N>, Uninitialized<T>) -> Tensor<T, N, DynamicMemory>;
+template <Arithmetic T, size_t N, typename Dev = device::Base>
+explicit Tensor(std::array<size_t, N>, Uninitialized<T>) -> Tensor<T, N, DeviceMemory<Dev>>;
 
 // Tensor(array, array, Uninitialized<T>)
-template <Arithmetic T, size_t N>
-explicit Tensor(std::array<size_t, N>, std::array<ssize_t, N>, Uninitialized<T>) -> Tensor<T, N, DynamicMemory>;
+template <Arithmetic T, size_t N, typename Dev = device::Base>
+explicit Tensor(std::array<size_t, N>, std::array<ssize_t, N>, Uninitialized<T>) -> Tensor<T, N, DeviceMemory<Dev>>;
 
 // Tensor with Dynamic Allocator - TensorView Argument
 
-template <typename TTensor, size_t TRank>
-Tensor(TensorView<TTensor, TRank>&&) -> Tensor<typename TTensor::value_type, TRank, DynamicMemory>;
-template <typename TTensor, size_t TRank>
-Tensor(const TensorView<TTensor, TRank>&) -> Tensor<typename TTensor::value_type, TRank, DynamicMemory>;
+template <typename TTensor, size_t TRank, typename Dev = device::Base>
+Tensor(TensorView<TTensor, TRank>&&) -> Tensor<typename TTensor::value_type, TRank, DeviceMemory<Dev>>;
+template <typename TTensor, size_t TRank, typename Dev = device::Base>
+Tensor(const TensorView<TTensor, TRank>&) -> Tensor<typename TTensor::value_type, TRank, DeviceMemory<Dev>>;
 
 // Tensor with Dynamic Allocator - Operator Argument
-// Tensor(Operator) -> Tensor (move)
-template <template <template <typename, size_t, typename...> typename, typename, size_t, typename...> typename TOperator,
-          template <typename, size_t, typename...> typename TTensor, typename T, size_t TRank, typename... TTensors>
-Tensor(TOperator<TTensor, T, TRank, TTensors...>&&) -> Tensor<T, TRank, DynamicMemory>;
+template <grid::AnyOperator TOperator, typename Dev = device::Base>
+Tensor(TOperator&&) -> Tensor<typename TOperator::value_type, TOperator::rank, grid::DeviceMemory<Dev>>;
 
-// Tensor(Operator) -> Tensor (copy)
-template <template <template <typename, size_t, typename...> typename, typename, size_t, typename...> typename TOperator,
-          template <typename, size_t, typename...> typename TTensor, typename T, size_t TRank, typename... TTensors>
-Tensor(const TOperator<TTensor, T,  TRank, TTensors...>&) -> Tensor<T, TRank, DynamicMemory>;
-template <grid::AnyOperator TOperator>
-Tensor(const TOperator&) -> Tensor<typename TOperator::value_type, TOperator::rank, grid::DynamicMemory>;
+template <grid::AnyOperator TOperator, typename Dev = device::Base>
+Tensor(const TOperator&) -> Tensor<typename TOperator::value_type, TOperator::rank, grid::DeviceMemory<Dev>>;
 
 // Tensor with "MemoryMapped"
 template <Arithmetic T, size_t N>

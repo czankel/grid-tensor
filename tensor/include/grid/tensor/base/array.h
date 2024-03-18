@@ -15,8 +15,8 @@ namespace grid {
 
 
 /// brief: Array is a specialization for a dynamically allocated buffer.
-template <typename T>
-class Array<T, DynamicMemory>
+template <typename T, typename TDevice>
+class Array<T, DeviceMemory<TDevice>>
 {
   using value_type = T;
   using pointer = value_type*;

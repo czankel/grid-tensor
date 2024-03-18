@@ -11,8 +11,8 @@
 
 namespace grid {
 
-/// DynamicMemory defines a dynamically allocated buffer with the standard allocator.
-struct DynamicMemory {};
+/// DeviceMemroy defines a dynamically allocated buffer for the specific device.
+template <typename> struct DeviceMemory {};
 
 /// StaticMemory defines constant static memory in the RO section.
 template <size_t...> struct StaticMemory {};
