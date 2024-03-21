@@ -6,8 +6,8 @@
 // The contents of this file are confidential and proprietary to Chris Zankel.
 //
 
-#ifndef GRID_TENSOR_BINARY__
-#define GRID_TENSOR_BINARY__
+#ifndef GRID_TENSOR_BINARY_H
+#define GRID_TENSOR_BINARY_H
 
 #include <span>
 #include <algorithm>
@@ -15,19 +15,26 @@
 
 #include "concepts.h"
 
-// TODO: remove when operators are device templated
-#include "base/binary.h"
-
 namespace grid {
 
+/// BinaryOperator is a empty definition for device-specific operators.
+template <typename> class BinaryOperator;
 template <typename, size_t, typename> class Tensor;
-template <PrimitiveTensor, size_t> class TensorView;
+
+//
+// Binary Operators
+//
+
+template <typename> struct AddOperator;
+template <typename> struct SubOperator;
+template <typename> struct MulOperator;
+template <typename> struct DivOperator;
 
 
-/// @brief BinaryFunction<Operator> implements lazy element-wise binary operations of two tensors.
+/// @brief Binary is a wrapper for a device-specific binary operator implementation
 ///
-/// BinaryFunction stores the tensors (or tensor operators) and evaluates it on execution with
-/// the operator().
+/// Binary provides a lazy-implementation that only stores the tensors and evaluates
+/// the operation with operator().
 ///
 /// The dimensions of the tensors must match following broadcasting rules.
 /// The resulting rank is the maximum of the tensor ranks.
@@ -47,7 +54,7 @@ template <PrimitiveTensor, size_t> class TensorView;
 ///   shape: 3, 4, 4 <op> shape: 3, 5, 1    -> Error
 ///
 template <typename TOperator, AnyTensor TTensor1, AnyTensor TTensor2>
-class BinaryFunction
+class Binary
 {
  public:
   using tensor1_type = std::remove_reference_t<TTensor1>;
@@ -58,19 +65,17 @@ class BinaryFunction
   constexpr static size_t rank = std::max(tensor1_type::rank, tensor2_type::rank);
 
   template <typename T1, typename T2>
-  BinaryFunction(TOperator, T1&& tensor1, T2&& tensor2)
+  Binary(TOperator, T1&& tensor1, T2&& tensor2)
    : tensor1_(std::forward<T1>(tensor1)),
      tensor2_(std::forward<T2>(tensor2))
   {}
 
-  ~BinaryFunction() {}
+  ~Binary() {}
 
   // delete assignment and copy/move constructors
-  BinaryFunction() = delete;
-  BinaryFunction(const BinaryFunction& other) = delete;
-  BinaryFunction(BinaryFunction&& other) = delete;
-  BinaryFunction& operator=(const BinaryFunction& other) = delete;
-  BinaryFunction& operator=(BinaryFunction&& other) = delete;
+  Binary() = delete;
+  Binary(const Binary& other) = delete;
+  Binary& operator=(const Binary& other) = delete;
 
  public:
 
@@ -80,7 +85,7 @@ class BinaryFunction
     auto dimensions = BroadcastDimensions(tensor1_, tensor2_);
     auto result = Tensor(dimensions, Uninitialized<value_type>{});
 
-    operator_(tensor1_, tensor2_, result.begin());
+    operator_(tensor1_, tensor2_, result);
 
     return result;
   }
@@ -91,12 +96,12 @@ class BinaryFunction
   TTensor2 tensor2_;
 };
 
+template <typename TOp, typename T1, typename T2> Binary(TOp, T1&&, T2&&)
+  -> Binary<TOp, typename to_tensor<T1>::type, typename to_tensor<T2>::type>;
+
 
 template <typename TOperator, AnyTensor TTensor1, AnyTensor TTensor2>
-TOperator BinaryFunction<TOperator, TTensor1, TTensor2>::operator_;
-
-template <typename TOp, typename T1, typename T2> BinaryFunction(TOp, T1&&, T2&&)
-  -> BinaryFunction<TOp, typename to_tensor<T1>::type, typename to_tensor<T2>::type>;
+TOperator Binary<TOperator, TTensor1, TTensor2>::operator_;
 
 //
 // Exported binary functions
@@ -106,45 +111,45 @@ template <typename TOp, typename T1, typename T2> BinaryFunction(TOp, T1&&, T2&&
 template <TensorConvertible TTensor1, TensorConvertible TTensor2>
 auto Add(TTensor1&& tensor1, TTensor2&& tensor2)
 {
-  return BinaryFunction(BinaryOperator<AddOperator>(), std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
+  return Binary(BinaryOperator<AddOperator<tensor_device_t<TTensor1>>>(), std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
 }
 
 /// @brief Sub subtracts two tensors element-wise (lazily).
 template <TensorConvertible TTensor1, TensorConvertible TTensor2>
 auto Sub(TTensor1&& tensor1, TTensor2&& tensor2)
 {
-  return BinaryFunction(BinaryOperator<SubOperator>(), std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
+  return Binary(BinaryOperator<SubOperator<tensor_device_t<TTensor1>>>(), std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
 }
 
 /// @brief Mul multiplies two tensors element-wise (lazily).
 template <TensorConvertible TTensor1, TensorConvertible TTensor2>
 auto Mul(TTensor1&& tensor1, TTensor2&& tensor2)
 {
-  return BinaryFunction(BinaryOperator<MulOperator>(), std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
+  return Binary(BinaryOperator<MulOperator<tensor_device_t<TTensor1>>>(), std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
 }
 
 /// @brief Mul multiplies a tensors with a scalar.
 template <TensorConvertible TTensor, Arithmetic T>
 auto Mul(TTensor&& tensor, T scalar)
 {
-  return BinaryFunction(BinaryOperator<MulOperator>{}, std::forward<TTensor>(tensor), Tensor(scalar));
+  return Binary(BinaryOperator<MulOperator<tensor_device_t<TTensor>>>(), std::forward<TTensor>(tensor), Tensor(scalar));
 }
 
 /// @brief Mul multiplies a scalar with a tensors.
 template <Arithmetic T, TensorConvertible TTensor>
 auto Mul(T scalar, TTensor&& tensor)
 {
-  return BinaryFunction(BinaryOperator<MulOperator>{}, std::forward<TTensor>(tensor), Tensor(scalar));
+  return Binary(BinaryOperator<MulOperator<tensor_device_t<TTensor>>>(), std::forward<TTensor>(tensor), Tensor(scalar));
 }
 
 /// @brief Div multiplies two tensors element-wise (lazily).
 template <TensorConvertible TTensor1, TensorConvertible TTensor2>
 auto Div(TTensor1&& tensor1, TTensor2&& tensor2)
 {
-  return BinaryFunction(BinaryOperator<DivOperator>{}, std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
+  return Binary(BinaryOperator<DivOperator<tensor_device_t<TTensor1>>>(), std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
 }
 
 
 } // end of namespace grd
 
-#endif  // GRID_TENSOR_BINARY__
+#endif  // GRID_TENSOR_BINARY_H

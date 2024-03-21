@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <ranges>
 
+#include "../binary.h"
 #include "../concepts.h"
 
 
@@ -25,33 +26,33 @@ namespace grid {
 /// The resulting rank is the maximum of the tensor ranks.
 ///
 ///  @tparm TOperator binary operator
-template <typename TOperator>
-class BinaryOperator
+template <template <typename> typename TOperator>
+class BinaryOperator<TOperator<device::Base>>
 {
- private:
+  static constexpr TOperator<device::Base> Operator;
 
   // operation on a single element
   template <typename const_pointer, typename pointer>
   inline void eval(pointer dest, const_pointer src1, const_pointer src2,
-                  std::span<const size_t,  0> dimensions,
-                  std::span<const ssize_t, 0>,
-                  std::span<const ssize_t, 0>,
-                  std::span<const ssize_t, 0>) const
+                   std::span<const size_t,  0> dimensions,
+                   std::span<const ssize_t, 0>,
+                   std::span<const ssize_t, 0>,
+                   std::span<const ssize_t, 0>) const
   {
-    TOperator::eval(dest, src1, src2, 0);
+    Operator(dest, src1, src2, 0);
   }
 
   // operation on a single dimension (unoptimized)
   template <typename const_pointer, typename pointer>
   inline void eval(pointer dest, const_pointer src1, const_pointer src2,
-                  std::span<const size_t,  1> dimensions,
-                  std::span<const ssize_t, 1> strides0,
-                  std::span<const ssize_t, 1> strides1,
-                  std::span<const ssize_t, 1> strides2) const
+                   std::span<const size_t,  1> dimensions,
+                   std::span<const ssize_t, 1> strides0,
+                   std::span<const ssize_t, 1> strides1,
+                   std::span<const ssize_t, 1> strides2) const
   {
     for (size_t i = 0; i < dimensions[0]; i++)
     {
-      TOperator::eval(dest, src1, src2, 0);
+      Operator(dest, src1, src2, 0);
       dest += strides0[0];
       src1 += strides1[0];
       src2 += strides2[0];
@@ -88,7 +89,7 @@ class BinaryOperator
   inline void eval(pointer dest, const_pointer src1, const_pointer src2, size_t dimensions) const
   {
     for (size_t i = 0; i < dimensions; i++)
-      TOperator::eval(dest, src1, src2, i);
+      Operator(dest, src1, src2, i);
   }
 
   // operation on dim >= 2 (optimized)
@@ -154,7 +155,7 @@ class BinaryOperator
   }
 
  public:
-  // FIXME: remove when all functions are converted to use ranges
+  // TODO: remove when all functions are converted to use ranges
   template <typename T, size_t TRank>
   void operator()(T* dest, const T* src1, const T* src2,
                   const std::array<size_t, TRank>& dimensions,
@@ -185,17 +186,16 @@ class BinaryOperator
 
   template<std::ranges::input_range R1,
            std::ranges::input_range R2,
-           std::weakly_incrementable O> //,
-           //std::copy_constructible F>
-  requires std::indirectly_copyable<std::ranges::iterator_t<R1>, O> &&
-           std::indirectly_copyable<std::ranges::iterator_t<R2>, O>
-  constexpr std::ranges::binary_transform_result<std::ranges::borrowed_iterator_t<R1>,
-                                                 std::ranges::borrowed_iterator_t<R2>, O>
-  operator()(R1&& r1, R2&& r2, O result/*, F op*/) const
+           std::ranges::output_range<std::iter_value_t<std::ranges::iterator_t<R1>>> O>
+  requires std::indirectly_copyable<std::ranges::iterator_t<R1>, std::ranges::iterator_t<O>> &&
+           std::indirectly_copyable<std::ranges::iterator_t<R2>, std::ranges::iterator_t<O>>
+  void operator()(R1&& r1, R2&& r2, O&& o) const
   {
-    constexpr size_t rank = O::rank;
+    using tensor_type = std::remove_cvref_t<O>;
+    constexpr size_t rank = tensor_type::rank;
     auto first1 = std::ranges::cbegin(r1);
     auto first2 = std::ranges::cbegin(r2);
+    auto result = std::ranges::begin(o);
     auto [strides1, strides2] = BroadcastStrides(first1, first2);
     auto& strides0 = result.Strides();
     auto& dimensions = result.Extents();
@@ -213,9 +213,6 @@ class BinaryOperator
              std::span<const ssize_t, rank - 1>(strides1.begin(), rank - 1),
              std::span<const ssize_t, rank - 1>(strides2.begin(), rank - 1),
              dimensions[rank - 1]);
-
-        // FIXME: result needs to be at the end?
-        return {std::move(std::ranges::end(r1)), std::move(std::ranges::end(r2)), std::move(result)};
       }
     }
 
@@ -224,9 +221,6 @@ class BinaryOperator
          std::span<const ssize_t, rank>(strides0.begin(), rank),
          std::span<const ssize_t, rank>(strides1.begin(), rank),
          std::span<const ssize_t, rank>(strides2.begin(), rank));
-
-    // FIXME: result needs to be at the end?
-    return {std::move(std::ranges::end(r1)), std::move(std::ranges::end(r2)), std::move(result)};
   }
 
 };
@@ -235,32 +229,28 @@ class BinaryOperator
 // Operators
 //
 
-struct AddOperator
+template<> struct AddOperator<device::Base>
 {
-  // scalar X scalar
   template<typename T>
-  static inline void eval(T* dest, const T* src1, const T* src2, const size_t i) { dest[i] = src1[i] + src2[i]; }
+  inline void operator()(T* dest, const T* src1, const T* src2, const size_t i) const { dest[i] = src1[i] + src2[i]; }
 };
 
-struct SubOperator
+template<> struct SubOperator<device::Base>
 {
-  // scalar X scalar
   template<typename T>
-  static inline void eval(T* dest, const T* src1, const T* src2, const size_t i) { dest[i] = src1[i] - src2[i]; }
+  inline void operator()(T* dest, const T* src1, const T* src2, const size_t i) const { dest[i] = src1[i] - src2[i]; }
 };
 
-struct MulOperator
+template<> struct MulOperator<device::Base>
 {
-  // scalar X scalar
   template<typename T>
-  static inline void eval(T* dest, const T* src1, const T* src2, const size_t i) { dest[i] = src1[i] * src2[i]; }
+  inline void operator()(T* dest, const T* src1, const T* src2, const size_t i) const { dest[i] = src1[i] * src2[i]; }
 };
 
-struct DivOperator
+template<> struct DivOperator<device::Base>
 {
-  // scalar X scalar
   template<typename T>
-  static inline void eval(T* dest, const T* src1, const T* src2, const size_t i) { dest[i] = src1[i] / src2[i]; }
+  inline void operator()(T* dest, const T* src1, const T* src2, const size_t i) const { dest[i] = src1[i] / src2[i]; }
 };
 
 

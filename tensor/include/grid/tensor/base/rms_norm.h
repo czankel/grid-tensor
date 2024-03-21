@@ -74,7 +74,7 @@ class RmsNormOperator
     auto [value, count] = SumSquare(src, std::span(dimensions), std::span(strides1));
     T scale = 1.0f/sqrtf(value / count + eps);
     auto strides2 = std::array<ssize_t, TRank>{0};
-    BinaryOperator<MulOperator>{}(dst, src, &scale, dimensions, strides0, strides1, strides2);
+    BinaryOperator<MulOperator<device::Base>>{}(src, &scale, dst, dimensions, strides0, strides1, strides2);
   }
 };
 

@@ -112,7 +112,7 @@ class SoftMaxOperator
     T scale = static_cast<T>(1)/(sum + eps);
 
     auto strides2 = std::array<ssize_t, TRank>{0};
-    BinaryOperator<MulOperator>{}(dst, dst, &scale, dimensions, strides0, strides0, strides2);
+    BinaryOperator<MulOperator<device::Base>>{}(dst, &scale, dst, dimensions, strides0, strides0, strides2);
   }
 };
 
