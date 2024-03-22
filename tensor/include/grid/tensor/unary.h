@@ -14,65 +14,76 @@
 #include <span>
 
 #include "concepts.h"
-#include "transform.h"
-
-// TODO: remove when operators are device templated
-#include "base/unary.h"
-#include "base/rms_norm.h"
-#include "base/softmax.h"
-#include "base/silu.h"
+#include "unary.h"
 
 namespace grid {
 
-template <typename, size_t, typename> class Tensor;
-template <PrimitiveTensor, size_t> class TensorView;
+template <typename> class UnaryOperator;
+
+//
+// Unary Operators
+//
+
+template <typename> struct CopyOperator;
+template <typename> struct NegOperator;
+
+template <typename> class RmsNormOperator;
+template <typename> class SoftMaxOperator;
+template <typename> class SiluOperator;
 
 
-/// @brief UnaryFunction<Operator> implements lazy element-wise unary operations on a tensors.
+/// @brief Unary is a wrapper for a device-specific unary operator implementation.
 ///
-/// UnaryFunction stores the tensor (or tensor operator) and evaluates it on execution with
-/// the operator().
+/// Unary provides a lazy-implementation that only stores the tensor and evaluates
+/// the operation with operator().
 ///
-///  @tparm TOperator unary operator
-///  @tparm TTensor  second tensor
+/// Unary is typically not used directly, instead, use the actual functions, such as Neg(Tensor).
+///
+/// The actual operator implementations need to provide an operator() with an input and output
+/// range. This differs from, e.g. std::ranges::transform that requires an output iterator instead
+/// of a range.
+///
+///  template<std::ranges::input_range, std::ranges::output_range> operator();
+///
+///  @tparm TOperator unary operator type
+///  @tparm TTensor  tensor type
 ///
 template <typename TOperator, AnyTensor TTensor>
-class UnaryFunction
+class Unary
 {
  public:
   using tensor_type = std::remove_reference_t<TTensor>;
-  using value_type = std::common_type_t<typename tensor_type::value_type>;
-  using pointer = value_type*;
-  using const_pointer = const value_type*;
+  using value_type = tensor_type::value_type;
   constexpr static size_t rank = tensor_type::rank;
 
   template <typename T>
-  UnaryFunction(TOperator, T&& tensor) : tensor_(std::forward<T>(tensor)) {}
-  ~UnaryFunction() {}
+  Unary(TOperator, T&& tensor) : tensor_(std::forward<T>(tensor)) {}
 
-  // delete assignment and copy/move constructors
-  UnaryFunction() = delete;
-  UnaryFunction(const UnaryFunction& other) = delete;
-  UnaryFunction(UnaryFunction&& other) = delete;
-  UnaryFunction& operator=(const UnaryFunction& other) = delete;
-  UnaryFunction& operator=(UnaryFunction&& other) = delete;
+  ~Unary() {}
+
+  Unary() = delete;
+  Unary(const Unary& other) = delete;
+  Unary& operator=(const Unary& other) = delete;
 
  public:
 
   /// operator()() evaluates the unary operator and returns a tensor.
   auto operator()() const
   {
-    auto& dimensions = tensor_.Dimensions();
-    auto result = Tensor(dimensions, Uninitialized<value_type>{});
-    TOperator{}(result.Data(), tensor_.Data(), dimensions, result.Strides(), tensor_.Strides());
+    auto result = Tensor(tensor_.Dimensions(), Uninitialized<value_type>{});
+    operator_(tensor_, result);
     return result;
   }
 
  private:
+  static TOperator operator_;
   TTensor tensor_;
 };
 
-template <typename TOp, typename T> UnaryFunction(TOp, T&&) -> UnaryFunction<TOp, typename to_tensor<T>::type>;
+template <typename TOp, typename T> Unary(TOp, T&&) -> Unary<TOp, typename to_tensor<T>::type>;
+
+template <typename TOperator, AnyTensor TTensor>
+TOperator Unary<TOperator, TTensor>::operator_;
 
 //
 // Exported unary functions
@@ -82,7 +93,7 @@ template <typename TOp, typename T> UnaryFunction(TOp, T&&) -> UnaryFunction<TOp
 template <TensorConvertible TTensor>
 auto Copy(TTensor&& tensor)
 {
-  return UnaryFunction(UnaryOperator<CopyOperator>{}, std::forward<TTensor>(tensor));
+  return Unary(UnaryOperator<CopyOperator<tensor_device_t<TTensor>>>(), std::forward<TTensor>(tensor));
 }
 
 
@@ -90,7 +101,7 @@ auto Copy(TTensor&& tensor)
 template <TensorConvertible TTensor>
 auto RmsNorm(TTensor&& tensor)
 {
-  return UnaryFunction(RmsNormOperator{}, std::forward<TTensor>(tensor));
+  return Unary(RmsNormOperator<tensor_device_t<TTensor>>(), std::forward<TTensor>(tensor));
 }
 
 
@@ -98,7 +109,7 @@ auto RmsNorm(TTensor&& tensor)
 template <TensorConvertible TTensor>
 auto SoftMax(TTensor&& tensor)
 {
-  return UnaryFunction(SoftMaxOperator{}, std::forward<TTensor>(tensor));
+  return Unary(SoftMaxOperator<tensor_device_t<TTensor>>(), std::forward<TTensor>(tensor));
 }
 
 
@@ -106,7 +117,7 @@ auto SoftMax(TTensor&& tensor)
 template <TensorConvertible TTensor>
 auto Silu(TTensor&& tensor)
 {
-  return UnaryFunction(SiluOperator{}, std::forward<TTensor>(tensor));
+  return Unary(SiluOperator<tensor_device_t<TTensor>>(), std::forward<TTensor>(tensor));
 }
 
 

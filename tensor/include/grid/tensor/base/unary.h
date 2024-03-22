@@ -29,9 +29,9 @@ class UnaryOperator
   // operation on a single element
   template <typename const_pointer, typename pointer>
   inline void eval(pointer dest, const_pointer src,
-                  std::span<const size_t,  0> dimensions,
-                  std::span<const ssize_t, 0>,
-                  std::span<const ssize_t, 0>) const
+                   std::span<const size_t,  0> dimensions,
+                   std::span<const ssize_t, 0>,
+                   std::span<const ssize_t, 0>) const
   {
     TOperator::eval(dest, src);
   }
@@ -72,16 +72,21 @@ class UnaryOperator
   }
 
  public:
-  template <typename T, size_t TRank>
-  void operator()(T* dst, const T* src,
-                  const std::array<size_t, TRank>& dimensions,
-                  const std::array<ssize_t, TRank>& strides0,
-                  const std::array<ssize_t, TRank>& strides1)
+  template<std::ranges::input_range R,
+           std::ranges::output_range<std::iter_value_t<std::ranges::iterator_t<R>>> O>
+  requires std::indirectly_copyable<std::ranges::iterator_t<R>, std::ranges::iterator_t<O>>
+  void operator()(R&& r, O&& o) const
   {
-    eval(dst, src,
-         std::span<const size_t, TRank>(dimensions),
-         std::span<const ssize_t, TRank>(strides0),
-         std::span<const ssize_t, TRank>(strides1));
+    using tensor_type = std::remove_cvref_t<O>;
+    constexpr size_t rank = tensor_type::rank;
+    auto first = std::ranges::cbegin(r);
+    auto result = std::ranges::begin(o);
+
+    // FIXME fold ...
+    eval(&*result, &*first,
+         std::span<const size_t, rank>(result.Extents()),
+         std::span<const ssize_t, rank>(result.Strides()),
+         std::span<const ssize_t, rank>(first.Strides()));
   }
 };
 
@@ -89,14 +94,14 @@ class UnaryOperator
 // Operators
 //
 
-struct CopyOperator
+template <> struct CopyOperator<device::Base>
 {
   // scalar X scalar
   template<typename T>
   static inline void eval(T* dest, const T* src) { *dest = *src; }
 };
 
-struct NegOperator
+template <> struct NegOperator<device::Base>
 {
   // scalar X scalar
   template<typename T>

@@ -20,14 +20,13 @@
 namespace grid {
 
 /// Silu implements the SiLU activation function operator.
-class SiluOperator
+template <> class SiluOperator<device::Base>
 {
  private:
 
   template <typename T>
   inline void
-  Silu(T* dst,
-       const T* src,
+  Silu(T* dst, const T* src,
        std::span<const size_t,  1> dimensions,
        std::span<const ssize_t, 1> strides0,
        std::span<const ssize_t, 1> strides1) const
@@ -42,8 +41,7 @@ class SiluOperator
 
   template <typename T, size_t _N>
   inline void
-  Silu(T* dst,
-       const T* src,
+  Silu(T* dst, const T* src,
        std::span<const size_t,  _N> dimensions,
        std::span<const ssize_t, _N> strides0,
        std::span<const ssize_t, _N> strides1) const
@@ -61,14 +59,13 @@ class SiluOperator
   }
 
  public:
-  /// operator()() executes the operation and returns a tensor.
-  template <typename T, size_t TRank>
-  auto operator()(T* dst, const T* src,
-                  const std::array<size_t,  TRank>& dimensions,
-                  const std::array<ssize_t, TRank>& strides0,
-                  const std::array<ssize_t, TRank>& strides1)
+  template<std::ranges::input_range R, std::ranges::output_range<std::iter_value_t<std::ranges::iterator_t<R>>> O>
+  requires std::indirectly_copyable<std::ranges::iterator_t<R>, std::ranges::iterator_t<O>>
+  void operator()(R r, O o) const
   {
-    Silu(dst, src, dimensions, strides0, strides1);
+    auto first = std::ranges::cbegin(r);
+    auto result = std::ranges::begin(o);
+    Silu(&*result, &*first, result.Extents(), first.Strides(), result.Strides());
   }
 };
 

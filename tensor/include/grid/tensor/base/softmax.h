@@ -20,7 +20,7 @@
 namespace grid {
 
 /// SoftMaxOperator implements the softmax operator.
-class SoftMaxOperator
+template <> class SoftMaxOperator<device::Base>
 {
  private:
 
@@ -58,9 +58,7 @@ class SoftMaxOperator
 
   template <typename T>
   inline auto
-  SumExp(T* dst,
-         const T* src,
-         T max,
+  SumExp(T* dst, const T* src, T max,
          std::span<const size_t,  1> dimensions,
          std::span<const ssize_t, 1> strides) const
   {
@@ -76,9 +74,7 @@ class SoftMaxOperator
   // FIXME: add strides for dst
   template <typename T, size_t _N>
   inline auto
-  SumExp(T* dst,
-         const T* src,
-         T max,
+  SumExp(T* dst, const T* src, T max,
          std::span<const size_t,  _N> dimensions,
          std::span<const ssize_t, _N> strides) const
   {
@@ -95,24 +91,22 @@ class SoftMaxOperator
   }
 
  public:
-
-  /// operator()() executes the operation and returns a tensor.
-  // TODO: make eps a parameter, see also definition in rms_norm
-  template <typename T, size_t TRank>
-  auto operator()(T* dst, const T* src,
-                  const std::array<size_t,  TRank>& dimensions,
-                  const std::array<ssize_t, TRank>& strides0,
-                  const std::array<ssize_t, TRank>& strides1)
+  template<std::ranges::input_range R, std::ranges::output_range<std::iter_value_t<std::ranges::iterator_t<R>>> O>
+  requires std::indirectly_copyable<std::ranges::iterator_t<R>, std::ranges::iterator_t<O>>
+  void operator()(R&& r, O&& o) const
   {
-    constexpr T eps = std::numeric_limits<T>::epsilon();
+    using tensor_type = std::remove_cvref_t<O>;
+    using value_type = tensor_type::value_type;
+    constexpr value_type eps = std::numeric_limits<value_type>::epsilon();
 
-    auto max = Max(src, std::span(dimensions), std::span(strides1));
-    auto sum = SumExp(dst, src, max, std::span(dimensions), std::span(strides1));
+    auto first = std::ranges::cbegin(r);
+    auto result = std::ranges::begin(o);
+    auto& extents = result.Extents();
+    auto max = Max(&*first, std::span(extents), std::span(result.Strides()));
+    auto sum = SumExp(&*result, &*first, max, std::span(extents), std::span(first.Strides()));
 
-    T scale = static_cast<T>(1)/(sum + eps);
-
-    auto strides2 = std::array<ssize_t, TRank>{0};
-    BinaryOperator<MulOperator<device::Base>>{}(dst, &scale, dst, dimensions, strides0, strides0, strides2);
+    value_type scale = static_cast<value_type>(1)/(sum + eps);
+    BinaryOperator<MulOperator<device::Base>>()(o, Tensor(scale), o);
   }
 };
 

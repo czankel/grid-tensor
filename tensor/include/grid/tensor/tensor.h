@@ -262,7 +262,7 @@ class Tensor : public Array<T, TMemory>
       dimensions_{other.Dimensions()},
       strides_{other.Strides()}
   {
-    Transform(other, begin(), UnaryOperator<CopyOperator>{});
+    UnaryOperator<CopyOperator<tensor_device_t<decltype(*this)>>>()(other, *this);
   }
 
   /// Move constructor
@@ -285,9 +285,7 @@ class Tensor : public Array<T, TMemory>
   Tensor& operator=(const TTensor& other)
   {
     array_type::Realloc(other.Size());
-    dimensions_ = other.Dimensions();
-    strides_ = other.Strides();
-    Transform(other, begin(), UnaryOperator<CopyOperator>{});
+    UnaryOperator<CopyOperator<tensor_device_t<decltype(*this)>>>()(other, *this);
 
     return *this;
   }

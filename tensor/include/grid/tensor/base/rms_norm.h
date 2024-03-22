@@ -25,7 +25,7 @@ namespace {
 }
 
 // requires (std::is_floating_point_v<value_type> && rank > 0)
-class RmsNormOperator
+template <> class RmsNormOperator<device::Base>
 {
  private:
   template <typename T>
@@ -62,19 +62,22 @@ class RmsNormOperator
   }
 
  public:
-
-  /// operator()() executes and returns a tensor with the RMS norm of the stored vector.
-  template <typename T, size_t TRank>
-  void operator()(T* dst, const T* src,
-                  const std::array<size_t,  TRank>& dimensions,
-                  const std::array<ssize_t, TRank>& strides0,
-                  const std::array<ssize_t, TRank>& strides1,
-                  T eps = Eps<T>::default_value)
+  template<std::ranges::input_range R, std::ranges::output_range<std::iter_value_t<std::ranges::iterator_t<R>>> O>
+  requires std::indirectly_copyable<std::ranges::iterator_t<R>, std::ranges::iterator_t<O>>
+  void operator()(R&& r, O&& o) const
   {
-    auto [value, count] = SumSquare(src, std::span(dimensions), std::span(strides1));
-    T scale = 1.0f/sqrtf(value / count + eps);
-    auto strides2 = std::array<ssize_t, TRank>{0};
-    BinaryOperator<MulOperator<device::Base>>{}(src, &scale, dst, dimensions, strides0, strides1, strides2);
+    using tensor_type = std::remove_cvref_t<O>;
+    using value_type = tensor_type::value_type;
+    constexpr value_type eps = Eps<value_type>::default_value;
+
+    auto first = std::ranges::cbegin(r);
+    auto result = std::ranges::begin(o);
+    auto& extents = result.Extents();
+
+    auto [value, count] = SumSquare(&*first, std::span(extents), std::span(result.Strides()));
+
+    value_type scale = 1.0f/sqrtf(value / count + eps);
+    BinaryOperator<MulOperator<device::Base>>()(r, Tensor(scale), o);
   }
 };
 
