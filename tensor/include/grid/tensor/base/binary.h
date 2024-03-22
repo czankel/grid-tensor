@@ -34,10 +34,10 @@ class BinaryOperator<TOperator<device::Base>>
   // operation on a single element
   template <typename const_pointer, typename pointer>
   inline void eval(pointer dest, const_pointer src1, const_pointer src2,
-                   std::span<const size_t,  0> dimensions,
-                   std::span<const ssize_t, 0>,
-                   std::span<const ssize_t, 0>,
-                   std::span<const ssize_t, 0>) const
+                  std::span<const size_t,  0> dimensions,
+                  std::span<const ssize_t, 0>,
+                  std::span<const ssize_t, 0>,
+                  std::span<const ssize_t, 0>) const
   {
     Operator(dest, src1, src2, 0);
   }
@@ -45,10 +45,10 @@ class BinaryOperator<TOperator<device::Base>>
   // operation on a single dimension (unoptimized)
   template <typename const_pointer, typename pointer>
   inline void eval(pointer dest, const_pointer src1, const_pointer src2,
-                   std::span<const size_t,  1> dimensions,
-                   std::span<const ssize_t, 1> strides0,
-                   std::span<const ssize_t, 1> strides1,
-                   std::span<const ssize_t, 1> strides2) const
+                  std::span<const size_t,  1> dimensions,
+                  std::span<const ssize_t, 1> strides0,
+                  std::span<const ssize_t, 1> strides1,
+                  std::span<const ssize_t, 1> strides2) const
   {
     for (size_t i = 0; i < dimensions[0]; i++)
     {
@@ -59,12 +59,13 @@ class BinaryOperator<TOperator<device::Base>>
     }
   }
 
-  template <size_t N, typename const_pointer, typename pointer> inline
-  void eval(pointer dest, const_pointer src1, const_pointer src2,
-            std::span<const size_t,  N> dimensions,
-            std::span<const ssize_t, N> strides0,
-            std::span<const ssize_t, N> strides1,
-            std::span<const ssize_t, N> strides2) const
+  // operation on dim >=2 (unoptimized)
+  template <size_t N, typename const_pointer, typename pointer>
+  inline void eval(pointer dest, const_pointer src1, const_pointer src2,
+                   std::span<const size_t,  N> dimensions,
+                   std::span<const ssize_t, N> strides0,
+                   std::span<const ssize_t, N> strides1,
+                   std::span<const ssize_t, N> strides2) const
   {
     static_assert(N != std::dynamic_extent, "dynamic_extent not allowed");
     for (size_t i = 0; i < dimensions[0]; i++)
