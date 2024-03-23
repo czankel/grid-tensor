@@ -22,12 +22,12 @@ TYPED_TEST_P(MultiplicationTestSuite, TensorVecDot)
   typename TypeParam::Tensor tensor1{   2,   3,   5 };
   typename TypeParam::Tensor tensor2{   7,  11,  13 };
 
-  typename TypeParam::Tensor result = grid::MatMul(tensor1, tensor2);
+  typename TypeParam::Tensor result = grid::Matmul(tensor1, tensor2);
   EXPECT_EQ(result, typename TypeParam::Tensor{112});
 }
 
 // Note: tests full optimization: can ignore stides (loop dim_m * dim_n)
-TYPED_TEST_P(MultiplicationTestSuite, TensorMatMul)
+TYPED_TEST_P(MultiplicationTestSuite, TensorMatmul)
 {
   typename TypeParam::Tensor tensor1{ { 3, 6, 9 },
                                       { 2, 8, 4 },
@@ -39,7 +39,7 @@ TYPED_TEST_P(MultiplicationTestSuite, TensorMatMul)
                                       { 2 * 1 + 8 * 5 + 4 * 7, 2 * 8 + 8 * 3 + 4 * 4 }, // 70, 56
                                       { 5 * 1 + 1 * 5 + 7 * 7, 5 * 8 + 1 * 3 + 7 * 4 }};// 59, 71
 
-  typename TypeParam::Tensor result = grid::MatMul(tensor1, tensor2);
+  typename TypeParam::Tensor result = grid::Matmul(tensor1, tensor2);
   EXPECT_EQ(result, expected);
 }
 
@@ -54,7 +54,7 @@ TYPED_TEST_P(MultiplicationTestSuite, TensorMatVec)
                                        2 * 1 + 8 * 5 + 4 * 7, // 70
                                        5 * 1 + 1 * 5 + 7 * 7};// 59
 
-  typename TypeParam::Tensor result = grid::MatMul(tensor1, tensor2);
+  typename TypeParam::Tensor result = grid::Matmul(tensor1, tensor2);
   EXPECT_EQ(result, expected);
 }
 
@@ -69,7 +69,7 @@ TYPED_TEST_P(MultiplicationTestSuite, TensorVecMat)
                                        1 * 2 + 5 * 8 + 7 * 4, // 70
                                        1 * 5 + 5 * 1 + 7 * 7};// 59
 
-  typename TypeParam::Tensor result = grid::MatMul(tensor1, tensor2);
+  typename TypeParam::Tensor result = grid::Matmul(tensor1, tensor2);
   EXPECT_EQ(result, expected);
 }
 
@@ -127,7 +127,7 @@ TYPED_TEST_P(MultiplicationTestSuite, TensorElemMulRank2Broadcast)
 
 REGISTER_TYPED_TEST_SUITE_P(MultiplicationTestSuite,
     TensorVecDot,
-    TensorMatMul,
+    TensorMatmul,
     TensorMatVec,
     TensorVecMat,
     TensorScaleRight,

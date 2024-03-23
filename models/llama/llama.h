@@ -285,9 +285,9 @@ void LLaMAModelT<T, Dev>::Forward(LLaMAVocab::token token, size_t pos)
     xb_ = RmsNorm(x_) * l.att_norm_;                      // (dim) * (dim) -> (dim)
 
     // Insert Weight(xb) vectors into the key and value caches at row "pos"
-    l.key_cache_.View(pos) = MatMul(l.wk_, xb_);          // (kv_dim, dim) @ (dim) -> (kv_dim)
-    l.value_cache_.View(pos) = MatMul(l.wv_, xb_);        // (kv_dim, dim) @ (dim) -> (kv_dim)
-    l.q_ = MatMul(l.wq_, xb_);                            // (dim, dim) @ (dim)    -> (dim)
+    l.key_cache_.View(pos) = Matmul(l.wk_, xb_);          // (kv_dim, dim) @ (dim) -> (kv_dim)
+    l.value_cache_.View(pos) = Matmul(l.wv_, xb_);        // (kv_dim, dim) @ (dim) -> (kv_dim)
+    l.q_ = Matmul(l.wq_, xb_);                            // (dim, dim) @ (dim)    -> (dim)
 
     // RoPE, rotate for each 'head'
     auto q = l.q_.Data();
@@ -325,9 +325,9 @@ void LLaMAModelT<T, Dev>::Forward(LLaMAVocab::token token, size_t pos)
       // scores [head_offset:head_offset + head_size] =
       //   softmax(K [:pos+1, head:head+head_size] @ q [head:head+head_size] @ V [:pos+1, head:head+head_size]
       scores_.View(Extent(head_offset, head_size)) =
-        MatMul(
+        Matmul(
           SoftMax(
-            MatMul(
+            Matmul(
               l.key_cache_.View(Extent(pos + 1), Extent(kv_head_offset, head_size)),
               l.q_.View(Extent(head_offset, head_size))) *
             (static_cast<T>(1) / sqrt(static_cast<T>(head_size)))),
@@ -336,7 +336,7 @@ void LLaMAModelT<T, Dev>::Forward(LLaMAVocab::token token, size_t pos)
 
     // bring it all together
     // (dim, dim) @ (dim = n_heads * head_size) -> (dim)
-    x_ += MatMul(l.wo_, scores_);
+    x_ += Matmul(l.wo_, scores_);
 
     // (dim) * (dim) -> (dim)
     xb_ = RmsNorm(x_) * l.ffn_norm_;
@@ -345,12 +345,12 @@ void LLaMAModelT<T, Dev>::Forward(LLaMAVocab::token token, size_t pos)
     // w1(x), w3(x)         -> (hidden_dim, dim) @ (dim)        -> (hidden_dim)
     // silu(w1(x)) * w3(x)  -> (hidden_dim) * (hiddem_dim)      -> (hidden_dim)
     // w2(...)              -> (dim, hidden_dim) @ (hidden_dim) -> (dim)
-    x_ += MatMul(l.w2_, Silu(MatMul(l.w1_, xb_)) * MatMul(l.w3_, xb_));
+    x_ += Matmul(l.w2_, Silu(Matmul(l.w1_, xb_)) * Matmul(l.w3_, xb_));
   }
 
   // Final RMS norm and classified into logits
   // (vocab_size, dim) @ ((dim, dim) * (dim)) -> (vocab_size)
-  logits_ = MatMul(output_, RmsNorm(x_) * output_norm_);
+  logits_ = Matmul(output_, RmsNorm(x_) * output_norm_);
 }
 
 template <typename T, typename Dev>

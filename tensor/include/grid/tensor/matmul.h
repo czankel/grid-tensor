@@ -21,11 +21,11 @@ namespace grid {
 // Device-specific operator
 //
 
-template <typename> class MatMulOperator;
+template <typename> class MatmulOperator;
 template <typename, size_t, typename> class Tensor;
 
 template <AnyTensor TTensor1, AnyTensor TTensor2>
-class MatMulFunction
+class MatmulFunction
 {
   using device = tensor_device_t<TTensor1>;
 
@@ -43,7 +43,7 @@ class MatMulFunction
 
   template <typename T1, typename T2>
   requires (tensor1_rank > 0 && tensor2_rank > 0)
-  MatMulFunction(T1&& tensor1, T2&& tensor2)
+  MatmulFunction(T1&& tensor1, T2&& tensor2)
    : tensor1_(std::forward<T1>(tensor1)),
      tensor2_(std::forward<T2>(tensor2))
   {
@@ -59,9 +59,9 @@ class MatMulFunction
   }
 
   // delete assignment and copy/move constructors
-  MatMulFunction() = delete;
-  MatMulFunction(const MatMulFunction& other) = delete;
-  MatMulFunction& operator=(const MatMulFunction& other) = delete;
+  MatmulFunction() = delete;
+  MatmulFunction(const MatmulFunction& other) = delete;
+  MatmulFunction& operator=(const MatmulFunction& other) = delete;
 
   /// operator()() executes and returns a (scalar) tensor with the 'vector dot' multiplication.
   auto operator()() const requires (tensor1_rank == 1 && tensor2_rank == 1)
@@ -114,19 +114,19 @@ class MatMulFunction
   }
 
  private:
-  MatMulOperator<device> operator_;
+  MatmulOperator<device> operator_;
   TTensor1 tensor1_;
   TTensor2 tensor2_;
 };
 
-template <typename T1, typename T2> MatMulFunction(T1&&, T2&&)
-  -> MatMulFunction<typename to_tensor<T1>::type, typename to_tensor<T2>::type>;
+template <typename T1, typename T2> MatmulFunction(T1&&, T2&&)
+  -> MatmulFunction<typename to_tensor<T1>::type, typename to_tensor<T2>::type>;
 
 template <TensorConvertible TTensor1, TensorConvertible TTensor2>
 requires (std::remove_cvref_t<TTensor1>::rank > 0 && std::remove_cvref_t<TTensor2>::rank > 0)
-auto MatMul(TTensor1&& tensor1, TTensor2&& tensor2)
+auto Matmul(TTensor1&& tensor1, TTensor2&& tensor2)
 {
-  return MatMulFunction(std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
+  return MatmulFunction(std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
 }
 
 } // end of namespace grd

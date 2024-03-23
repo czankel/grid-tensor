@@ -15,15 +15,15 @@
 
 namespace grid {
 
-/// MatMulOperator implements a multiplication operation for tensors
-/// different ranks, such as matrix multiplication (MatMul) and vector dot-product (VecDot).
+/// MatmulOperator implements a multiplication operation for tensors
+/// different ranks, such as matrix multiplication (Matmul) and vector dot-product (VecDot).
 /// Note that all dimensions are assumed to be correct.
-template <> class MatMulOperator<device::Base>
+template <> class MatmulOperator<device::Base>
 {
   // rank-2 o rank-2
   // Note that dimensions are mn,k: M_m_k * M_k_n -> M_m_n
   template <typename T>
-  inline void MatMul(T* dest, const T* src1, const T* src2,
+  inline void Matmul(T* dest, const T* src1, const T* src2,
                      std::span<const size_t,  2> dimensions,
                      size_t                      dim_k,
                      std::span<const ssize_t, 2> strides0,
@@ -117,7 +117,7 @@ template <> class MatMulOperator<device::Base>
 
     // mat * mat: M_m_k * M_k_n -> M_m_n
     if constexpr (std::ranges::iterator_t<R1>::rank == 2 && std::ranges::iterator_t<R2>::rank == 2)
-      MatMul(&*result, &*first1, &*first2,
+      Matmul(&*result, &*first1, &*first2,
              std::span<const size_t,  2>(result.Extents()),
              first1.Extents()[1],
              std::span<const ssize_t, 2>(result.Strides()),
@@ -127,7 +127,7 @@ template <> class MatMulOperator<device::Base>
     // mat * vec: M_m_n * V_n = M_m_n * V_n_1 -> V_m_1 = V_m
     else if constexpr (std::ranges::iterator_t<R1>::rank == 2 && std::ranges::iterator_t<R2>::rank == 1)
     {
-      MatMul(&*result, &*first1, &*first2,
+      Matmul(&*result, &*first1, &*first2,
              std::array<size_t, 2>{first1.Extents()[0], 1},
              first1.Extents()[1],
              std::array<const ssize_t, 2>{result.Strides()[0], 0},
@@ -137,7 +137,7 @@ template <> class MatMulOperator<device::Base>
 
     // vec * mat: V_m * M_m_n = V_1_m * M_m_n -> V_1_n = V_n
     else if constexpr (std::ranges::iterator_t<R1>::rank == 1 && std::ranges::iterator_t<R2>::rank == 2)
-      MatMul(&*result, &*first1, &*first2,
+      Matmul(&*result, &*first1, &*first2,
              std::array<size_t, 2>{1, first2.Extents()[1]},
              first2.Extents()[0],
              std::array<const ssize_t, 2>{0, result.Strides()[0]},
@@ -147,7 +147,7 @@ template <> class MatMulOperator<device::Base>
     // vec * vec: V_m * V_m -> scalar
     else if constexpr (std::ranges::iterator_t<R1>::rank == 1 && std::ranges::iterator_t<R2>::rank == 1)
     {
-      MatMul(&*result, &*first1, &*first2,
+      Matmul(&*result, &*first1, &*first2,
              std::array<size_t, 2>{1, 1},
              first1.Extents()[0],
              std::array<const ssize_t, 2>{0, 0},
