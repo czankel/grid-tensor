@@ -26,6 +26,9 @@
 #include "tensor_view.h"
 #include "unary.h"
 
+// "Base" is the default device for Tensors
+#include "base/device.h"
+
 namespace grid {
 
 /// Tensor implements an "AI Tensor" that follows more typical AI implementations rather than
