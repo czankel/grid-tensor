@@ -11,54 +11,57 @@
 #ifndef GRID_TENSOR_BASE_MATMUL_H
 #define GRID_TENSOR_BASE_MATMUL_H
 
-namespace grid {
+#include "../device.h"
 
+namespace grid {
 
 /// MatMulOperator implements a multiplication operation for tensors
 /// different ranks, such as matrix multiplication (MatMul) and vector dot-product (VecDot).
-class MatMulOperator
+/// Note that all dimensions are assumed to be correct.
+template <> class MatMulOperator<device::Base>
 {
- private:
-  // Note that dimensions are mkn: M_m_k * M_k_n -> M(m,n)
-  // Note that strides for all tensors (destination and sources) are:
-  //    [0] row: m -> m + 1,  [1] col: n -> n + 1
+  // rank-2 o rank-2
+  // Note that dimensions are mn,k: M_m_k * M_k_n -> M_m_n
   template <typename T>
   inline void MatMul(T* dest, const T* src1, const T* src2,
-                     std::span<const size_t,  3> dimensions,
+                     std::span<const size_t,  2> dimensions,
+                     size_t                      dim_k,
                      std::span<const ssize_t, 2> strides0,
                      std::span<const ssize_t, 2> strides1,
                      std::span<const ssize_t, 2> strides2) const
   {
     // optimizations:
-    // vec = mat x vec
-    // mat = mat x vec(broadcast)
-    // mat = vec(broadcast) x mat
+    // mat = mat x mat_T           (strides: 1,1,1)
+    // mat = mat x vec (broadcast) (strides: 1,1,0)
+    // mat = vec (broadcast) x mat (strides: 1,0,1)
     if (strides0[1] <= 1 && strides1[1] <= 1 && strides2[0] <= 1)
     {
-      // all tensors are contiguous
+      // full optimizations: mat * mat and all tensors are contiguous, strides ignored
       if (strides0[0] - dimensions[1] == 0 &&
           strides1[0] - dimensions[1] == 0 &&
           strides2[1] - dimensions[1] == 0)
       {
-        for (size_t i = 0; i < dimensions[0] * dimensions[2]; i++)
+        for (size_t i = 0; i < dimensions[0] * dimensions[1]; i++)
         {
           T sum{0};
-          for (size_t k = 0; k < dimensions[1]; k++)
+          for (size_t k = 0; k < dim_k; k++)
             sum += src1[k] * src2[k];
           dest[i] = sum;
         }
       }
-      // inner vector dot
+
+      // optimize inner vector dot: add strides for each (m,n)
+      // TODO: could optimize further
       else
       {
         for (size_t m = 0; m < dimensions[0]; m++)
         {
           T* destprime = dest;
           const T* src2prime = src2;
-          for (size_t n = 0; n < dimensions[2]; n++)
+          for (size_t n = 0; n < dimensions[1]; n++)
           {
             T sum{0};
-            for (size_t k = 0; k < dimensions[1]; k++)
+            for (size_t k = 0; k < dim_k; k++)
               sum += src1[k] * src2prime[k];
             *destprime = sum;
             destprime += strides0[1];
@@ -69,19 +72,20 @@ class MatMulOperator
         }
       }
     }
-    // no optimizations
+
+    // no optimizations: add strides for each (m,k,n)
     else
     {
       for (size_t m = 0; m < dimensions[0]; m++)
       {
         T* destprime = dest;
         const T* src2prime = src2;
-        for (size_t n = 0; n < dimensions[2]; n++)
+        for (size_t n = 0; n < dimensions[1]; n++)
         {
           const T* src1tmp = src1;
           const T* src2tmp = src2prime;
           T sum{0};
-          for (size_t i = 0; i < dimensions[1]; i++)
+          for (size_t i = 0; i < dim_k; i++)
           {
             sum += *src1tmp * *src2tmp;
             src1tmp += strides1[1];
@@ -98,43 +102,58 @@ class MatMulOperator
   }
 
  public:
-  // vecdot
-  template <typename T>
-  void operator()(T* dst, const T* src1, const T* src2,
-                  const size_t dimensions, const ssize_t strides1, const ssize_t strides2)
-  {
-    T sum{0};
-    if (strides1 == 1 && strides2 == 1)
-    {
-      for (size_t i = 0; i < dimensions; i++)
-        sum += src1[i] * src2[i];
-    }
-    else
-    {
-      for (size_t i = 0; i < dimensions; i++)
-      {
-        sum += *src1 * *src2;
-        src1 += strides1;
-        src2 += strides2;
-      }
-    }
-    *dst = sum;
-  }
 
-  // matmul
-  template <typename T, size_t TRank>
-  requires (TRank > 1)
-  void operator()(T* dst, const T* src1, const T* src2,
-                  const std::array<size_t, TRank+1>& dimensions,
-                  const std::array<ssize_t, TRank>& strides0,
-                  const std::array<ssize_t, TRank>& strides1,
-                  const std::array<ssize_t, TRank>& strides2)
+  // mat x mat
+  template<std::ranges::input_range R1,
+           std::ranges::input_range R2,
+           std::ranges::output_range<std::iter_value_t<std::ranges::iterator_t<R1>>> O>
+  requires std::indirectly_copyable<std::ranges::iterator_t<R1>, std::ranges::iterator_t<O>> &&
+           std::indirectly_copyable<std::ranges::iterator_t<R2>, std::ranges::iterator_t<O>>
+  void operator()(O&& o, R1&& r1, R2&& r2) const
   {
-    MatMul(dst, src1, src2,
-      std::span<const size_t,  TRank+1>(dimensions),
-      std::span<const ssize_t, TRank>(strides0),
-      std::span<const ssize_t, TRank>(strides1),
-      std::span<const ssize_t, TRank>(strides2));
+    auto first1 = std::ranges::cbegin(r1);
+    auto first2 = std::ranges::cbegin(r2);
+    auto result = std::ranges::begin(o);
+
+    // mat * mat: M_m_k * M_k_n -> M_m_n
+    if constexpr (std::ranges::iterator_t<R1>::rank == 2 && std::ranges::iterator_t<R2>::rank == 2)
+      MatMul(&*result, &*first1, &*first2,
+             std::span<const size_t,  2>(result.Extents()),
+             first1.Extents()[1],
+             std::span<const ssize_t, 2>(result.Strides()),
+             std::span<const ssize_t, 2>(first1.Strides()),
+             std::span<const ssize_t, 2>(first2.Strides()));
+
+    // mat * vec: M_m_n * V_n = M_m_n * V_n_1 -> V_m_1 = V_m
+    else if constexpr (std::ranges::iterator_t<R1>::rank == 2 && std::ranges::iterator_t<R2>::rank == 1)
+    {
+      MatMul(&*result, &*first1, &*first2,
+             std::array<size_t, 2>{first1.Extents()[0], 1},
+             first1.Extents()[1],
+             std::array<const ssize_t, 2>{result.Strides()[0], 0},
+             std::span<const ssize_t, 2>(first1.Strides()),
+             std::array<const ssize_t, 2>{first2.Strides()[0], 0});
+    }
+
+    // vec * mat: V_m * M_m_n = V_1_m * M_m_n -> V_1_n = V_n
+    else if constexpr (std::ranges::iterator_t<R1>::rank == 1 && std::ranges::iterator_t<R2>::rank == 2)
+      MatMul(&*result, &*first1, &*first2,
+             std::array<size_t, 2>{1, first2.Extents()[1]},
+             first2.Extents()[0],
+             std::array<const ssize_t, 2>{0, result.Strides()[0]},
+             std::array<const ssize_t, 2>{0, first1.Strides()[0]},
+             std::span<const ssize_t, 2>(first2.Strides()));
+
+    // vec * vec: V_m * V_m -> scalar
+    else if constexpr (std::ranges::iterator_t<R1>::rank == 1 && std::ranges::iterator_t<R2>::rank == 1)
+    {
+      MatMul(&*result, &*first1, &*first2,
+             std::array<size_t, 2>{1, 1},
+             first1.Extents()[0],
+             std::array<const ssize_t, 2>{0, 0},
+             std::array<const ssize_t, 2>{0, first1.Strides()[0]},
+             std::array<const ssize_t, 2>{0, first2.Strides()[0]});
+    }
   }
 };
 

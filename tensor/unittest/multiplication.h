@@ -22,12 +22,11 @@ TYPED_TEST_P(MultiplicationTestSuite, TensorVecDot)
   typename TypeParam::Tensor tensor1{   2,   3,   5 };
   typename TypeParam::Tensor tensor2{   7,  11,  13 };
 
-  auto op = grid::MatMul(tensor1, tensor2);
-  auto res = op();
-  EXPECT_EQ(res, typename TypeParam::Tensor{112});
+  typename TypeParam::Tensor result = grid::MatMul(tensor1, tensor2);
+  EXPECT_EQ(result, typename TypeParam::Tensor{112});
 }
 
-
+// Note: tests full optimization: can ignore stides (loop dim_m * dim_n)
 TYPED_TEST_P(MultiplicationTestSuite, TensorMatMul)
 {
   typename TypeParam::Tensor tensor1{ { 3, 6, 9 },
@@ -40,10 +39,40 @@ TYPED_TEST_P(MultiplicationTestSuite, TensorMatMul)
                                       { 2 * 1 + 8 * 5 + 4 * 7, 2 * 8 + 8 * 3 + 4 * 4 }, // 70, 56
                                       { 5 * 1 + 1 * 5 + 7 * 7, 5 * 8 + 1 * 3 + 7 * 4 }};// 59, 71
 
-  auto op = grid::MatMul(tensor1, tensor2);
-  auto res = op();
-  EXPECT_EQ(res, expected);
+  typename TypeParam::Tensor result = grid::MatMul(tensor1, tensor2);
+  EXPECT_EQ(result, expected);
 }
+
+// Note: tests partial optimizations: add strides only for each (dim_m, 0)
+TYPED_TEST_P(MultiplicationTestSuite, TensorMatVec)
+{
+  typename TypeParam::Tensor tensor1{ { 3, 6, 9 },
+                                      { 2, 8, 4 },
+                                      { 5, 1, 7 }};
+  typename TypeParam::Tensor tensor2{ 1, 5, 7 };
+  typename TypeParam::Tensor expected{ 3 * 1 + 6 * 5 + 9 * 7, // 96
+                                       2 * 1 + 8 * 5 + 4 * 7, // 70
+                                       5 * 1 + 1 * 5 + 7 * 7};// 59
+
+  typename TypeParam::Tensor result = grid::MatMul(tensor1, tensor2);
+  EXPECT_EQ(result, expected);
+}
+
+// Note: tests un-optimized: add strides for each (dim_m, dim_n)
+TYPED_TEST_P(MultiplicationTestSuite, TensorVecMat)
+{
+  typename TypeParam::Tensor tensor1{ 1, 5, 7 };
+  typename TypeParam::Tensor tensor2{ { 3, 2, 5 },
+                                      { 6, 8, 1 },
+                                      { 9, 4, 7 }};
+  typename TypeParam::Tensor expected{ 1 * 3 + 5 * 6 + 7 * 9, // 96
+                                       1 * 2 + 5 * 8 + 7 * 4, // 70
+                                       1 * 5 + 5 * 1 + 7 * 7};// 59
+
+  typename TypeParam::Tensor result = grid::MatMul(tensor1, tensor2);
+  EXPECT_EQ(result, expected);
+}
+
 
 TYPED_TEST_P(MultiplicationTestSuite, TensorScaleRight)
 {
@@ -99,6 +128,8 @@ TYPED_TEST_P(MultiplicationTestSuite, TensorElemMulRank2Broadcast)
 REGISTER_TYPED_TEST_SUITE_P(MultiplicationTestSuite,
     TensorVecDot,
     TensorMatMul,
+    TensorMatVec,
+    TensorVecMat,
     TensorScaleRight,
     TensorScalexLeft,
     TensorElemMulRank1,

@@ -15,16 +15,20 @@
 
 #include "concepts.h"
 
-// TODO: remove when operators are device templated
-#include "base/matmul.h"
-
 namespace grid {
 
+//
+// Device-specific operator
+//
+
+template <typename> class MatMulOperator;
 template <typename, size_t, typename> class Tensor;
 
 template <AnyTensor TTensor1, AnyTensor TTensor2>
 class MatMulFunction
 {
+  using device = tensor_device_t<TTensor1>;
+
  public:
   using tensor1_type = std::remove_reference_t<TTensor1>;
   using tensor2_type = std::remove_reference_t<TTensor2>;
@@ -34,7 +38,8 @@ class MatMulFunction
   constexpr static size_t tensor1_rank = tensor1_type::rank;
   constexpr static size_t tensor2_rank = tensor2_type::rank;
   // TODO: OK for combination of rank-2 and rank-1 but maybe not rank-3 and higher?
-  constexpr static size_t rank = std::min(tensor1_type::rank, tensor2_type::rank);
+  constexpr static size_t rank =
+   tensor1_type::rank != 1 || tensor2_type::rank != 1 ? std::min(tensor1_type::rank, tensor2_type::rank) : 0;
 
   template <typename T1, typename T2>
   requires (tensor1_rank > 0 && tensor2_rank > 0)
@@ -56,71 +61,60 @@ class MatMulFunction
   // delete assignment and copy/move constructors
   MatMulFunction() = delete;
   MatMulFunction(const MatMulFunction& other) = delete;
-  MatMulFunction(MatMulFunction&& other) = delete;
   MatMulFunction& operator=(const MatMulFunction& other) = delete;
-  MatMulFunction& operator=(MatMulFunction&& other) = delete;
-
 
   /// operator()() executes and returns a (scalar) tensor with the 'vector dot' multiplication.
   auto operator()() const requires (tensor1_rank == 1 && tensor2_rank == 1)
   {
-    auto result = value_type{0};
+    if (tensor1_.Dimensions()[0] != tensor2_.Dimensions()[0])
+      throw std::runtime_error("mismatching dimensions in vector product");
 
-    MatMulOperator{}(&result, tensor1_.Data(), tensor2_.Data(),
-                     tensor1_.Dimensions()[0], tensor1_.Strides()[0], tensor2_.Strides()[0]);
-
-    return Tensor{result};
+    auto result = Tensor<value_type, 0, DeviceMemory<device>>{value_type{0}};
+    operator_(result, tensor1_, tensor2_);
+    return result;
   }
 
   /// operator()() executes and returns a (matrix) tensor for a mtrix multiplication.
   auto operator()() const requires (tensor1_rank == 2 && tensor2_rank == 2)
   {
-    auto&& dimensions1 = tensor1_.Dimensions();
-    auto&& dimensions2 = tensor2_.Dimensions();
-    std::array<size_t, 3> dimensions{dimensions1[0], dimensions1[1], dimensions2[1]};
-    auto result = Tensor({dimensions1[0], dimensions2[1]}, Uninitialized<value_type>{});
+    auto&& dims1 = tensor1_.Dimensions();
+    auto&& dims2 = tensor2_.Dimensions();
+    if (dims1[1] != dims2[0])
+      throw std::runtime_error("mismatching dimensions in matrix multiplication");
 
-    MatMulOperator{}(result.Data(), tensor1_.Data(), tensor2_.Data(),
-                     dimensions, result.Strides(), tensor1_.Strides(), tensor2_.Strides());
-
+    auto result = Tensor<value_type, 2, DeviceMemory<device>>({dims1[0], dims2[1]}, Uninitialized<value_type>{});
+    operator_(result, tensor1_, tensor2_);
     return result;
   }
 
   /// operator()() executes and returns a (vector) tensor of a matrix * vector multiplication.
   auto operator()() const requires (tensor1_rank == 2 && tensor2_rank == 1)
   {
-    auto&& dimensions1 = tensor1_.Dimensions();
-    auto result = Tensor(dimensions1[0], Uninitialized<value_type>{});
+    auto&& dims1 = tensor1_.Dimensions();
+    auto&& dims2 = tensor2_.Dimensions();
+    if (dims1[1] != dims2[0])
+      throw std::runtime_error("mismatching dimensions in matrix multiplication");
 
-    std::array<size_t,  3> dimensions{dimensions1[0], dimensions1[1], 1};
-    std::array<ssize_t, 2> strides0{result.Strides()[0], 0};
-    std::array<ssize_t, 2> strides2{tensor2_.Strides()[0], 0};
-
-    // Use: M_m_n * V_n = M_m_n * V_n_1 -> V_m
-    MatMulOperator{}(result.Data(), tensor1_.Data(), tensor2_.Data(),
-                     dimensions, strides0, tensor1_.Strides(), strides2);
-
+    auto result = Tensor<value_type, 1, DeviceMemory<device>>(dims1[0], Uninitialized<value_type>{});
+    operator_(result, tensor1_, tensor2_);
     return result;
   }
 
   /// operator()() executes and returns a (vector) tensor of a vector * matrix multiplication.
   auto operator()() const requires (tensor1_rank == 1 && tensor2_rank == 2)
   {
-    auto&& dimensions2 = tensor2_.Dimensions();
-    auto result = Tensor(dimensions2[1], Uninitialized<value_type>{});
+    auto&& dims1 = tensor1_.Dimensions();
+    auto&& dims2 = tensor2_.Dimensions();
+    if (dims1[0] != dims2[0])
+      throw std::runtime_error("mismatching dimensions in matrix multiplication");
 
-    std::array<size_t,  3> dimensions{1, dimensions2[0], dimensions2[1]};
-    std::array<ssize_t, 2> strides0{0L, result.Strides()[0]};
-    std::array<ssize_t, 2> strides1{0L, tensor1_.Strides()[0]};
-
-    // Use V_m * M_m_n = V_1_m * M_m_n -> V_n
-    MatMulOperator{}(result.Data(), tensor1_.Data(), tensor2_.Data(),
-                     dimensions, strides0, strides1, tensor2_.Strides());
-
+    auto result = Tensor<value_type, 1, DeviceMemory<device>>(dims2[1], Uninitialized<value_type>{});
+    operator_(result, tensor1_, tensor2_);
     return result;
   }
 
  private:
+  MatMulOperator<device> operator_;
   TTensor1 tensor1_;
   TTensor2 tensor2_;
 };
