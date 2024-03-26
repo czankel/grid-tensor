@@ -14,7 +14,6 @@
 #include <span>
 
 #include "concepts.h"
-#include "unary.h"
 
 namespace grid {
 
