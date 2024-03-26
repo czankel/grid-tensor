@@ -11,6 +11,7 @@
 #include <grid/tensor/base/binary.h>
 #include <grid/tensor/base/comparison.h>
 #include <grid/tensor/base/matmul.h>
+#include <grid/tensor/base/unary.h>
 
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
