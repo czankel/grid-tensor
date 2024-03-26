@@ -16,16 +16,18 @@
 #include <ranges>
 
 #include "../concepts.h"
+#include "../unary.h"
 
 namespace grid {
 
 /// UnaryOperator<Operator> implements element-wise unary operation on a tensors.
 ///
 ///  @tparm TOperator binary operator
-template <typename TOperator>
-class UnaryOperator
+template <template <typename> typename TOperator>
+class UnaryOperator<TOperator<device::Base>>
 {
- private:
+  static constexpr TOperator<device::Base> Operator;
+
   // operation on a single element
   template <typename const_pointer, typename pointer>
   inline void eval(pointer dest, const_pointer src,
@@ -33,7 +35,7 @@ class UnaryOperator
                    std::span<const ssize_t, 0>,
                    std::span<const ssize_t, 0>) const
   {
-    TOperator::eval(dest, src);
+    Operator(dest, src);
   }
 
   // operation on a single dimension (unoptimized)
@@ -45,7 +47,7 @@ class UnaryOperator
   {
     for (size_t i = 0; i < dimensions[0]; i++)
     {
-      TOperator::eval(dest + i, src);
+      Operator(dest + i, src);
       src += strides1[0];
     }
   }
@@ -96,16 +98,14 @@ class UnaryOperator
 
 template <> struct CopyOperator<device::Base>
 {
-  // scalar X scalar
   template<typename T>
-  static inline void eval(T* dest, const T* src) { *dest = *src; }
+  inline void operator()(T* dest, const T* src) const { *dest = *src; }
 };
 
 template <> struct NegOperator<device::Base>
 {
-  // scalar X scalar
   template<typename T>
-  static inline void eval(T* dest, const T* src) { *dest = -*src; }
+  inline void operator()(T* dest, const T* src) const { *dest = -*src; }
 };
 
 
