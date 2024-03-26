@@ -79,40 +79,42 @@ class Tensor : public Array<T, TMemory>
  public:
   Tensor() = default;
 
+  //
+  // Statically allocated memory
+  //
 
   /// Constructor for a rank-0 tensor (scalar)
   Tensor(const value_type& init) : Array<value_type, memory_type>(init) {}
   Tensor(value_type&& init) : Array<value_type, memory_type>(init) {}
   Tensor(Uninitialized<value_type>) {}
 
-
   /// Constructor for a rank-1 tensor (vector) with static brace initialization.
-  explicit Tensor(std::initializer_list<value_type>&& init) requires (TRank > 0)
-    : Array<value_type, memory_type>(get_array<value_type, mem_ext<memory_type>::array[0]>(std::move(init))),
-      dimensions_(mem_ext<memory_type>::array),
+  template <Arithmetic... Ts>
+  Tensor(Ts&&... ts)
+    : Array<std::common_type_t<Ts...>, StaticMemory<sizeof...(Ts)>>(std::to_array({std::forward<Ts>(ts)...})),
+      dimensions_(std::to_array({sizeof...(Ts)})),
       strides_{1}
   {}
 
   /// Constructor for a rank-2 tensor (matrix) with static brace initialization.
-  explicit Tensor(std::initializer_list<std::initializer_list<value_type>>&& init)
-    : Array<value_type, memory_type>(
-        get_array<value_type, mem_ext<memory_type>::array[0], mem_ext<memory_type>::array[1]>(std::move(init))),
+  template <Arithmetic S, size_t... N>
+  Tensor(S(&&... init)[N])
+    : Array<value_type, memory_type>(get_array(std::move(init)...)),
       dimensions_(mem_ext<memory_type>::array),
       strides_{make_strides(dimensions_)}
   {}
 
   /// Constructor for a rank-3 tensor with static brace initialization.
-  explicit Tensor(std::initializer_list<std::initializer_list<std::initializer_list<value_type>>>&& init)
-    : Array<value_type, memory_type>(
-        get_array<value_type,
-                  mem_ext<memory_type>::array[0],
-                  mem_ext<memory_type>::array[1],
-                  mem_ext<memory_type>::array[2]>(std::move(init))),
+  template <Arithmetic S, size_t... M, size_t... N>
+  Tensor(S((&&... init)[M])[N])
+    : Array<value_type, memory_type>(get_array(std::move(init)...)),
       dimensions_(mem_ext<memory_type>::array),
       strides_{make_strides(dimensions_)}
   {}
 
-
+  //
+  // Dynamically allocated memory
+  //
 
   /// Constructor for a rank-1 tensor (vector) with a dynamically allocated buffer without padding.
   explicit Tensor(size_t dimension, value_type init)
@@ -258,6 +260,10 @@ class Tensor : public Array<T, TMemory>
       strides_{strides}
   {}
 
+  //
+  // Copy/Move constructors
+  //
+
   /// Copy constructor
   // TODO: "flatten" new array?
   Tensor(const Tensor& other)
@@ -267,6 +273,16 @@ class Tensor : public Array<T, TMemory>
   {
     UnaryOperator<CopyOperator<tensor_device_t<decltype(*this)>>>()(other, *this);
   }
+
+  template <AnyTensor TTensor>
+  Tensor(const TTensor& other)
+    : Array<value_type, memory_type>(other.Size()),
+      dimensions_{other.Dimensions()},
+      strides_{other.Strides()}
+  {
+    UnaryOperator<CopyOperator<tensor_device_t<decltype(*this)>>>()(other, *this);
+  }
+
 
   /// Move constructor
   Tensor(Tensor&& other)
@@ -349,7 +365,7 @@ class Tensor : public Array<T, TMemory>
   /// begin returns an iterator for the begin of the Tensor array
   auto begin()                        { return details::Iterator(*this); }
 
-  // FIXME: reutnr "sentinel"!!
+  // TODO: return "sentinel"!!
   /// end returns the sentinel for the end of the Tensor array
   auto end()                          { return details::Iterator(*this, Dimensions()); }
 
@@ -529,8 +545,8 @@ explicit Tensor(Uninitialized<T>) -> Tensor<T, 0, Scalar>;
 // Tensor with Static Allocator - Brace-initializer List
 
 // Tensor{Ts...} -> Rank-1 tensor with a static/local array (brace-initializer).
-template <Arithmetic T, typename... Ts>
-explicit Tensor(T, Ts...) -> Tensor<std::common_type_t<T, Ts...>, 1, StaticMemory<sizeof...(Ts)+1>>;
+template <Arithmetic... Ts>
+explicit Tensor(Ts...) -> Tensor<std::common_type_t<Ts...>, 1, StaticMemory<sizeof...(Ts)>>;
 
 // Tensor{{...},...} -> Rank-2 tensor with a static/local array (brace-initializer).
 template <Arithmetic T, size_t... N>

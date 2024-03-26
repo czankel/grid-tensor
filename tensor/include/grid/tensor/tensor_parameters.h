@@ -13,7 +13,8 @@
 
 namespace grid {
 
-// get_array(iniitlizer_list) returns a std::array initialized from a brace-initializer list.
+// get_array(iniitlizer_list)
+// returns a std::array initialized from a initializer list.
 template <typename T, size_t... Ns>
 inline constexpr std::array<T, sizeof...(Ns)>
 get_array_impl(std::initializer_list<T>&& init, std::index_sequence<Ns...>)
@@ -28,7 +29,8 @@ get_array(std::initializer_list<T>&& init)
   return get_array_impl(std::move(init), Ns{});
 }
 
-// get_array(initializer_list<initializer_list>) returns a std::array from a 2-dimensional initializer list.
+// get_array(initializer_list<initializer_list>)
+// returns a std::array from a 2-dimensional initializer list.
 template <typename T, size_t M, size_t N>
 inline constexpr std::array<T, M * N>
 get_array(std::initializer_list<std::initializer_list<T>>&& init)
@@ -43,8 +45,8 @@ get_array(std::initializer_list<std::initializer_list<T>>&& init)
   return arr;
 }
 
-// get_array(initializer_list<initializer_list<initializer_list>>) returns a std::array from a
-// 3-dimensional initializer list.
+// get_array(initializer_list<initializer_list<initializer_list>>)
+// returns a std::array from a 3-dimensional initializer list.
 template <typename T, size_t C, size_t M, size_t N>
 inline constexpr std::array<T, C * M * N>
 get_array(std::initializer_list<std::initializer_list<std::initializer_list<T>>>&& init)
@@ -62,8 +64,10 @@ get_array(std::initializer_list<std::initializer_list<std::initializer_list<T>>>
   return arr;
 }
 
-// get_array(T(&)[]) returns a std::array from a c-array.
-template <typename T, size_t N>
+
+// get_array(T(&)[])
+// returns a std::array from a c-array.
+template <Arithmetic T, size_t N>
 inline constexpr std::array<T, N>
 get_array(const T(&init)[N])
 {
@@ -72,8 +76,9 @@ get_array(const T(&init)[N])
   return arr;
 }
 
-// get_array(T(&&)[]) returns a std::array from a c-array (rvalue reference)
-template <typename T, size_t N>
+// get_array(T(&&)[])
+// returns a std::array from a c-array (rvalue reference)
+template <Arithmetic T, size_t N>
 inline constexpr std::array<T, N>
 get_array(T(&&init)[N])
 {
@@ -81,6 +86,47 @@ get_array(T(&&init)[N])
   std::copy(std::begin(init), std::end(init), arr.begin());
   return arr;
 }
+
+// get_array(T(&&...)[N])
+// returns a std::array from a 2-dimensional c-array
+template <Arithmetic T, size_t... N>
+inline constexpr std::array<T, sizeof...(N) * std::max({N...})>
+get_array(T(&&... init)[N])
+{
+  constexpr size_t cols = std::max({N...});
+  std::array<T, sizeof...(N) * cols> arr{};
+  auto line_it = arr.begin();
+
+  auto apply = [&] <typename U> (U&& value) -> void {
+    for (size_t i = 0; i < cols; i++, ++line_it)
+      *line_it = value[i];
+  };
+
+  (apply(std::forward<T[N]>(init)),...);
+  return arr;
+}
+
+// get_array(T((&&...)[M])[N])
+// returns a std::array from a 3-dimensional c-array
+template <Arithmetic T, size_t... M, size_t... N>
+inline constexpr std::array<T, sizeof...(M) * std::max({M...}) * std::max({N...})>
+get_array(T((&&... init)[M])[N])
+{
+  constexpr size_t rows = std::max({M...});
+  constexpr size_t cols = std::max({N...});
+  std::array<T, sizeof...(M) * rows * cols> arr{};
+  auto line_it = arr.begin();
+
+  auto apply = [&] <typename U> (U&& value) -> void {
+    for (size_t i = 0; i < rows; i++)
+      for (size_t j = 0; j < cols; j++, ++line_it)
+        *line_it = value[i][j];
+  };
+
+  (apply(std::forward<T[M][N]>(init)),...);
+  return arr;
+}
+
 
 // make_strides returns a std::array with the strides calculated from the provided dimensions and
 // the template type parameter (make_strides<TYPE>(...))
