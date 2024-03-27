@@ -37,11 +37,11 @@ struct TensorBaseType
 
   // static tensors
   template <typename T, typename... Ts>
-  explicit Tensor(T, Ts...) -> Tensor<std::common_type_t<T, Ts...>, 1, grid::StaticMemory<sizeof...(Ts)+1>>;
+  Tensor(T, Ts...) -> Tensor<std::common_type_t<T, Ts...>, 1, grid::StaticMemory<sizeof...(Ts)+1>>;
   template <typename T, size_t... N>
-  explicit Tensor(T(&&... l)[N]) -> Tensor<T, 2, grid::StaticMemory<sizeof...(N), std::max({N...})>>;
+  Tensor(T(&&... l)[N]) -> Tensor<T, 2, grid::StaticMemory<sizeof...(N), std::max({N...})>>;
   template <typename T, size_t... M, size_t... N>
-  explicit Tensor(T(&&... l)[M][N]) -> Tensor<T, 3, grid::StaticMemory<sizeof...(M), std::max({M...}), std::max({N...})>>;
+  Tensor(T(&&... l)[M][N]) -> Tensor<T, 3, grid::StaticMemory<sizeof...(M), std::max({M...}), std::max({N...})>>;
   // dynamic tensors
   template <typename T>
   explicit Tensor(size_t, T) -> Tensor<T, 1, grid::DeviceMemory<grid::device::Base>>;
