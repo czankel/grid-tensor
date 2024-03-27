@@ -26,7 +26,7 @@ namespace grid {
 template <template <typename> typename TOperator>
 class UnaryOperator<TOperator<device::Base>>
 {
-  static constexpr TOperator<device::Base> Operator;
+  // static constexpr TOperator<device::Base> Operator();
 
   // operation on a single element
   template <typename const_pointer, typename pointer>
@@ -35,7 +35,7 @@ class UnaryOperator<TOperator<device::Base>>
                    std::span<const ssize_t, 0>,
                    std::span<const ssize_t, 0>) const
   {
-    Operator(dest, src);
+    TOperator<device::Base>()(dest, src);
   }
 
   // operation on a single dimension (unoptimized)
@@ -47,7 +47,7 @@ class UnaryOperator<TOperator<device::Base>>
   {
     for (size_t i = 0; i < dimensions[0]; i++)
     {
-      Operator(dest + i, src);
+      TOperator<device::Base>()(dest + i, src);
       src += strides1[0];
     }
   }

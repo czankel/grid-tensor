@@ -29,7 +29,8 @@ namespace grid {
 template <template <typename> typename TOperator>
 class BinaryOperator<TOperator<device::Base>>
 {
-  static constexpr TOperator<device::Base> Operator;
+  // TODO: gcc doesn't like this constexpr, which would be use later as just Operator(args). Should it? See P0386R2 change: 9.2.3.2p3
+  //static constexpr TOperator<device::Base> Operator;
 
   // operation on a single element
   template <typename const_pointer, typename pointer>
@@ -39,7 +40,7 @@ class BinaryOperator<TOperator<device::Base>>
                   std::span<const ssize_t, 0>,
                   std::span<const ssize_t, 0>) const
   {
-    Operator(dest, src1, src2, 0);
+    TOperator<device::Base>()(dest, src1, src2, 0);
   }
 
   // operation on a single dimension (unoptimized)
@@ -52,7 +53,7 @@ class BinaryOperator<TOperator<device::Base>>
   {
     for (size_t i = 0; i < dimensions[0]; i++)
     {
-      Operator(dest, src1, src2, 0);
+      TOperator<device::Base>()(dest, src1, src2, 0);
       dest += strides0[0];
       src1 += strides1[0];
       src2 += strides2[0];
@@ -90,7 +91,7 @@ class BinaryOperator<TOperator<device::Base>>
   inline void eval(pointer dest, const_pointer src1, const_pointer src2, size_t dimensions) const
   {
     for (size_t i = 0; i < dimensions; i++)
-      Operator(dest, src1, src2, i);
+      TOperator<device::Base>()(dest, src1, src2, i);
   }
 
   // operation on dim >= 2 (optimized)
