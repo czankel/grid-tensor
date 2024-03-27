@@ -10,6 +10,7 @@
 #include <grid/tensor/mmap.h>
 #include <grid/tensor/base/tensor.h>
 #include <grid/tensor/base/comparison.h>
+#include <grid/tensor/base/unary.h>
 
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
