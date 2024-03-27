@@ -34,7 +34,7 @@ class Iterator
   Iterator() = default;
 
   // Note that ranges iterators must be default-initializable, so cannot use reference for Tensor
-  Iterator(TTensor& tensor) : coordinates_{0}, tensor_(&tensor), index_(0) {}
+  Iterator(TTensor& tensor) : coordinates_{}, tensor_(&tensor), index_(0) {}
 
   Iterator(TTensor& tensor, const std::array<size_t, rank>& dimensions)
     : coordinates_(dimensions),
@@ -152,7 +152,7 @@ class ConstIterator
 
   ConstIterator() = default;
 
-  ConstIterator(const TTensor& tensor) : coordinates_{0}, tensor_(&tensor), index_(0) {}
+  ConstIterator(const TTensor& tensor) : coordinates_{}, tensor_(&tensor), index_(0) {}
 
   ConstIterator(const TTensor& tensor, const std::array<size_t, rank>& dimensions)
     : coordinates_(dimensions),
