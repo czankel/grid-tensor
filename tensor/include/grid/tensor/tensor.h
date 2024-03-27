@@ -546,7 +546,7 @@ explicit Tensor(Uninitialized<T>) -> Tensor<T, 0, Scalar>;
 
 // Tensor{Ts...} -> Rank-1 tensor with a static/local array (brace-initializer).
 template <Arithmetic... Ts>
-explicit Tensor(Ts...) -> Tensor<std::common_type_t<Ts...>, 1, StaticMemory<sizeof...(Ts)>>;
+Tensor(Ts...) -> Tensor<std::common_type_t<Ts...>, 1, StaticMemory<sizeof...(Ts)>>;
 
 // Tensor{{...},...} -> Rank-2 tensor with a static/local array (brace-initializer).
 template <Arithmetic T, size_t... N>
@@ -554,7 +554,7 @@ Tensor(T(&&... l)[N]) -> Tensor<T, 2, StaticMemory<sizeof...(N), std::max({N...}
 
 // Tensor{{{...},...},...} -> Rank-3 tensor with a static/local array (brace-initializer).
 template <Arithmetic T, size_t... M, size_t... N>
-explicit Tensor(T(&&... l)[M][N]) -> Tensor<T, 3, StaticMemory<sizeof...(M), std::max({M...}), std::max({N...})>>;
+Tensor(T(&&... l)[M][N]) -> Tensor<T, 3, StaticMemory<sizeof...(M), std::max({M...}), std::max({N...})>>;
 
 // Tensor with Dynamic Allocator - Paremter List
 
