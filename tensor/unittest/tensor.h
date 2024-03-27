@@ -28,6 +28,8 @@ TYPED_TEST_P(TensorTestSuite, TensorBraceInitializationRank0Integer)
 TYPED_TEST_P(TensorTestSuite, TensorBraceInitializationRank1Integer)
 {
   typename TypeParam::Tensor tensor1{ 11, 22, 33, 44, 55, 66 };
+  typename TypeParam::Tensor tensor2 = { 11, 22, 33, 44, 55, 66 };
+  typename TypeParam::Tensor tensor3 = grid::Tensor{ 11, 22, 33, 44, 55, 66 };
 
   EXPECT_TRUE(grid::is_tensor_v<decltype(tensor1)>);
   EXPECT_EQ(tensor1.Rank(), 1);
@@ -36,11 +38,15 @@ TYPED_TEST_P(TensorTestSuite, TensorBraceInitializationRank1Integer)
 
   int data[] = { 11, 22, 33, 44, 55, 66 };
   EXPECT_EQ(memcmp(tensor1.Data(), data, sizeof(data)), 0);
+  EXPECT_EQ(tensor1, tensor2);
+  EXPECT_EQ(tensor1, tensor3);
 }
 
 TYPED_TEST_P(TensorTestSuite, TensorBraceInitializationRank2Integer)
 {
   typename TypeParam::Tensor tensor1{ { 11, 12 }, { 21, 22, 23 }, { 31, 32, 33, 34 } };
+  typename TypeParam::Tensor tensor2 = { { 11, 12 }, { 21, 22, 23 }, { 31, 32, 33, 34 } };
+  typename TypeParam::Tensor tensor3 = grid::Tensor{ { 11, 12 }, { 21, 22, 23 }, { 31, 32, 33, 34 } };
 
   EXPECT_EQ(tensor1.Rank(), 2);
   EXPECT_THAT(tensor1.Dimensions(), ElementsAre(3, 4));
@@ -51,6 +57,8 @@ TYPED_TEST_P(TensorTestSuite, TensorBraceInitializationRank2Integer)
   EXPECT_EQ(data[4], 21);
   EXPECT_EQ(data[8], 31);
   EXPECT_EQ(data[9], 32);
+  EXPECT_EQ(tensor1, tensor2);
+  EXPECT_EQ(tensor1, tensor3);
 }
 
 TYPED_TEST_P(TensorTestSuite, TensorBraceInitializationRank3Integer)

@@ -93,16 +93,17 @@ template <Arithmetic T, size_t... N>
 inline constexpr std::array<T, sizeof...(N) * std::max({N...})>
 get_array(T(&&... init)[N])
 {
-  constexpr size_t cols = std::max({N...});
-  std::array<T, sizeof...(N) * cols> arr{};
+  constexpr size_t maxcols = std::max({N...});
+  std::array<T, sizeof...(N) * maxcols> arr{};
   auto line_it = arr.begin();
 
-  auto apply = [&] <typename U> (U&& value) -> void {
+  auto apply = [&] <typename U> (U&& value, size_t cols) -> void {
     for (size_t i = 0; i < cols; i++, ++line_it)
       *line_it = value[i];
+    line_it += maxcols - cols;
   };
 
-  (apply(std::forward<T[N]>(init)),...);
+  (apply(std::forward<T[N]>(init), N),...);
   return arr;
 }
 
@@ -112,18 +113,19 @@ template <Arithmetic T, size_t... M, size_t... N>
 inline constexpr std::array<T, sizeof...(M) * std::max({M...}) * std::max({N...})>
 get_array(T((&&... init)[M])[N])
 {
-  constexpr size_t rows = std::max({M...});
-  constexpr size_t cols = std::max({N...});
-  std::array<T, sizeof...(M) * rows * cols> arr{};
+  constexpr size_t maxrows = std::max({M...});
+  constexpr size_t maxcols = std::max({N...});
+  std::array<T, sizeof...(M) * maxrows * maxcols> arr{};
   auto line_it = arr.begin();
 
-  auto apply = [&] <typename U> (U&& value) -> void {
-    for (size_t i = 0; i < rows; i++)
+  auto apply = [&] <typename U> (U&& value, size_t rows, size_t cols) -> void {
+    for (size_t i = 0; i < rows; i++, line_it += maxcols - cols)
       for (size_t j = 0; j < cols; j++, ++line_it)
         *line_it = value[i][j];
+    line_it += maxrows - rows;
   };
 
-  (apply(std::forward<T[M][N]>(init)),...);
+  (apply(std::forward<T[M][N]>(init), M, N),...);
   return arr;
 }
 
