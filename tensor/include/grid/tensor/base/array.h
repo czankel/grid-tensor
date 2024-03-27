@@ -11,12 +11,13 @@
 #ifndef GRID_TENSOR_BASE_ARRAY_H
 #define GRID_TENSOR_BASE_ARRAY_H
 
+#include "device.h"
+
 namespace grid {
 
-
 /// brief: Array is a specialization for a dynamically allocated buffer.
-template <typename T, typename TDevice>
-class Array<T, DeviceMemory<TDevice>>
+template <typename T>
+class Array<T, DeviceMemory<device::Base>>
 {
   using value_type = T;
   using pointer = value_type*;
