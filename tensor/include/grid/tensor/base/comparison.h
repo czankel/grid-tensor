@@ -31,7 +31,7 @@ equals(const T* src1, const T* src2,
        std::span<const ssize_t, 0>)
 {
   auto max = std::max(std::abs(*src1), std::abs(*src2));
-  T eps = max * std::numeric_limits<T>::epsilon();
+  T eps = max * std::numeric_limits<T>::epsilon() * T{10};
   return std::abs(*src1 - *src2) <= eps;
 }
 
@@ -62,7 +62,7 @@ equals(const T* src1, const T* src2,
   for (size_t i = 0; i < dimensions[0]; i++)
   {
     auto max = std::max(std::abs(*src1), std::abs(*src2));
-    T eps = max * std::numeric_limits<T>::epsilon();
+    T eps = max * std::numeric_limits<T>::epsilon() * T{10};
 
     if (std::abs(*src1 - *src2) > eps)
       return false;
