@@ -20,12 +20,6 @@ cmake_policy(SET CMP0025 NEW)
 
 project(gridtensor CXX C)
 
-if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
-  set(LINUX TRUE)
-else()
-  set(LINUX FALSE)
-endif()
-
 ##
 ## Project Options and configurations
 ## (Ensure to also update cmake/Summary.cmake)
@@ -33,8 +27,10 @@ endif()
 
 option(BUILD_TEST "Build C++ test binaries (need gtest and gbenchmark)" OFF)
 option(BUILD_DOCS "Build documentation" OFF)
-option(BUILD_DEB_PACKAGE "Build a debian package" OFF)
-option(BUILD_RPM_PACKAGE "Build an RPM package" OFF)
+if (LINUX)
+  option(BUILD_DEB_PACKAGE "Build a debian package" OFF)
+  option(BUILD_RPM_PACKAGE "Build an RPM package" OFF)
+endif ()
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 option(BUILD_STATIC_LIBS "Build static libraries" OFF)
 
@@ -93,7 +89,7 @@ endif()
 # Compiler flags
 
 if(NOT MSVC)
-  string(APPEND CMAKE_CXX_FLAGS " -O3 -fPIC -ffast-math")
+  string(APPEND CMAKE_CXX_FLAGS " -O3 -fPIC")
   string(APPEND CMAKE_CXX_FLAGS " -Wno-narrowing")
   # Eigen fails to build with some versions, so convert this to a warning
   # Details at http://eigen.tuxfamily.org/bz/show_bug.cgi?id=1459
@@ -194,7 +190,7 @@ if(NOT MSVC)
     check_cxx_compiler_flag_and_append("-Wno-unused-but-set-variable")
     check_cxx_compiler_flag_and_append("-Wno-maybe-uninitialized")
   endif()
-  string(APPEND CMAKE_CXX_FLAGS_DEBUG " -fno-omit-frame-pointer -g -O3 -ffast-math")
+  string(APPEND CMAKE_CXX_FLAGS_DEBUG " -fno-omit-frame-pointer -g -O3")
 
   string(APPEND CMAKE_LINKER_FLAGS_DEBUG " -fno-omit-frame-pointer -O0")
   # -ldflags="-X github.com/czankel//config.CneVersion=${VERSION}" FIXME.. or --defsym? -X is not default??
