@@ -83,7 +83,8 @@ class Binary
   auto operator()() const
   {
     auto dimensions = BroadcastDimensions(tensor1_, tensor2_);
-    auto result = Tensor(dimensions, Uninitialized<value_type>{});
+    using ResultTensor = Tensor<value_type, rank, DeviceMemory<tensor_device_t<TTensor1>>>;
+    auto result = ResultTensor(dimensions, Uninitialized<value_type>{});
 
     operator_(tensor1_, tensor2_, result);
 

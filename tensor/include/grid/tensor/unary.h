@@ -69,7 +69,8 @@ class Unary
   /// operator()() evaluates the unary operator and returns a tensor.
   auto operator()() const
   {
-    auto result = Tensor(tensor_.Dimensions(), Uninitialized<value_type>{});
+    using ResultTensor = Tensor<value_type, rank, DeviceMemory<tensor_device_t<TTensor>>>;
+    auto result = ResultTensor(tensor_.Dimensions(), Uninitialized<value_type>{});
     operator_(tensor_, result);
     return result;
   }
