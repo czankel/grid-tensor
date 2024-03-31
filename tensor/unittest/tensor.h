@@ -91,7 +91,7 @@ TYPED_TEST_P(TensorTestSuite, TensorBraceInitializationRank3Integer)
 
 TYPED_TEST_P(TensorTestSuite, TensorAllocInitializedRank1Double)
 {
-  typename TypeParam::Tensor tensor1(4UL, 1.2);
+  typename TypeParam::Tensor tensor1({4}, 1.2);
 
   EXPECT_EQ(tensor1.Rank(), 1);
   EXPECT_THAT(tensor1.Dimensions(), ElementsAre(4));
@@ -103,7 +103,7 @@ TYPED_TEST_P(TensorTestSuite, TensorAllocInitializedRank1Double)
 
 TYPED_TEST_P(TensorTestSuite, TensorAllocUninitializedRank1Double)
 {
-  typename TypeParam::Tensor tensor1(5UL, grid::Uninitialized<double>{});
+  typename TypeParam::Tensor tensor1({5}, grid::Uninitialized<double>{});
   EXPECT_EQ(tensor1.Rank(), 1);
   EXPECT_THAT(tensor1.Dimensions(), ElementsAre(5));
   EXPECT_THAT(tensor1.Strides(), ElementsAre(1));
@@ -111,7 +111,7 @@ TYPED_TEST_P(TensorTestSuite, TensorAllocUninitializedRank1Double)
 
 TYPED_TEST_P(TensorTestSuite, TensorAllocInitializedRank2Char)
 {
-  typename TypeParam::Tensor tensor1(5UL, 4UL, (char)'3');
+  typename TypeParam::Tensor tensor1({5, 4}, (char)'3');
 
   EXPECT_EQ(tensor1.Rank(), 2);
   EXPECT_THAT(tensor1.Dimensions(), ElementsAre(5, 4));
@@ -126,7 +126,7 @@ TYPED_TEST_P(TensorTestSuite, TensorAllocInitializedRank2Char)
 
 TYPED_TEST_P(TensorTestSuite, TensorAllocUninitializedRank2Double)
 {
-  typename TypeParam::Tensor tensor1(7UL, 3UL, grid::Uninitialized<int>{});
+  typename TypeParam::Tensor tensor1({7, 3}, grid::Uninitialized<int>{});
 
   EXPECT_EQ(tensor1.Rank(), 2);
   EXPECT_THAT(tensor1.Dimensions(), ElementsAre(7, 3));
@@ -234,7 +234,7 @@ TYPED_TEST_P(TensorTestSuite, TensorViewBraceInitializationTensor)
 
 TYPED_TEST_P(TensorTestSuite, TensorViewAllocInitializationTensor)
 {
-  typename TypeParam::Tensor tensor(4UL, 5UL, 1.1);
+  typename TypeParam::Tensor tensor({4, 5}, 1.1);
   auto data = tensor.Data();
 
   // tensor[:,1]
@@ -266,7 +266,7 @@ TYPED_TEST_P(TensorTestSuite, TensorViewAllocInitializationTensor)
 
 TYPED_TEST_P(TensorTestSuite, TensorBroadcast)
 {
-  typename TypeParam::Tensor tensor(4UL, 5UL, 1.1);
+  typename TypeParam::Tensor tensor({4, 5}, 1.1);
 
   // tensor[newaxis] -> (1, 5, 4)
   auto view_newaxis_0 = tensor.View(NewAxis);

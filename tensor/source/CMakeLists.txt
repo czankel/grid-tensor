@@ -8,3 +8,11 @@ grid_add_sources(gridtensor
 	tensor.cc
 	mmap.cc
 )
+
+if (BUILD_CUDA)
+
+  grid_add_sources(gridtensor
+    cuda/wrapper.cu
+  )
+
+endif()

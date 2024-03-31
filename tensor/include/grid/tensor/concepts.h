@@ -33,17 +33,33 @@ inline constexpr bool is_tensor_v =
   std::is_class_v<typename std::remove_cvref_t<TTensor>> &&
   requires (const TTensor& t) { t.Rank(); t.Dimensions(); t.Strides(); t.Data(); };
 
+template <typename TTensor, typename T, size_t TRank>
+inline constexpr bool is_tensor_x_v =
+  std::is_class_v<typename std::remove_cvref_t<TTensor>> &&
+  std::is_same_v<std::remove_cvref_t<TTensor>::value_type, T> &&
+  requires (const TTensor& t) { t.Rank() = TRank; t.Dimensions(); t.Strides(); t.Data(); };
+
 
 /// AnyTensor requires that the provided argument is a tensor.
 template <typename TTensor>
 concept AnyTensor = is_tensor_v<TTensor>;
 
+#if 0
+template <typename TTensor, typename T, size_t TRank>
+concept XTensor = is_tensor_x_v<TTensor, T, TRank>;
+#endif
 
 /// is_operator_v<Operator> checks if a type is tensor operator, which requires to have a member
 /// operator()() overload.
 /// TODO: check also template signature
 template <typename TOperator>
 inline constexpr bool is_operator_v = requires (const TOperator& t) { { t.operator()() } -> AnyTensor; };
+
+#if 0
+template <typename TOperator, typename T, size_t TRank>
+inline constexpr bool is_operator_x_v = requires (const TOperator& t) { { t.operator()() } -> XTensor<T, TRank>; };
+#endif
+
 
 
 // to_tensor provides the type of the tensor or the type of the tensor resulting from a  tensor operation
@@ -103,6 +119,12 @@ concept PrimitiveTensor = AnyTensor<TTensor> && tensor_is_primitive<TTensor>::va
 template <typename TOperator>
 concept AnyOperator = is_operator_v<TOperator>;
 
+/// XOperator FIXME
+#if 0
+template <typename TOperator, typename T, size_t TRank>
+concept XOperator = is_operator_x_v<TOperator, T, TRank>;
+#endif
+
 /// TensorConvertible requires that the tensor is a tensor or functor that returns a tensor
 template <typename TTensor>
 concept TensorConvertible = is_tensor_v<TTensor> || is_operator_v<TTensor>;
@@ -117,6 +139,8 @@ struct tensor_is_convertible_to
 template <typename> struct tensor_device { using type = device::Base; };
 template <template <typename, size_t, typename> typename TTensor, typename T, size_t TRank, typename TDevice>
 struct tensor_device<TTensor<T, TRank, DeviceMemory<TDevice>>> { using type = TDevice; };
+template <AnyOperator TOperator>
+struct tensor_device<TOperator> { using type = tensor_device<typename to_tensor<TOperator>::type>::type; };
 
 template <typename TTensor>
 using tensor_device_t = tensor_device<std::remove_cvref_t<TTensor>>::type;

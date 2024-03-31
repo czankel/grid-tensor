@@ -258,7 +258,7 @@ std::string LLaMAModelT<T, Dev>::Decode(LLaMAVocab::token prev, LLaMAVocab::toke
     std::string sep("\u2581");
     std::string::size_type pos = 0;
     while ((pos = symbol.find(sep, pos)) != std::string::npos)
-      symbol.replace(pos, sep.size(), " ");
+      symbol.replace(pos, sep.size(), " "); // FIXME: doesn't work with gcc
   }
 
   return symbol;

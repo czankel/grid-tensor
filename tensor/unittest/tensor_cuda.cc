@@ -7,19 +7,15 @@
 //
 
 #include <grid/tensor/tensor.h>
-#include <grid/tensor/base/tensor.h>
-
-#include <grid/tensor/binary.h>
-#include <grid/tensor/base/binary.h>
-#include <grid/tensor/base/comparison.h>
-#include <grid/tensor/base/unary.h>
-
+#include <grid/tensor/mmap.h>
+#include <grid/tensor/cuda/tensor.h>
+#include <grid/tensor/cuda/comparison.h>
+#include <grid/tensor/cuda/unary.h>
 
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
 
-#include "addition.h"
-#include "tensor_base.h"
+#include "tensor.h"
+#include "tensor_cuda.h"
 
-
-INSTANTIATE_TYPED_TEST_SUITE_P(AdditionTestBase, AdditionTestSuite, TensorBaseType);
+INSTANTIATE_TYPED_TEST_SUITE_P(TensorTestCuda, TensorTestSuite, TensorCudaType);

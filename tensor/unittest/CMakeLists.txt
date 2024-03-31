@@ -1,3 +1,11 @@
+if (BUILD_CUDA)
+
+grid_add_sources(gridtensor_test
+  addition_cuda.cc
+)
+
+endif()
+
 grid_add_sources(gridtensor_test
   tensor_base.cc
   addition_base.cc
@@ -5,3 +13,5 @@ grid_add_sources(gridtensor_test
   rms_norm_base.cc
   softmax_base.cc
 )
+
+

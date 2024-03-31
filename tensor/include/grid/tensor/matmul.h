@@ -14,6 +14,7 @@
 #include <ranges>
 
 #include "concepts.h"
+#include "tensor_operator.h"
 
 namespace grid {
 
@@ -24,8 +25,24 @@ namespace grid {
 template <typename> class MatmulOperator;
 template <typename, size_t, typename> class Tensor;
 
+namespace details {
 template <AnyTensor TTensor1, AnyTensor TTensor2>
-class MatmulFunction
+struct matmul_rank
+{
+  using tensor1_type = std::remove_reference_t<TTensor1>;
+  using tensor2_type = std::remove_reference_t<TTensor2>;
+  constexpr static size_t rank =
+   tensor1_type::rank != 1 || tensor2_type::rank != 1 ? std::min(tensor1_type::rank, tensor2_type::rank) : 0;
+};
+
+}
+
+template <AnyTensor TTensor1, AnyTensor TTensor2>
+class MatmulFunction : public TensorOperator<
+               std::common_type_t<typename std::remove_cvref_t<TTensor1>::value_type,
+                                  typename std::remove_cvref_t<TTensor2>::value_type>,
+               details::matmul_rank<TTensor1, TTensor2>::rank,
+               MatmulFunction<TTensor1, TTensor2>>
 {
   using device = tensor_device_t<TTensor1>;
 
@@ -44,7 +61,8 @@ class MatmulFunction
   template <typename T1, typename T2>
   requires (tensor1_rank > 0 && tensor2_rank > 0)
   MatmulFunction(T1&& tensor1, T2&& tensor2)
-   : tensor1_(std::forward<T1>(tensor1)),
+   : TensorOperator<value_type, rank, MatmulFunction<TTensor1, TTensor2>>(*this),
+     tensor1_(std::forward<T1>(tensor1)),
      tensor2_(std::forward<T2>(tensor2))
   {
     if constexpr (tensor1_rank > 0 && tensor2_rank > 0)

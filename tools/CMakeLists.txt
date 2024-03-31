@@ -6,3 +6,6 @@
 
 add_executable(llama llama.cc)
 #target_link_libraries(llama gridstreamer)
+
+add_executable(cudatest cudatest.cu)
+

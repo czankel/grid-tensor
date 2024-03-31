@@ -14,12 +14,14 @@
 #include <ranges>
 
 #include "concepts.h"
+#include "tensor_operator.h"
 
 namespace grid {
 
 /// BinaryOperator is a empty definition for device-specific operators.
 template <typename> class BinaryOperator;
 template <typename, size_t, typename> class Tensor;
+
 
 //
 // Binary Operators
@@ -53,20 +55,32 @@ template <typename> struct DivOperator;
 ///   shape:    4, 1 <op> shape: 3, 4, 3    -> OK
 ///   shape: 3, 4, 4 <op> shape: 3, 5, 1    -> Error
 ///
+// FIXME: could possiblye be optimized with TensorOperator<TTensor1, TTensor2, std::max> or not, need T and rank
+
+template <typename T> using tp = std::remove_cvref_t<T>;
+
 template <typename TOperator, AnyTensor TTensor1, AnyTensor TTensor2>
-class Binary
+class Binary : public TensorOperator<
+               std::common_type_t<typename tp<TTensor1>::value_type, // std::remove_cvref_t<TTensor1>::value_type,
+                                  typename std::remove_cvref_t<TTensor2>::value_type>,
+               std::max(std::remove_cvref_t<TTensor1>::rank, std::remove_cvref_t<TTensor2>::rank),
+               Binary<TOperator, TTensor1, TTensor2>>
+
 {
  public:
   using tensor1_type = std::remove_reference_t<TTensor1>;
   using tensor2_type = std::remove_reference_t<TTensor2>;
-  using value_type = std::common_type_t<typename tensor1_type::value_type, typename tensor2_type::value_type>;
+  using value_type = typename Binary::TensorOperator::value_type;
+  //using value_type = TensorOperator::value_type;
+  ////std::common_type_t<typename tensor1_type::value_type, typename tensor2_type::value_type>;
   using pointer = value_type*;
   using const_pointer = const value_type*;
   constexpr static size_t rank = std::max(tensor1_type::rank, tensor2_type::rank);
 
   template <typename T1, typename T2>
   Binary(TOperator, T1&& tensor1, T2&& tensor2)
-   : tensor1_(std::forward<T1>(tensor1)),
+   : TensorOperator<value_type, rank, Binary<TOperator, TTensor1, TTensor2>>(*this),
+     tensor1_(std::forward<T1>(tensor1)),
      tensor2_(std::forward<T2>(tensor2))
   {}
 

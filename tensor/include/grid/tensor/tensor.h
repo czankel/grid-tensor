@@ -291,18 +291,19 @@ class Tensor : public Array<T, TMemory>
       strides_{std::move(other.strides_)}
   {}
 
-  // Constructors for converting from a tensor operator.
+  // FIXME: any chance to get rid of TOperator?? virtual function only?
+  // FIXME: This will always have to execute it. Option: Tensor for Lazy operation, can be used for backprop
+  // Instead of Tensor x = Tensor op Tensor --> TensorGraph = Tensor op Tensor, TensorGraph = TensorGraph op Tensor[Graph ]
+  // What if operation fusion will only work forward but not backprop? Should have both, one for forward, one for back
   template <AnyOperator TOperator>
-  Tensor(TOperator&& functor) : Tensor{std::move(functor())} {};
-
-  template <AnyOperator TOperator>
-  Tensor(const TOperator& functor) : Tensor{functor()} {};
+  Tensor(const TensorOperator<T, TRank, TOperator>& op) : Tensor<T, TRank, memory_type>(op()) {};
 
 
   /// Assign operator
   template <PrimitiveTensor TTensor>
   Tensor& operator=(const TTensor& other)
   {
+    printf("copy assign\n");
     array_type::Realloc(other.Size());
     UnaryOperator<CopyOperator<tensor_device_t<decltype(*this)>>>()(other, *this);
 
@@ -312,6 +313,7 @@ class Tensor : public Array<T, TMemory>
   /// Move-assign is only supported from the same type
   Tensor& operator=(Tensor&& other)
   {
+    printf("move assign\n");
     dimensions_ = other.Dimensions();
     strides_ = other.Strides();
     Array<value_type, memory_type>::operator=(std::move(other));
@@ -557,7 +559,8 @@ template <Arithmetic T, size_t... M, size_t... N>
 Tensor(T(&&... l)[M][N]) -> Tensor<T, 3, StaticMemory<sizeof...(M), std::max({M...}), std::max({N...})>>;
 
 // Tensor with Dynamic Allocator - Paremter List
-
+// FIXME
+#if 0
 // Tensor(uint,T) -> Rank-1 tensor with a dynamically allocated buffer.
 template <Arithmetic T, typename Dev = device::Base>
 explicit Tensor(size_t, T) -> Tensor<T, 1, DeviceMemory<Dev>>;
@@ -581,7 +584,7 @@ explicit Tensor(size_t, size_t, size_t, T) -> Tensor<T, 3, DeviceMemory<Dev>>;
 // Tensor(size_t, size_t, size_t, Uninitialized<T>) -> Rank-3 tensor with a dynamically allocated uninitialized buffer.
 template <Arithmetic T, typename Dev = device::Base>
 explicit Tensor(size_t, size_t, size_t, Uninitialized<T>) -> Tensor<T, 3, DeviceMemory<Dev>>;
-
+#endif
 // Tensor(&[], &[], T) -> Rank-N tensor with a dynamically allocated initialized buffer.
 template <Arithmetic T, size_t N, typename Dev = device::Base>
 explicit Tensor(const size_t(&)[N], const ssize_t(&)[N], T) -> Tensor<T, N, DeviceMemory<Dev>>;
@@ -636,13 +639,18 @@ template <typename TTensor, size_t TRank, typename Dev = device::Base>
 Tensor(TensorView<TTensor, TRank>&&) -> Tensor<typename TTensor::value_type, TRank, DeviceMemory<Dev>>;
 template <typename TTensor, size_t TRank, typename Dev = device::Base>
 Tensor(const TensorView<TTensor, TRank>&) -> Tensor<typename TTensor::value_type, TRank, DeviceMemory<Dev>>;
-
+// FIXME
+#if 1
 // Tensor with Dynamic Allocator - Operator Argument
 template <grid::AnyOperator TOperator, typename Dev = device::Base>
 Tensor(TOperator&&) -> Tensor<typename TOperator::value_type, TOperator::rank, grid::DeviceMemory<Dev>>;
 
 template <grid::AnyOperator TOperator, typename Dev = device::Base>
 Tensor(const TOperator&) -> Tensor<typename TOperator::value_type, TOperator::rank, grid::DeviceMemory<Dev>>;
+#else
+template <typename T, size_t RANK, AnyOperator<T, RANK> TOperator, typename Dev = device::Base>
+Tensor(const TOperator&) -> Tensor<T, RANK, Dev>;
+#endif
 
 // Tensor with "MemoryMapped"
 template <Arithmetic T, size_t N>
@@ -650,6 +658,10 @@ explicit Tensor(const size_t(&)[N], const std::tuple<T*, size_t>&) -> Tensor<T, 
 template <Arithmetic T, size_t N>
 explicit Tensor(const std::array<size_t, N>&, const std::tuple<T*, size_t>&) -> Tensor<T, N, grid::MemoryMapped>;
 
+template <typename T, size_t N, typename M, typename Dev = device::Base>
+Tensor(const grid::Tensor<T, N, M>&) -> Tensor<T, N, grid::DeviceMemory<Dev>>;
+template <typename T, size_t N, typename M, typename Dev = device::Base>
+Tensor(grid::Tensor<T, N, M>&&) -> Tensor<T, N, grid::DeviceMemory<Dev>>;
 
 //
 // Tensor basic arithmetic operations

@@ -18,7 +18,7 @@ cmake_policy(SET CMP0025 NEW)
 ## Project
 ##
 
-project(gridtensor CXX C)
+project(gridtensor CXX CUDA)
 
 ##
 ## Project Options and configurations
@@ -34,6 +34,8 @@ endif ()
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 option(BUILD_STATIC_LIBS "Build static libraries" OFF)
 
+option(BUILD_CUDA "Build CUDA support" OFF)
+
 option(USE_COLORIZE_OUTPUT "Colorize output during compilation" ON)
 option(USE_CPP_CODE_COVERAGE "Compile C/C++ with code coverage flags" OFF)
 option(USE_CCACHE "" OFF)
@@ -44,6 +46,7 @@ option(USE_GOLD_LINKER "Use gold linkder" OFF)
 ##
 
 include(cmake/utils.cmake)
+include(3rdparty/cpm-make/cpm.cmake)
 
 
 ##
@@ -233,6 +236,16 @@ set(gridtensor_HEADER_DIRS
 )
 
 ##
+## CUDA Support
+##
+
+if (BUILD_CUDA)
+  message(STATUS "Adding CCCL...")
+  set(CCCL_VERSION "v2.2.0" CACHE STRING "Version of CCCL to use")
+  include(cmake/FindCCCL.cmake)
+endif ()
+
+##
 ## Target libraries
 ##
 
@@ -260,6 +273,14 @@ add_executable(llama tools/llama.cc models/llama/llama.cc models/llama/karpathy.
 target_include_directories(llama PUBLIC ${gridtensor_HEADER_DIRS})
 target_link_libraries(llama gridtensor)
 
+
+add_executable(cudatest tools/cudatest.cu)
+target_compile_features(cudatest PUBLIC cxx_std_20)
+set_target_properties(cudatest PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+set_target_properties(cudatest PROPERTIES CUDA_ARCHITECTURES "75")
+
+
+
 ##
 ## Install libraries and header files
 ##
@@ -283,6 +304,14 @@ install(TARGETS llama DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 #set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "bin/")
 #include_directories("${CMAKE_INSTALL_PREFIX}/include")
 #link_directories("${CMAKE_INSTALL_PREFIX}/lib")
+
+if (BUILD_CUDA)
+  target_include_directories(gridtensor SYSTEM INTERFACE
+                             $<BUILD_INTERFACE:${CCCL_SOURCE_DIR}/libcudacxx/include>
+                             $<BUILD_INTERFACE:${CCCL_SOURCE_DIR}/cub>
+                             $<BUILD_INTERFACE:${CCCL_SOURCE_DIR}/thrust>)
+endif ()
+
 
 ##
 ## Android Project
