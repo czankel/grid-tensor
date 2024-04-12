@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <ranges>
 
+#include "device.h"
 #include "../binary.h"
 #include "../concepts.h"
 
@@ -29,6 +30,22 @@ namespace grid {
 template <template <typename> typename TOperator>
 class BinaryOperator<TOperator<device::Cuda>>
 {
+  template <typename T>
+  void eval(T*, const T*, const T*,
+            std::span<const size_t, 0>,
+            std::span<const ssize_t, 0>,
+            std::span<const ssize_t, 0>,
+            std::span<const ssize_t, 0>) const;
+#if 0
+  template <typename T, size_t 0>
+  void eval(T*, const T*, const T*,
+            std::span<const size_t, N>,
+            std::span<const ssize_t, N>,
+            std::span<const ssize_t, N>,
+            std::span<const ssize_t, N>) const;
+#endif
+  // FIXME
+#if 0
   // TODO: gcc doesn't like this constexpr, which would be use later as just Operator(args). Should it? See P0386R2 change: 9.2.3.2p3
   //static constexpr TOperator<device::Cuda> Operator;
 
@@ -59,6 +76,7 @@ class BinaryOperator<TOperator<device::Cuda>>
       src2 += strides2[0];
     }
   }
+#endif
 
   // operation on dim >=2 (unoptimized)
   template <size_t N, typename const_pointer, typename pointer>
@@ -85,15 +103,16 @@ class BinaryOperator<TOperator<device::Cuda>>
   //
   // Optimized (folded)
   //
-
+#if 0
   // operation on a single dimension (optimized)
   template <typename const_pointer, typename pointer>
-  inline void eval(pointer dest, const_pointer src1, const_pointer src2, size_t dimensions) const
+  void eval(pointer dest, const_pointer src1, const_pointer src2, size_t dimensions) const;
+#if 0
   {
     for (size_t i = 0; i < dimensions; i++)
       TOperator<device::Cuda>()(dest, src1, src2, i);
   }
-
+#endif
   // operation on dim >= 2 (optimized)
   template <size_t N, typename const_pointer, typename pointer>
   inline void eval(pointer dest, const_pointer src1, const_pointer src2,
@@ -113,13 +132,28 @@ class BinaryOperator<TOperator<device::Cuda>>
              std::span<const ssize_t, N - 1>(strides2.begin() + 1, N - 1),
              folded_dimensions);
       else
-        eval(dest, src1, src2, folded_dimensions);
+        ; //eval(dest, src1, src2, folded_dimensions);
 
       dest += strides0[0];
       src1 += strides1[0];
       src2 += strides2[0];
     }
   }
+#endif
+  // FIXME: use span.last instead of span.begin + 1 ... or subspan
+  // FIXME: could this be done in the 'function' and initialized only once?
+
+
+  // fully optimized contiguous tensors (only single dimension size)
+  template <typename T> void eval(T*, const T*, const T*, size_t) const;
+
+  // folded version with the folded dimensions first, followed by rank and pointers to dimensions and all strides
+  template <typename T>
+  void eval(T*, const T*, const T*, size_t, const size_t*, const ssize_t*, const ssize_t*, const ssize_t*) const;
+
+  // unoptimized version with pointers to dimension and all strides
+  template <typename T>
+  void eval(T*, const T*, const T*, size_t, size_t, const size_t*, const ssize_t*, const ssize_t*, const ssize_t*) const;
 
   // fold dimensions
   template <size_t N, typename const_pointer, typename pointer>
@@ -139,6 +173,7 @@ class BinaryOperator<TOperator<device::Cuda>>
           strides1[N - 2] - dimensions[N - 1] == 0 &&
           strides2[N - 2] - dimensions[N - 1] == 0)
       {
+        // FIXME: use subspan?
         fold(dest, src1, src2,
             std::span<const size_t,  N - 1>(dimensions.begin(), N - 1),
             std::span<const ssize_t, N - 1>(strides0.begin(), N - 1),
@@ -148,46 +183,10 @@ class BinaryOperator<TOperator<device::Cuda>>
         return;
       }
     }
-    eval(dest, src1, src2,
-         std::move(dimensions),
-         std::move(strides0),
-         std::move(strides1),
-         std::move(strides2),
-         folded_dimensions);
+    eval(dest, src1, src2, N, folded_dimensions, &*dimensions.begin(), &*strides0.begin(), &*strides1.begin(), &*strides2.begin());
   }
 
  public:
-  // TODO: remove when all functions are converted to use ranges
-  template <typename T, size_t TRank>
-  void operator()(T* dest, const T* src1, const T* src2,
-                  const std::array<size_t, TRank>& dimensions,
-                  const std::array<ssize_t, TRank>& strides0,
-                  const std::array<ssize_t, TRank>& strides1,
-                  const std::array<ssize_t, TRank>& strides2)
-  {
-    /*
-    if constexpr (TRank > 2)
-    {
-      if (strides0[TRank - 2] - dimensions[TRank - 1] == 0 &&
-          strides1[TRank - 2] - dimensions[TRank - 1] == 0 &&
-          strides2[TRank - 2] - dimensions[TRank - 1] == 0)
-        eval(dest, src1, src2,
-             std::span<const size_t,  TRank - 1>(dimensions.begin(), TRank - 1),
-             std::span<const ssize_t, TRank - 1>(strides0.begin(), TRank - 1),
-             std::span<const ssize_t, TRank - 1>(strides1.begin(), TRank - 1),
-             std::span<const ssize_t, TRank - 1>(strides2.begin(), TRank - 1),
-             dimensions[TRank - 1]);
-      return;
-    }
-
-    eval(dest, src1, src2,
-         std::span<const size_t,  TRank>(dimensions),
-         std::span<const ssize_t, TRank>(strides0),
-         std::span<const ssize_t, TRank>(strides1),
-         std::span<const ssize_t, TRank>(strides2));
-         */
-  }
-
   template<std::ranges::input_range R1,
            std::ranges::input_range R2,
            std::ranges::output_range<std::iter_value_t<std::ranges::iterator_t<R1>>> O>
@@ -220,43 +219,11 @@ class BinaryOperator<TOperator<device::Cuda>>
       }
     }
 
-    eval(&*result, &*first1, &*first2,
-         std::span<const size_t,  rank>(dimensions.begin(), rank),
-         std::span<const ssize_t, rank>(strides0.begin(), rank),
-         std::span<const ssize_t, rank>(strides1.begin(), rank),
-         std::span<const ssize_t, rank>(strides2.begin(), rank));
+    // FIXME: assert xx.size() == rank?
+    eval(&*result, &*first1, &*first2, rank, &*dimensions.begin(), &*strides0.begin(), &*strides1.begin(), &*strides2.begin());
   }
 
 };
-
-//
-// Operators
-//
-
-template<> struct AddOperator<device::Cuda>
-{
-  template<typename T>
-  inline void operator()(T* dest, const T* src1, const T* src2, const size_t i) const { dest[i] = src1[i] + src2[i]; }
-};
-
-template<> struct SubOperator<device::Cuda>
-{
-  template<typename T>
-  inline void operator()(T* dest, const T* src1, const T* src2, const size_t i) const { dest[i] = src1[i] - src2[i]; }
-};
-
-template<> struct MulOperator<device::Cuda>
-{
-  template<typename T>
-  inline void operator()(T* dest, const T* src1, const T* src2, const size_t i) const { dest[i] = src1[i] * src2[i]; }
-};
-
-template<> struct DivOperator<device::Cuda>
-{
-  template<typename T>
-  inline void operator()(T* dest, const T* src1, const T* src2, const size_t i) const { dest[i] = src1[i] / src2[i]; }
-};
-
 
 } // end of namespace grid
 

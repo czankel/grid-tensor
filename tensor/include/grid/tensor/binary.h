@@ -57,11 +57,11 @@ template <typename> struct DivOperator;
 ///
 // FIXME: could possiblye be optimized with TensorOperator<TTensor1, TTensor2, std::max> or not, need T and rank
 
-template <typename T> using tp = std::remove_cvref_t<T>;
+// FIXME could come in handy somehere... template <typename T> using tp = std::remove_cvref_t<T>;
 
 template <typename TOperator, AnyTensor TTensor1, AnyTensor TTensor2>
 class Binary : public TensorOperator<
-               std::common_type_t<typename tp<TTensor1>::value_type, // std::remove_cvref_t<TTensor1>::value_type,
+               std::common_type_t<typename std::remove_cvref_t<TTensor1>::value_type,
                                   typename std::remove_cvref_t<TTensor2>::value_type>,
                std::max(std::remove_cvref_t<TTensor1>::rank, std::remove_cvref_t<TTensor2>::rank),
                Binary<TOperator, TTensor1, TTensor2>>

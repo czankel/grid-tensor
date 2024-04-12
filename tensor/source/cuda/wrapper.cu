@@ -6,6 +6,7 @@
 // The contents of this file are confidential and proprietary to Chris Zankel.
 //
 
+#include <stdexcept>
 
 #include <grid/tensor/cuda/array.h>
 

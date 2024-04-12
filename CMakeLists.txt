@@ -18,7 +18,7 @@ cmake_policy(SET CMP0025 NEW)
 ## Project
 ##
 
-project(gridtensor CXX CUDA)
+project(gridtensor CXX)
 
 ##
 ## Project Options and configurations
@@ -238,12 +238,13 @@ set(gridtensor_HEADER_DIRS
 ##
 ## CUDA Support
 ##
-
-if (BUILD_CUDA)
-  message(STATUS "Adding CCCL...")
-  set(CCCL_VERSION "v2.2.0" CACHE STRING "Version of CCCL to use")
-  include(cmake/FindCCCL.cmake)
-endif ()
+# FIXME
+#  set(CMAKE_CUDA_STANDARD 20)  # works with 17, but not 20
+#  set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+  # message(STATUS "Adding CCCL...")
+  # set(CCCL_VERSION "v2.2.0" CACHE STRING "Version of CCCL to use")
+	# include(cmake/FindCCCL.cmake)
+  #endif ()
 
 ##
 ## Target libraries
@@ -265,6 +266,13 @@ endif()
 
 target_include_directories(gridtensor PUBLIC ${gridtensor_HEADER_DIRS})
 
+if (BUILD_CUDA)
+set_target_properties(gridtensor PROPERTIES CUDA_ARCHITECTURES "75")
+set_target_properties(gridtensor PROPERTIES CUDA_STANDARD 20)
+#target_compile_features(gridtensor INTERFACE cxx_std_20)
+enable_language(CUDA)
+endif ()
+
 ##
 ## Target Tools
 ##
@@ -274,10 +282,7 @@ target_include_directories(llama PUBLIC ${gridtensor_HEADER_DIRS})
 target_link_libraries(llama gridtensor)
 
 
-add_executable(cudatest tools/cudatest.cu)
-target_compile_features(cudatest PUBLIC cxx_std_20)
-set_target_properties(cudatest PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
-set_target_properties(cudatest PROPERTIES CUDA_ARCHITECTURES "75")
+#add_executable(cudatest tools/cudatest.cu)
 
 
 

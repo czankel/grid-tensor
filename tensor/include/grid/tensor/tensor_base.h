@@ -18,6 +18,7 @@
 #include "base/binary.h"
 #include "base/comparison.h"
 #include "base/device.h"
+#include "base/generate.h"
 #include "base/matmul.h"
 #include "base/rms_norm.h"
 #include "base/softmax.h"

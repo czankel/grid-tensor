@@ -9,6 +9,8 @@
 #ifndef GRID_TENSOR_CONCEPTS_H
 #define GRID_TENSOR_CONCEPTS_H
 
+#include <type_traits>
+
 #include "device.h"
 #include "memory.h"
 
@@ -36,7 +38,7 @@ inline constexpr bool is_tensor_v =
 template <typename TTensor, typename T, size_t TRank>
 inline constexpr bool is_tensor_x_v =
   std::is_class_v<typename std::remove_cvref_t<TTensor>> &&
-  std::is_same_v<std::remove_cvref_t<TTensor>::value_type, T> &&
+  std::is_same_v<typename std::remove_cvref_t<TTensor>::value_type, T> &&
   requires (const TTensor& t) { t.Rank() = TRank; t.Dimensions(); t.Strides(); t.Data(); };
 
 

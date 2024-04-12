@@ -13,7 +13,16 @@
 
 namespace grid::device {
 
-class Cuda : public Device {};
+class Cuda : public Device
+{
+ public:
+  static int GetDeviceCount();
+
+  /*
+  static cudaDeviceProp GetDeviceProp();
+  cudaDeviceProp deviceProp;
+  checkCudaErrors(cudaGetDeviceProperties(&deviceProp, devID));
+  */
 
 } // end of namespace grid::device
 
