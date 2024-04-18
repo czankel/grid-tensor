@@ -22,7 +22,7 @@ namespace grid {
 
 /// UnaryOperator<Operator> implements element-wise unary operation on a tensors.
 ///
-///  @tparm TOperator binary operator
+///  @tparm TOperator unary operator
 template <template <typename> typename TOperator>
 class UnaryOperator<TOperator<device::Base>>
 {

@@ -14,6 +14,7 @@
 #include <span>
 
 #include "concepts.h"
+#include "tensor_operator.h"
 
 namespace grid {
 
@@ -48,15 +49,19 @@ template <typename> class SiluOperator;
 ///  @tparm TTensor  tensor type
 ///
 template <typename TOperator, AnyTensor TTensor>
-class Unary
+class Unary : public TensorOperator<typename std::remove_cvref_t<TTensor>::value_type,
+                                    std::remove_cvref_t<TTensor>::rank,
+                                    Unary<TOperator, TTensor>>
 {
  public:
-  using tensor_type = std::remove_reference_t<TTensor>;
-  using value_type = tensor_type::value_type;
-  constexpr static size_t rank = tensor_type::rank;
+  using typename Unary::TensorOperator::value_type;
+  using Unary::TensorOperator::rank;
 
   template <typename T>
-  Unary(TOperator, T&& tensor) : tensor_(std::forward<T>(tensor)) {}
+  Unary(TOperator, T&& tensor)
+    : TensorOperator<value_type, rank, Unary<TOperator, TTensor>>(*this),
+      tensor_(std::forward<T>(tensor))
+  {}
 
   ~Unary() {}
 
