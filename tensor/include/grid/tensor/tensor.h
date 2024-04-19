@@ -19,7 +19,7 @@
 #include "concepts.h"
 #include "device.h"
 #include "iterator.h"
-#include "generate.h"
+#include "generator.h"
 #include "matmul.h"
 #include "memory.h"
 #include "tensor_parameters.h"
@@ -122,7 +122,7 @@ class Tensor : public Array<T, TMemory>
       dimensions_{dimension},
       strides_{make_strides(dimensions_)}
   {
-    Generate(*this, [init] { return init; });
+    GeneratorOperator<FillOperator<tensor_device_t<decltype(*this)>>>()(*this, init);
   }
 
   /// Constructor for a rank-1 tensor (vector) with a dynamically allocated uninitialized buffer.
@@ -138,7 +138,7 @@ class Tensor : public Array<T, TMemory>
       dimensions_{dim_m, dim_n},
       strides_{make_strides(dimensions_)}
   {
-    Generate(*this, [init] { return init; });
+    GeneratorOperator<FillOperator<tensor_device_t<decltype(*this)>>>()(*this, init);
   }
 
   /// Constructor for a rank-2 tensor (matrix) with a dynamically allocated uninitialized buffer.
@@ -154,7 +154,7 @@ class Tensor : public Array<T, TMemory>
       dimensions_{dim_m, dim_n, dim_u},
       strides_{make_strides(dimensions_)}
   {
-    Generate(*this, [init] { return init; });
+    GeneratorOperator<FillOperator<tensor_device_t<decltype(*this)>>>()(*this, init);
   }
 
   /// Constructor for a rank-3 tensor (matrix) with a dynamically allocated uninitialized buffer.
@@ -172,7 +172,7 @@ class Tensor : public Array<T, TMemory>
       dimensions_(get_array<size_t, TRank>(std::move(dimensions))),
       strides_{make_strides(dimensions_)}
   {
-    Generate(*this, [init] { return init; });
+    GeneratorOperator<FillOperator<tensor_device_t<decltype(*this)>>>()(*this, init);
   }
 
 
@@ -192,7 +192,7 @@ class Tensor : public Array<T, TMemory>
       dimensions_(get_array<size_t, TRank>(std::move(dimensions))),
       strides_(get_array<ssize_t, TRank>(std::move(strides)))
   {
-    Generate(*this, [init] { return init; });
+    GeneratorOperator<FillOperator<tensor_device_t<decltype(*this)>>>()(*this, init);
   }
 
   /// Constructor for any rank tensor with a dynamically allocated uninitialized buffer with strides.
@@ -210,7 +210,7 @@ class Tensor : public Array<T, TMemory>
       dimensions_(get_array<size_t, TRank>(dimensions)),
       strides_(get_array<ssize_t, TRank>(strides))
   {
-    Generate(*this, [init] { return init; });
+    GeneratorOperator<FillOperator<tensor_device_t<decltype(*this)>>>()(*this, init);
   }
 
   /// Constructor for any rank tensor with a dynamically allocated uninitialized buffer
@@ -228,7 +228,7 @@ class Tensor : public Array<T, TMemory>
       dimensions_(dimensions),
       strides_(make_strides(dimensions))
   {
-    Generate(*this, [init] { return init; });
+    GeneratorOperator<FillOperator<tensor_device_t<decltype(*this)>>>()(*this, init);
   }
 
   /// Constructor for any rank tensor with a dynamically allocated initialized buffer with padding.
@@ -239,7 +239,7 @@ class Tensor : public Array<T, TMemory>
       dimensions_{dimensions},
       strides_{strides}
   {
-    Generate(*this, [init] { return init; });
+    GeneratorOperator<FillOperator<tensor_device_t<decltype(*this)>>>()(*this, init);
   }
 
   /// Constructor for any rank tensor with a dynamically allocated uninitialized buffer.
