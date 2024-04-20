@@ -18,22 +18,21 @@ TYPED_TEST_SUITE_P(RmsNormTestSuite);
 
 TYPED_TEST_P(RmsNormTestSuite, TensorNormRmsRank1)
 {
-  typename TypeParam::Tensor tensor{ 1.618, 2., 3.14, 5.382, -8.5, 13., -21., 34.77, 55. };
-  typename TypeParam::Tensor result = grid::RmsNorm(tensor);
+  typename TypeParam::Tensor tensor = grid::Tensor{ 1.618f, 2.f, 3.14f, 5.382f, -8.5f, 13.f, -21.f, 34.77f, 55.f };
+  float scale = 23.47965324677914722429f;
+  grid::Tensor expected{ 1.618f / scale,    2.f / scale, 3.14f / scale,
+                         5.382f / scale,  -8.5f / scale,  13.f / scale,
+                          -21.f / scale, 34.77f / scale,  55.f / scale };
 
-  double scale = 23.47965324677914722429;
-  typename TypeParam::Tensor expected{ 1.618 / scale, 2. / scale, 3.14 / scale,
-                                       5.382 / scale, -8.5 / scale, 13. / scale,
-                                       -21. / scale, 34.77 / scale, 55. / scale };
+  typename TypeParam::Tensor result = grid::RmsNorm(tensor);
   EXPECT_EQ(result, expected);
 }
 
 TYPED_TEST_P(RmsNormTestSuite, TensorNormRmsRank2)
 {
-  typename TypeParam::Tensor tensor{ { 1.618, 2., 3.14, 5.382, -8.5}, { 13., -21., 34.77, 55., 43.5} };
-  auto op = grid::RmsNorm(tensor);
-  auto result = op();
-
+  typename TypeParam::Tensor tensor = grid::Tensor{ { 1.618f, 2.f, 3.14f, 5.382f, -8.5f},
+                                                    { 13.f, -21.f, 34.77f, 55.f, 43.5f} };
+  typename TypeParam::Tensor result = grid::RmsNorm(tensor);
   // TODO: check actual result
   EXPECT_EQ(result.Rank(), 2);
 }

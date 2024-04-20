@@ -19,13 +19,12 @@ TYPED_TEST_SUITE_P(SoftMaxTestSuite);
 
 TYPED_TEST_P(SoftMaxTestSuite, TensorSoftMaxRank1)
 {
-  typename TypeParam::Tensor tensor{ 1.618, 2., 3.14, 5.382, -8.5, 1.3, -2.1, 3.477, 5.5 };
-  typename TypeParam::Tensor result = grid::SoftMax(tensor);
-  typename TypeParam::Tensor expected
-  { 0.944665670912764495e-02, 0.138413555743161758e-01, 0.432787127410648800e-01,
-    0.407345162648720671e-00, 0.381141786703997885e-06, 0.687341376275671639e-02,
-    0.229388293053500676e-03, 0.606221835647282256e-01, 0.458362745564445395e-00 };
+  typename TypeParam::Tensor tensor = grid::Tensor{ 1.618f, 2.f, 3.14f, 5.382f, -8.5f, 1.3f, -2.1f, 3.477f, 5.5f };
+  grid::Tensor expected { 0.944665670912764495e-02f, 0.138413555743161758e-01f, 0.432787127410648800e-01f,
+                          0.407345162648720671e-00f, 0.381141786703997885e-06f, 0.687341376275671639e-02f,
+                          0.229388293053500676e-03f, 0.606221835647282256e-01f, 0.458362745564445395e-00f };
 
+  typename TypeParam::Tensor result = grid::SoftMax(tensor);
   EXPECT_EQ(result, expected);
 }
 
