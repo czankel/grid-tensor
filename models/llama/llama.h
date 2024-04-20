@@ -145,17 +145,17 @@ LLaMAModelT<T, Dev>* LLaMAModelT<T, Dev>::Load(LLaMAFile& file)
   model->output_     =  Tensor({params.vocab_size_, dim}, file.GetTensor<T>(base, LLaMAFile::kOutput));
 
   // Initialize runtime tensors
-  model->x_ =           Tensor(dim, Uninitialized<T>{});
-  model->xb_ =          Tensor(dim, Uninitialized<T>{});
-  model->logits_ =      Tensor(params.vocab_size_, Uninitialized<T>{});
-  model->scores_ =      Tensor(dim, Uninitialized<T>{});
+  model->x_ =           Tensor({dim}, Uninitialized<T>{});
+  model->xb_ =          Tensor({dim}, Uninitialized<T>{});
+  model->logits_ =      Tensor({params.vocab_size_}, Uninitialized<T>{});
+  model->scores_ =      Tensor({dim}, Uninitialized<T>{});
 
   for (size_t i = 0; i < n_layers; i++)
   {
     auto& layer =        model->layers_[i];
     layer.key_cache_ =   Tensor({params.max_seq_len_, kv_dim}, T{});
     layer.value_cache_ = Tensor({params.max_seq_len_, kv_dim}, T{});
-    layer.q_ =           Tensor(dim, Uninitialized<T>{});
+    layer.q_ =           Tensor({dim}, Uninitialized<T>{});
   }
 
   return model;
@@ -258,7 +258,7 @@ std::string LLaMAModelT<T, Dev>::Decode(LLaMAVocab::token prev, LLaMAVocab::toke
     std::string sep("\u2581");
     std::string::size_type pos = 0;
     while ((pos = symbol.find(sep, pos)) != std::string::npos)
-      symbol.replace(pos, sep.size(), " ");
+      symbol.replace(pos, sep.size(), " "); // FIXME: doesn't work with gcc
   }
 
   return symbol;
