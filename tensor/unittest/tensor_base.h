@@ -29,63 +29,38 @@ struct TensorBaseType
     using grid::Tensor<T, TRank, TMemory>::Tensor;
   };
 
-  // rank-0 tensor
-  template <typename T>
-  explicit Tensor(T) -> Tensor<T, 0, grid::Scalar>;
-  template <typename T>
-  explicit Tensor(grid::Uninitialized<T>) -> Tensor<T, 0, grid::Scalar>;
-
-  // static tensors
-  template <typename T, typename... Ts>
-  Tensor(T, Ts...) -> Tensor<std::common_type_t<T, Ts...>, 1, grid::StaticMemory<sizeof...(Ts)+1>>;
-  template <typename T, size_t... N>
-  Tensor(T(&&... l)[N]) -> Tensor<T, 2, grid::StaticMemory<sizeof...(N), std::max({N...})>>;
-  template <typename T, size_t... M, size_t... N>
-  Tensor(T(&&... l)[M][N]) -> Tensor<T, 3, grid::StaticMemory<sizeof...(M), std::max({M...}), std::max({N...})>>;
   // dynamic tensors
-  template <typename T>
-  explicit Tensor(size_t, T) -> Tensor<T, 1, grid::DeviceMemory<grid::device::Base>>;
-  template <typename T>
-  explicit Tensor(size_t, grid::Uninitialized<T>) -> Tensor<T, 1, grid::DeviceMemory<grid::device::Base>>;
-  template <typename T>
-  explicit Tensor(size_t, size_t, T) -> Tensor<T, 2, grid::DeviceMemory<grid::device::Base>>;
-  template <typename T>
-  explicit Tensor(size_t, size_t, grid::Uninitialized<T>) -> Tensor<T, 2, grid::DeviceMemory<grid::device::Base>>;
-  template <typename T>
-  explicit Tensor(size_t, size_t, size_t, T) -> Tensor<T, 3, grid::DeviceMemory<grid::device::Base>>;
-  template <typename T>
-  explicit Tensor(size_t, size_t, size_t, grid::Uninitialized<T>) -> Tensor<T, 3, grid::DeviceMemory<grid::device::Base>>;
   template <typename T, size_t N>
-  explicit Tensor(const size_t(&)[N], const ssize_t(&)[N], T) -> Tensor<T, N, grid::DeviceMemory<grid::device::Base>>;
+  Tensor(const size_t(&)[N], const ssize_t(&)[N], T) -> Tensor<T, N, grid::DeviceMemory<grid::device::Base>>;
   template <typename T, size_t N>
-  explicit Tensor(const size_t(&)[N], const ssize_t(&)[N], grid::Uninitialized<T>) -> Tensor<T, N, grid::DeviceMemory<grid::device::Base>>;
+  Tensor(const size_t(&)[N], const ssize_t(&)[N], grid::Uninitialized<T>) -> Tensor<T, N, grid::DeviceMemory<grid::device::Base>>;
   template <typename T, size_t N>
-  explicit Tensor(size_t(&&)[N], ssize_t(&&)[N], T) -> Tensor<T, N, grid::DeviceMemory<grid::device::Base>>;
+  Tensor(size_t(&&)[N], ssize_t(&&)[N], T) -> Tensor<T, N, grid::DeviceMemory<grid::device::Base>>;
   template <typename T, size_t N>
-  explicit Tensor(size_t(&&)[N], ssize_t(&&)[N], grid::Uninitialized<T>) -> Tensor<T, N, grid::DeviceMemory<grid::device::Base>>;
+  Tensor(size_t(&&)[N], ssize_t(&&)[N], grid::Uninitialized<T>) -> Tensor<T, N, grid::DeviceMemory<grid::device::Base>>;
   template <typename T, size_t N>
-  explicit Tensor(const size_t(&)[N], T) -> Tensor<T, N, grid::DeviceMemory<grid::device::Base>>;
+  Tensor(const size_t(&)[N], T) -> Tensor<T, N, grid::DeviceMemory<grid::device::Base>>;
   template <typename T, size_t N>
-  explicit Tensor(const size_t(&)[N], grid::Uninitialized<T>) -> Tensor<T, N, grid::DeviceMemory<grid::device::Base>>;
+  Tensor(const size_t(&)[N], grid::Uninitialized<T>) -> Tensor<T, N, grid::DeviceMemory<grid::device::Base>>;
   template <typename T, size_t N>
-  explicit Tensor(const size_t(&&)[N], T) -> Tensor<T, N, grid::DeviceMemory<grid::device::Base>>;
+  Tensor(const size_t(&&)[N], T) -> Tensor<T, N, grid::DeviceMemory<grid::device::Base>>;
   template <typename T, size_t N>
-  explicit Tensor(const size_t(&&)[N], grid::Uninitialized<T>) -> Tensor<T, N, grid::DeviceMemory<grid::device::Base>>;
+  Tensor(const size_t(&&)[N], grid::Uninitialized<T>) -> Tensor<T, N, grid::DeviceMemory<grid::device::Base>>;
   template <typename T, size_t N>
-  explicit Tensor(std::array<size_t, N>, T) -> Tensor<T, N, grid::DeviceMemory<grid::device::Base>>;
+  Tensor(std::array<size_t, N>, T) -> Tensor<T, N, grid::DeviceMemory<grid::device::Base>>;
   template <typename T, size_t N>
-  explicit Tensor(std::array<size_t, N>, std::array<ssize_t, N>, T) -> Tensor<T, N, grid::DeviceMemory<grid::device::Base>>;
+  Tensor(std::array<size_t, N>, std::array<ssize_t, N>, T) -> Tensor<T, N, grid::DeviceMemory<grid::device::Base>>;
   template <typename T, size_t N>
-  explicit Tensor(std::array<size_t, N>, grid::Uninitialized<T>) -> Tensor<T, N, grid::DeviceMemory<grid::device::Base>>;
+  Tensor(std::array<size_t, N>, grid::Uninitialized<T>) -> Tensor<T, N, grid::DeviceMemory<grid::device::Base>>;
   template <typename T, size_t N>
-  explicit Tensor(std::array<size_t, N>, std::array<ssize_t, N>, grid::Uninitialized<T>) -> Tensor<T, N, grid::DeviceMemory<grid::device::Base>>;
+  Tensor(std::array<size_t, N>, std::array<ssize_t, N>, grid::Uninitialized<T>) -> Tensor<T, N, grid::DeviceMemory<grid::device::Base>>;
 
 
   // memory-mapped tensors
   template <grid::Arithmetic T, size_t N>
-  explicit Tensor(const size_t(&)[N], const std::tuple<T*, size_t>&) -> Tensor<T, N, grid::MemoryMapped>;
+  Tensor(const size_t(&)[N], const std::tuple<T*, size_t>&) -> Tensor<T, N, grid::MemoryMapped>;
   template <grid::Arithmetic T, size_t N>
-  explicit Tensor(const std::array<size_t, N>&, const std::tuple<T*, size_t>&) -> Tensor<T, N, grid::MemoryMapped>;
+  Tensor(const std::array<size_t, N>&, const std::tuple<T*, size_t>&) -> Tensor<T, N, grid::MemoryMapped>;
 
   // copy & move constructors
   template <typename T, size_t N, typename M>
