@@ -532,7 +532,7 @@ class Tensor<T, TRank, MemoryMapped>
 // CTAD rules
 //
 
-// Rank-0
+// Tensor rules for rank-0 tensors
 
 // Tensor{T} -> Rank-0 tensor with a static/local array
 template <Arithmetic T>
@@ -556,7 +556,14 @@ Tensor(T(&&... l)[N]) -> Tensor<T, 2, StaticMemory<sizeof...(N), std::max({N...}
 template <Arithmetic T, size_t... M, size_t... N>
 Tensor(T(&&... l)[M][N]) -> Tensor<T, 3, StaticMemory<sizeof...(M), std::max({M...}), std::max({N...})>>;
 
-// Tensor with Dynamic Allocator - Paremter List
+// Tensor rules for allocating dynamic device memory with dimensions provded as arguments
+
+// TODO: These rules are currently ignored by gcc as integers are not deduced from an alias definition.
+//       This might be by design or because of an issue with gcc. See:
+//        - https://stackoverflow.com/questions/64939408/how-to-write-deduction-guidelines-for-aliases-of-aggregate-templates
+//        - https://stackoverflow.com/questions/41008092/class-template-argument-deduction-not-working-with-alias-template
+
+#if 0
 
 // Tensor(uint,T) -> Rank-1 tensor with a dynamically allocated buffer.
 template <Arithmetic T, typename Dev = device::Base>
@@ -581,6 +588,10 @@ explicit Tensor(size_t, size_t, size_t, T) -> Tensor<T, 3, DeviceMemory<Dev>>;
 // Tensor(size_t, size_t, size_t, Uninitialized<T>) -> Rank-3 tensor with a dynamically allocated uninitialized buffer.
 template <Arithmetic T, typename Dev = device::Base>
 explicit Tensor(size_t, size_t, size_t, Uninitialized<T>) -> Tensor<T, 3, DeviceMemory<Dev>>;
+
+#endif
+
+// Tensor rules for allocation dynamic device memory with dimensions and optional strides provided as arrays
 
 // Tensor(&[], &[], T) -> Rank-N tensor with a dynamically allocated initialized buffer.
 template <Arithmetic T, size_t N, typename Dev = device::Base>
@@ -630,30 +641,27 @@ explicit Tensor(std::array<size_t, N>, Uninitialized<T>) -> Tensor<T, N, DeviceM
 template <Arithmetic T, size_t N, typename Dev = device::Base>
 explicit Tensor(std::array<size_t, N>, std::array<ssize_t, N>, Uninitialized<T>) -> Tensor<T, N, DeviceMemory<Dev>>;
 
-// Tensor with Dynamic Allocator - TensorView Argument
+// Tensor rules for tensor view argument
 
 template <typename TTensor, size_t TRank, typename Dev = device::Base>
 Tensor(TensorView<TTensor, TRank>&&) -> Tensor<typename TTensor::value_type, TRank, DeviceMemory<Dev>>;
 template <typename TTensor, size_t TRank, typename Dev = device::Base>
 Tensor(const TensorView<TTensor, TRank>&) -> Tensor<typename TTensor::value_type, TRank, DeviceMemory<Dev>>;
 
-// Tensor with Dynamic Allocator - Operator Argument
+// Tensor rules for operator arguments
+
 template <grid::AnyOperator TOperator, typename Dev = device::Base>
 Tensor(TOperator&&) -> Tensor<typename TOperator::value_type, TOperator::rank, grid::DeviceMemory<Dev>>;
 
 template <grid::AnyOperator TOperator, typename Dev = device::Base>
 Tensor(const TOperator&) -> Tensor<typename TOperator::value_type, TOperator::rank, grid::DeviceMemory<Dev>>;
 
-// Tensor with "MemoryMapped"
+// Tensor rules for memory-mapped arguments
+
 template <Arithmetic T, size_t N>
 explicit Tensor(const size_t(&)[N], const std::tuple<T*, size_t>&) -> Tensor<T, N, MemoryMapped>;
 template <Arithmetic T, size_t N>
 explicit Tensor(const std::array<size_t, N>&, const std::tuple<T*, size_t>&) -> Tensor<T, N, grid::MemoryMapped>;
-
-
-//
-// Tensor basic arithmetic operations
-//
 
 //
 // Arithmentic operator overloading
