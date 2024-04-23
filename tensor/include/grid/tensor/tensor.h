@@ -118,12 +118,10 @@ class Tensor : public Array<T, TMemory>
 
   /// Constructor for a rank-1 tensor (vector) with a dynamically allocated buffer without padding.
   explicit Tensor(size_t dimension, value_type init)
-    : Array<value_type, memory_type>(dimension * sizeof(value_type)),
+    : Array<value_type, memory_type>(dimension * sizeof(value_type), init),
       dimensions_{dimension},
       strides_{make_strides(dimensions_)}
-  {
-    GeneratorOperator<FillOperator<tensor_device_t<decltype(*this)>>>()(*this, init);
-  }
+  {}
 
   /// Constructor for a rank-1 tensor (vector) with a dynamically allocated uninitialized buffer.
   explicit Tensor(size_t dimension, Uninitialized<value_type>)
@@ -134,12 +132,10 @@ class Tensor : public Array<T, TMemory>
 
   /// Constructor for a rank-2 tensor (matrix) with a dynamically allocated buffer and no padding.
   explicit Tensor(size_t dim_m, size_t dim_n, value_type init)
-    : Array<value_type, memory_type>(dim_m * dim_n * sizeof(value_type)),
+    : Array<value_type, memory_type>(dim_m * dim_n * sizeof(value_type), init),
       dimensions_{dim_m, dim_n},
       strides_{make_strides(dimensions_)}
-  {
-    GeneratorOperator<FillOperator<tensor_device_t<decltype(*this)>>>()(*this, init);
-  }
+  {}
 
   /// Constructor for a rank-2 tensor (matrix) with a dynamically allocated uninitialized buffer.
   explicit Tensor(size_t dim_m, size_t dim_n, Uninitialized<value_type>)
@@ -150,12 +146,10 @@ class Tensor : public Array<T, TMemory>
 
   /// Constructor for a rank-3 tensor (matrix) with a dynamically allocated buffer and no padding.
   explicit Tensor(size_t dim_m, size_t dim_n, size_t dim_u, value_type init)
-    : Array<value_type, memory_type>(dim_m * dim_n * dim_u * sizeof(value_type)),
+    : Array<value_type, memory_type>(dim_m * dim_n * dim_u * sizeof(value_type), init),
       dimensions_{dim_m, dim_n, dim_u},
       strides_{make_strides(dimensions_)}
-  {
-    GeneratorOperator<FillOperator<tensor_device_t<decltype(*this)>>>()(*this, init);
-  }
+  {}
 
   /// Constructor for a rank-3 tensor (matrix) with a dynamically allocated uninitialized buffer.
   explicit Tensor(size_t dim_m, size_t dim_n, size_t dim_u, Uninitialized<value_type>)
@@ -168,12 +162,10 @@ class Tensor : public Array<T, TMemory>
   /// Constructor for any rank tensor with a dynamically allocated initialized buffer
   explicit Tensor(std::initializer_list<size_t>&& dimensions, value_type init)
     : Array<value_type, memory_type>(std::accumulate(
-          std::begin(dimensions), std::end(dimensions), sizeof(value_type), std::multiplies<size_t>())),
+          std::begin(dimensions), std::end(dimensions), sizeof(value_type), std::multiplies<size_t>()), init),
       dimensions_(get_array<size_t, TRank>(std::move(dimensions))),
       strides_{make_strides(dimensions_)}
-  {
-    GeneratorOperator<FillOperator<tensor_device_t<decltype(*this)>>>()(*this, init);
-  }
+  {}
 
 
   /// Constructor for any rank tensor with a dynamically allocated initialized buffer
@@ -188,12 +180,10 @@ class Tensor : public Array<T, TMemory>
   explicit Tensor(std::initializer_list<size_t>&& dimensions,
                   std::initializer_list<ssize_t>&& strides,
                   value_type init)
-    : Array<value_type, memory_type>(get_buffer_size<value_type>(dimensions, strides)),
+    : Array<value_type, memory_type>(get_buffer_size<value_type>(dimensions, strides), dimensions, strides, init),
       dimensions_(get_array<size_t, TRank>(std::move(dimensions))),
       strides_(get_array<ssize_t, TRank>(std::move(strides)))
-  {
-    GeneratorOperator<FillOperator<tensor_device_t<decltype(*this)>>>()(*this, init);
-  }
+  {}
 
   /// Constructor for any rank tensor with a dynamically allocated uninitialized buffer with strides.
   explicit Tensor(std::initializer_list<size_t>&& dimensions,
@@ -206,16 +196,14 @@ class Tensor : public Array<T, TMemory>
 
   /// Constructor for any rank tensor with a dynamically allocated initialized buffer
   explicit Tensor(const size_t(&dimensions)[TRank], const ssize_t(&strides)[TRank], value_type init)
-    : Array<value_type, memory_type>(get_buffer_size(dimensions, strides)),
+    : Array<value_type, memory_type>(dimensions, strides, init),
       dimensions_(get_array<size_t, TRank>(dimensions)),
       strides_(get_array<ssize_t, TRank>(strides))
-  {
-    GeneratorOperator<FillOperator<tensor_device_t<decltype(*this)>>>()(*this, init);
-  }
+  {}
 
   /// Constructor for any rank tensor with a dynamically allocated uninitialized buffer
   explicit Tensor(const size_t(&dimensions)[TRank], const ssize_t(&strides)[TRank], Uninitialized<value_type>)
-    : Array<value_type, memory_type>(get_buffer_size(dimensions, strides)),
+    : Array<value_type, memory_type>(dimensions, strides),
       dimensions_(get_array<size_t, TRank>(dimensions)),
       strides_(get_array<ssize_t, TRank>(strides))
   {}
@@ -224,23 +212,19 @@ class Tensor : public Array<T, TMemory>
   /// Constructor for any rank tensor with a dynamically allocated initialized buffer.
   explicit Tensor(std::array<size_t, TRank> dimensions, value_type init)
     : Array<value_type, memory_type>(std::accumulate(
-          begin(dimensions), end(dimensions), sizeof(value_type), std::multiplies<size_t>())),
+          begin(dimensions), end(dimensions), sizeof(value_type), std::multiplies<size_t>()), init),
       dimensions_(dimensions),
       strides_(make_strides(dimensions))
-  {
-    GeneratorOperator<FillOperator<tensor_device_t<decltype(*this)>>>()(*this, init);
-  }
+  {}
 
   /// Constructor for any rank tensor with a dynamically allocated initialized buffer with padding.
   explicit Tensor(std::array<size_t, TRank> dimensions,
                   std::array<ssize_t, TRank> strides,
                   value_type init)
-    : Array<value_type, memory_type>(get_buffer_size(dimensions, strides)),
+    : Array<value_type, memory_type>(dimensions, strides, init),
       dimensions_{dimensions},
       strides_{strides}
-  {
-    GeneratorOperator<FillOperator<tensor_device_t<decltype(*this)>>>()(*this, init);
-  }
+  {}
 
   /// Constructor for any rank tensor with a dynamically allocated uninitialized buffer.
   /// Note: assumes strides are type-aligned.
@@ -265,24 +249,20 @@ class Tensor : public Array<T, TMemory>
   //
 
   /// Copy constructor
-  // TODO: "flatten" new array?
+  // TODO: "flatten" new array? check if already contiguous?
   Tensor(const Tensor& other)
-    : Array<value_type, memory_type>(other.size_),
+    : Array<value_type, memory_type>(other, other.Dimensions(), other.Strides(), other.Strides()),
       dimensions_{other.Dimensions()},
       strides_{other.Strides()}
-  {
-    UnaryOperator<CopyOperator<tensor_device_t<decltype(*this)>>>()(other, *this);
-  }
+  {}
 
+  // TODO: will be called when assigning StaticMemory to DeviceMemory
   template <AnyTensor TTensor>
   Tensor(const TTensor& other)
-    : Array<value_type, memory_type>(other.Size()),
+    : Array<value_type, memory_type>(other.Data(), other.Dimensions(), other.Strides(), other.Strides()),
       dimensions_{other.Dimensions()},
       strides_{other.Strides()}
-  {
-    UnaryOperator<CopyOperator<tensor_device_t<decltype(*this)>>>()(other, *this);
-  }
-
+  {}
 
   /// Move constructor
   Tensor(Tensor&& other)
@@ -303,9 +283,11 @@ class Tensor : public Array<T, TMemory>
   template <PrimitiveTensor TTensor>
   Tensor& operator=(const TTensor& other)
   {
-    array_type::Realloc(other.Size());
-    UnaryOperator<CopyOperator<tensor_device_t<decltype(*this)>>>()(other, *this);
-
+    dimensions_ = other.Dimensions();
+    strides_ = other.Strides();
+    if (array_type::Size() != other.Size())
+      array_type::Realloc(other.Size());
+    array_type::Copy(other.Data(), dimensions_, strides_, strides_);
     return *this;
   }
 
@@ -314,7 +296,7 @@ class Tensor : public Array<T, TMemory>
   {
     dimensions_ = other.Dimensions();
     strides_ = other.Strides();
-    Array<value_type, memory_type>::operator=(std::move(other));
+    array_type::operator=(std::move(other));
     return *this;
   }
 
