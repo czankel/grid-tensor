@@ -13,7 +13,7 @@
 
 #include <algorithm>
 
-#include "base/copy.h"
+#include "array.h"
 #include "iterator.h"
 
 namespace grid {
@@ -72,7 +72,10 @@ class TensorView
   auto operator=(const TFromTensor& rhs)
   {
     // TODO: make this device agnostic
-    copy<value_type, TViewRank>(data_, rhs.Data(), dimensions_, strides_, rhs.Strides());
+    details::copy(data_, rhs.Data(),
+                  std::span<const size_t, TViewRank>(dimensions_.begin(), TViewRank),
+                  std::span<const ssize_t, TViewRank>(strides_.begin(), TViewRank),
+                  std::span<const ssize_t, TViewRank>(rhs.Strides().begin(), TViewRank));
   }
 
   template <AnyOperator TOperator> // FIXME requires PrimitiveTensor<to_tensor(TOperator)>
