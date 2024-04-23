@@ -135,19 +135,17 @@ class Array<T, StaticMemory<Ns...>>
 
 
  public:
-  Array() = default;
-
-  // Explicity disallow copy construction as Array isn't fully aware of any buffer structure.
-  Array(const Array& other) = delete;
-
-  // @brief Move constructor.
-  Array(Array&& other) = delete; // : size_(other.size_), data_(std::move(other.data_)) { other.data_ = nullptr; }
-
-  // @brief Allocates a buffer of the provided size. FIXME
+  // @brief Iniitializes a constant array
   Array(std::array<T, size>&& array) : array_(array) {}
+
+  // Explicity disallow default, copy, and move constructors for StaticMemory arrays.
+  Array() = delete;
+  Array(const Array& other) = delete;
+  Array(Array&& other) = delete;
+
+  // Explicitly disallow copy and move assign operators for StaticMemory arays.
   Array& operator=(Array&& other) = delete;
   Array& operator=(const Array& other) = delete;
-
 
   /// Size returns the size of the entire buffer.
   size_t Size() const                                     { return sizeof(value_type) * size; }
@@ -159,7 +157,7 @@ class Array<T, StaticMemory<Ns...>>
   const_pointer Data() const                              { return array_.data(); }
 
  protected:
-  std::array<value_type, size>  array_;
+  const std::array<value_type, size>  array_;
 };
 
 
