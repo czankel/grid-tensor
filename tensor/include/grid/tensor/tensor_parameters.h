@@ -149,7 +149,7 @@ std::array<ssize_t, TRank> make_strides(const std::array<size_t, TRank>& dimensi
 template <typename T, typename U, typename V>
 size_t get_buffer_size(U&& dimensions, V&& strides)
 {
-  size_t size = 0;
+  size_t size = 1;  // default is rank-0, which has size 1
   auto di = std::forward<U>(dimensions).begin();
   auto si = std::forward<V>(strides).begin();
   for (; di != dimensions.end() && si != strides.end(); ++di, ++si)
