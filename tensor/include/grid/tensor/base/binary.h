@@ -157,35 +157,6 @@ class BinaryOperator<TOperator<device::Base>>
   }
 
  public:
-  // TODO: remove when all functions are converted to use ranges
-  template <typename T, size_t TRank>
-  void operator()(T* dest, const T* src1, const T* src2,
-                  const std::array<size_t, TRank>& dimensions,
-                  const std::array<ssize_t, TRank>& strides0,
-                  const std::array<ssize_t, TRank>& strides1,
-                  const std::array<ssize_t, TRank>& strides2)
-  {
-    if constexpr (TRank > 2)
-    {
-      if (strides0[TRank - 2] - dimensions[TRank - 1] == 0 &&
-          strides1[TRank - 2] - dimensions[TRank - 1] == 0 &&
-          strides2[TRank - 2] - dimensions[TRank - 1] == 0)
-        eval(dest, src1, src2,
-             std::span<const size_t,  TRank - 1>(dimensions.begin(), TRank - 1),
-             std::span<const ssize_t, TRank - 1>(strides0.begin(), TRank - 1),
-             std::span<const ssize_t, TRank - 1>(strides1.begin(), TRank - 1),
-             std::span<const ssize_t, TRank - 1>(strides2.begin(), TRank - 1),
-             dimensions[TRank - 1]);
-      return;
-    }
-
-    eval(dest, src1, src2,
-         std::span<const size_t,  TRank>(dimensions),
-         std::span<const ssize_t, TRank>(strides0),
-         std::span<const ssize_t, TRank>(strides1),
-         std::span<const ssize_t, TRank>(strides2));
-  }
-
   template<std::ranges::input_range R1,
            std::ranges::input_range R2,
            std::ranges::output_range<std::iter_value_t<std::ranges::iterator_t<R1>>> O>
