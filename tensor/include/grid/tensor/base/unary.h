@@ -17,6 +17,7 @@
 
 #include "../concepts.h"
 #include "../unary.h"
+#include "../tensor_operator.h"
 
 namespace grid {
 
@@ -30,24 +31,36 @@ class UnaryOperator<TOperator<device::Base>>
 
   // operation on a single element
   template <typename const_pointer, typename pointer>
-  inline void eval(pointer dest, const_pointer src,
+  inline void eval(pointer dst, const_pointer src,
                    std::span<const size_t,  0> dimensions,
                    std::span<const ssize_t, 0>,
                    std::span<const ssize_t, 0>) const
   {
-    TOperator<device::Base>()(dest, src);
+    dst[0] = TOperator<device::Base>()(src[0]);
   }
 
-  // operation on a single dimension (unoptimized)
+  // operation on a single dimension (contiguous)
   template <typename const_pointer, typename pointer>
-  inline void eval(pointer dest, const_pointer src,
+  inline void eval(pointer dst, const_pointer src,
                    std::span<const size_t,  1> dimensions,
-                   std::span<const ssize_t, 1>,
+                   std::span<const ssize_t, 0>,
+                   std::span<const ssize_t, 0>) const
+  {
+    for (size_t i = 0; i < dimensions[0]; i++)
+      dst[i] = TOperator<device::Base>()(src[i]);
+  }
+
+  // operation on a single dimension (non-contiguous)
+  template <typename const_pointer, typename pointer>
+  inline void eval(pointer dst, const_pointer src,
+                   std::span<const size_t,  1> dimensions,
+                   std::span<const ssize_t, 1> strides0,
                    std::span<const ssize_t, 1> strides1) const
   {
     for (size_t i = 0; i < dimensions[0]; i++)
     {
-      TOperator<device::Base>()(dest + i, src);
+      dst[0] = TOperator<device::Base>()(src[0]);
+      dst += strides0[0];
       src += strides1[0];
     }
   }
@@ -55,7 +68,7 @@ class UnaryOperator<TOperator<device::Base>>
   // operation on higher dimensions (unoptimized)
   template <size_t N, typename const_pointer, typename pointer> inline
   //template <size_t N> inline
-  void eval(pointer dest, const_pointer src,
+  void eval(pointer dst, const_pointer src,
             std::span<const size_t,  N> dimensions,
             std::span<const ssize_t, N> strides0,
             std::span<const ssize_t, N> strides1) const
@@ -63,12 +76,11 @@ class UnaryOperator<TOperator<device::Base>>
     static_assert(N != std::dynamic_extent, "dynamic_extent not allowed");
     for (size_t i = 0; i < dimensions[0]; i++)
     {
-      eval(dest, src,
+      eval(dst, src,
            std::span<const size_t,  N - 1>(dimensions.begin() + 1, N - 1),
            std::span<const ssize_t, N - 1>(strides0.begin() + 1, N - 1),
            std::span<const ssize_t, N - 1>(strides1.begin() + 1, N - 1));
-
-      dest += strides0[0];
+      dst += strides0[0];
       src += strides1[0];
     }
   }
@@ -83,12 +95,28 @@ class UnaryOperator<TOperator<device::Base>>
     constexpr size_t rank = tensor_type::rank;
     auto first = std::ranges::cbegin(r);
     auto result = std::ranges::begin(o);
+    auto& dimensions = result.Extents();
+    auto& strides0 = result.Strides();
+    auto& strides1 = first.Strides();
 
-    // FIXME fold ...
+    if constexpr (rank > 1)
+    {
+      if (strides0[rank - 1] == 1 && strides1[rank - 1] == 1)
+      {
+        details::Fold(
+            std::span<size_t, rank>(dimensions.begin(), rank),
+            std::span<const ssize_t, rank - 1>(strides0.begin(), rank - 1),
+            std::span<const ssize_t, rank - 1>(strides1.begin(), rank - 1),
+            [=](auto f_dimensions, auto f_strides0, auto f_strides1) {
+              eval(&*result, &*first, f_dimensions, f_strides0, f_strides1);
+            });
+        return;
+      }
+    }
     eval(&*result, &*first,
-         std::span<const size_t, rank>(result.Extents()),
-         std::span<const ssize_t, rank>(result.Strides()),
-         std::span<const ssize_t, rank>(first.Strides()));
+         std::span<const size_t, rank>(dimensions),
+         std::span<const ssize_t, rank>(strides0),
+         std::span<const ssize_t, rank>(strides1));
   }
 };
 
@@ -98,14 +126,12 @@ class UnaryOperator<TOperator<device::Base>>
 
 template <> struct CopyOperator<device::Base>
 {
-  template<typename T>
-  inline void operator()(T* dest, const T* src) const { *dest = *src; }
+  template<typename T> inline T operator()(const T src) const { return src; }
 };
 
 template <> struct NegOperator<device::Base>
 {
-  template<typename T>
-  inline void operator()(T* dest, const T* src) const { *dest = -*src; }
+  template<typename T> inline T operator()(const T src) const { return -src; }
 };
 
 

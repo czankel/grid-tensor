@@ -29,8 +29,6 @@ namespace grid {
 template <template <typename> typename TOperator>
 class BinaryOperator<TOperator<device::Base>>
 {
-  friend void details::FoldBinary(auto, auto, auto, auto, auto);
-
   // TODO: gcc doesn't like this constexpr, which would be use later as just Operator(args).
   // Should it? See P0386R2 change: 9.2.3.2p3
   // static constexpr TOperator<device::Base> Operator;
@@ -119,7 +117,7 @@ class BinaryOperator<TOperator<device::Base>>
     {
       if (strides0[rank - 1] == 1 && strides1[rank - 1] == 1 && strides2[rank - 1] == 1)
       {
-        details::FoldBinary(
+        details::Fold(
             std::span<size_t, rank>(dimensions.begin(), rank),
             std::span<const ssize_t, rank - 1>(strides0.begin(), rank - 1),
             std::span<const ssize_t, rank - 1>(strides1.begin(), rank - 1),
