@@ -11,6 +11,43 @@
 
 namespace grid {
 
+namespace details {
+
+/// @brief Helper function to reduce the rank in case of contiguous data for binary operators.
+template <typename TOperator, size_t N>
+void FoldBinary(std::span<size_t,  N> dimensions,
+                std::span<const ssize_t, N - 1> strides0,
+                std::span<const ssize_t, N - 1> strides1,
+                std::span<const ssize_t, N - 1> strides2,
+                TOperator&& op)
+{
+  static_assert(N != std::dynamic_extent, "dynamic_extent not allowed");
+
+  if constexpr (N >= 2)
+  {
+    // "fold" one rank
+    if (strides0[N - 2] - dimensions[N - 1] == 0 &&
+        strides1[N - 2] - dimensions[N - 1] == 0 &&
+        strides2[N - 2] - dimensions[N - 1] == 0)
+    {
+      dimensions[N - 2] *=  dimensions[N - 1];
+      FoldBinary(dimensions.template first<N - 1>(),
+                 strides0.template first<N - 2>(),
+                 strides1.template first<N - 2>(),
+                 strides2.template first<N - 2>(),
+                 op);
+      return;
+    }
+  }
+  op(std::span<const size_t, N>(dimensions.begin(), N),
+     std::move(strides0),
+     std::move(strides1),
+     std::move(strides2));
+}
+
+} // end of namespace details
+
+
 /// TensorOperator is a base class and wrapper for tensor operators.
 ///
 /// Aliasing with partial specialization requires any CTAD rule to have a template-parameter-list

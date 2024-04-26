@@ -17,44 +17,9 @@
 
 #include "../binary.h"
 #include "../concepts.h"
+#include "../tensor_operator.h"
 
 namespace grid {
-
-namespace details {
-
-  /// @brief Fold is a helper function to reduce the number of ranks for contiguous data.
-  template <typename TOperator, size_t N>
-  void Fold(std::span<size_t,  N> dimensions,
-            std::span<const ssize_t, N - 1> strides0,
-            std::span<const ssize_t, N - 1> strides1,
-            std::span<const ssize_t, N - 1> strides2,
-            TOperator&& op)
-  {
-    static_assert(N != std::dynamic_extent, "dynamic_extent not allowed");
-
-    if constexpr (N >= 2)
-    {
-      // "fold" one rank
-      if (strides0[N - 2] - dimensions[N - 1] == 0 &&
-          strides1[N - 2] - dimensions[N - 1] == 0 &&
-          strides2[N - 2] - dimensions[N - 1] == 0)
-      {
-        dimensions[N - 2] *=  dimensions[N - 1];
-        Fold(dimensions.template first<N - 1>(),
-             strides0.template first<N - 2>(),
-             strides1.template first<N - 2>(),
-             strides2.template first<N - 2>(),
-             op);
-        return;
-      }
-    }
-    op(std::span<const size_t, N>(dimensions.begin(), N),
-       std::move(strides0),
-       std::move(strides1),
-       std::move(strides2));
-  }
-
-} // end of namespace details
 
 /// BinaryOperator<Operator> implements element-wise binary operations of two tensors.
 /// The dimensions of the tensors must match following broadcasting rules.
@@ -64,7 +29,7 @@ namespace details {
 template <template <typename> typename TOperator>
 class BinaryOperator<TOperator<device::Base>>
 {
-  friend void Fold(auto, auto, auto, auto, auto);
+  friend void details::FoldBinary(auto, auto, auto, auto, auto);
 
   // TODO: gcc doesn't like this constexpr, which would be use later as just Operator(args).
   // Should it? See P0386R2 change: 9.2.3.2p3
@@ -85,14 +50,14 @@ class BinaryOperator<TOperator<device::Base>>
   template <typename const_pointer, typename pointer>
   inline void eval(pointer dest, const_pointer src1, const_pointer src2,
                   std::span<const size_t,  1> dimensions,
-                  std::span<const ssize_t, 0> strides0,
-                  std::span<const ssize_t, 0> strides1,
-                  std::span<const ssize_t, 0> strides2) const
+                  std::span<const ssize_t, 0>,
+                  std::span<const ssize_t, 0>,
+                  std::span<const ssize_t, 0>) const
   {
     for (size_t i = 0; i < dimensions[0]; i++)
       dest[i] = TOperator<device::Base>()(src1[i], src2[i]);
   }
- 
+
   // operation on a single dimension (non-contiguous)
   template <typename const_pointer, typename pointer>
   inline void eval(pointer dest, const_pointer src1, const_pointer src2,
@@ -154,7 +119,8 @@ class BinaryOperator<TOperator<device::Base>>
     {
       if (strides0[rank - 1] == 1 && strides1[rank - 1] == 1 && strides2[rank - 1] == 1)
       {
-        details::Fold(std::span<size_t, rank>(dimensions.begin(), rank),
+        details::FoldBinary(
+            std::span<size_t, rank>(dimensions.begin(), rank),
             std::span<const ssize_t, rank - 1>(strides0.begin(), rank - 1),
             std::span<const ssize_t, rank - 1>(strides1.begin(), rank - 1),
             std::span<const ssize_t, rank - 1>(strides2.begin(), rank - 1),
