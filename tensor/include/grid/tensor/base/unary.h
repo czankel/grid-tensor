@@ -104,7 +104,7 @@ class UnaryOperator<TOperator<device::Base>>
       if (strides0[rank - 1] == 1 && strides1[rank - 1] == 1)
       {
         details::Fold(
-            std::span<size_t, rank>(dimensions.begin(), rank),
+            std::span(dimensions),
             std::span<const ssize_t, rank - 1>(strides0.begin(), rank - 1),
             std::span<const ssize_t, rank - 1>(strides1.begin(), rank - 1),
             [=](auto f_dimensions, auto f_strides0, auto f_strides1) {
@@ -113,10 +113,7 @@ class UnaryOperator<TOperator<device::Base>>
         return;
       }
     }
-    eval(&*result, &*first,
-         std::span<const size_t, rank>(dimensions),
-         std::span<const ssize_t, rank>(strides0),
-         std::span<const ssize_t, rank>(strides1));
+    eval(&*result, &*first, std::span(dimensions), std::span(strides0), std::span(strides1));
   }
 };
 

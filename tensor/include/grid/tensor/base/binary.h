@@ -109,7 +109,7 @@ class BinaryOperator<TOperator<device::Base>>
     auto first2 = std::ranges::cbegin(r2);
     auto result = std::ranges::begin(o);
 
-    auto dimensions = result.Extents();
+    auto& dimensions = result.Extents();
     auto& strides0 = result.Strides();
     auto [strides1, strides2] = BroadcastStrides(first1, first2);
 
@@ -118,7 +118,7 @@ class BinaryOperator<TOperator<device::Base>>
       if (strides0[rank - 1] == 1 && strides1[rank - 1] == 1 && strides2[rank - 1] == 1)
       {
         details::Fold(
-            std::span<size_t, rank>(dimensions.begin(), rank),
+            std::span(dimensions),
             std::span<const ssize_t, rank - 1>(strides0.begin(), rank - 1),
             std::span<const ssize_t, rank - 1>(strides1.begin(), rank - 1),
             std::span<const ssize_t, rank - 1>(strides2.begin(), rank - 1),
