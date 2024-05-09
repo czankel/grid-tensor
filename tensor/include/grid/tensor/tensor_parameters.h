@@ -190,29 +190,27 @@ inline auto BroadcastDimensions(const TTensor1& tensor1, const TTensor2& tensor2
   }
 }
 
-template <typename TTensor1, typename TTensor2>
-inline auto BroadcastStrides(const TTensor1& tensor1, const TTensor2& tensor2)
+template <size_t S1, size_t S2>
+inline auto BroadcastStrides(std::span<const ssize_t, S1> strides1,
+                             std::span<const ssize_t, S2> strides2)
 {
-  constexpr size_t rank1 = TTensor1::rank;
-  constexpr size_t rank2 = TTensor2::rank;
-
-  if constexpr (rank1 == rank2)
-    return std::make_tuple(std::cref(tensor1.Strides()), std::cref(tensor2.Strides()));
-  else if constexpr (rank1 == 0)
-    return std::make_tuple(std::array<ssize_t, rank2>{0}, std::cref(tensor2.Strides()));
-  else if constexpr (rank2 == 0)
-    return std::make_tuple(std::cref(tensor1.Strides()), std::array<ssize_t, rank1>{0});
-  else if constexpr (rank2 > rank1)
+  if constexpr (S1 == S2)
+    return std::make_tuple(std::cref(strides1), std::cref(strides2));
+  else if constexpr (S1 == 0)
+    return std::make_tuple(std::array<ssize_t, S2>{0}, std::cref(strides2));
+  else if constexpr (S2 == 0)
+    return std::make_tuple(std::cref(strides1), std::array<ssize_t, S1>{0});
+  else if constexpr (S2 > S1)
   {
-    std::array<ssize_t, rank2> strides{0};
-    std::ranges::copy(tensor1.Strides(), strides.begin() + rank2 - rank1);
-    return std::make_tuple(strides, std::cref(tensor2.Strides()));
+    std::array<ssize_t, S2> strides{0};
+    std::ranges::copy(strides1, strides.begin() + S2 - S1);
+    return std::make_tuple(strides, std::cref(strides2));
   }
   else
   {
-    std::array<ssize_t, rank1> strides{0};
-    std::ranges::copy(tensor2.Strides(), strides.begin() + rank1 - rank2);
-    return std::make_tuple(std::cref(tensor1.Strides()), strides);
+    std::array<ssize_t, S1> strides{0};
+    std::ranges::copy(strides2, strides.begin() + S1 - S2);
+    return std::make_tuple(std::cref(strides1), strides);
   }
 }
 

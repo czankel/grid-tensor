@@ -111,7 +111,7 @@ class BinaryOperator<TOperator<device::Base>>
 
     auto& dimensions = result.Extents();
     auto& strides0 = result.Strides();
-    auto [strides1, strides2] = BroadcastStrides(first1, first2);
+    auto [strides1, strides2] = BroadcastStrides(std::span(first1.Strides()), std::span(first2.Strides()));
 
     if constexpr (rank > 1)
     {
