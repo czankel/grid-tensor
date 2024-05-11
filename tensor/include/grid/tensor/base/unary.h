@@ -27,62 +27,28 @@ namespace grid {
 template <template <typename> typename TOperator>
 class UnaryOperator<TOperator<device::Base>>
 {
-  // static constexpr TOperator<device::Base> Operator();
-
-  // operation on a single element
-  template <typename const_pointer, typename pointer>
-  inline void eval(pointer dst, const_pointer src,
-                   std::span<const size_t,  0> dimensions,
-                   std::span<const ssize_t, 0>,
-                   std::span<const ssize_t, 0>) const
+  template <typename T>
+  inline void eval(T* dst, const T* src, auto dimensions, auto strides0, auto strides1) const
   {
-    dst[0] = TOperator<device::Base>()(src[0]);
-  }
+    static_assert(dimensions.size() != std::dynamic_extent, "dynamic_extent not allowed");
 
-  // operation on a single dimension (contiguous)
-  template <typename const_pointer, typename pointer>
-  inline void eval(pointer dst, const_pointer src,
-                   std::span<const size_t,  1> dimensions,
-                   std::span<const ssize_t, 0>,
-                   std::span<const ssize_t, 0>) const
-  {
-    for (size_t i = 0; i < dimensions[0]; i++)
-      dst[i] = TOperator<device::Base>()(src[i]);
-  }
-
-  // operation on a single dimension (non-contiguous)
-  template <typename const_pointer, typename pointer>
-  inline void eval(pointer dst, const_pointer src,
-                   std::span<const size_t,  1> dimensions,
-                   std::span<const ssize_t, 1> strides0,
-                   std::span<const ssize_t, 1> strides1) const
-  {
-    for (size_t i = 0; i < dimensions[0]; i++)
-    {
+    if constexpr (dimensions.size() == 0)
       dst[0] = TOperator<device::Base>()(src[0]);
-      dst += strides0[0];
-      src += strides1[0];
-    }
-  }
 
-  // operation on higher dimensions (unoptimized)
-  template <size_t N, typename const_pointer, typename pointer> inline
-  //template <size_t N> inline
-  void eval(pointer dst, const_pointer src,
-            std::span<const size_t,  N> dimensions,
-            std::span<const ssize_t, N> strides0,
-            std::span<const ssize_t, N> strides1) const
-  {
-    static_assert(N != std::dynamic_extent, "dynamic_extent not allowed");
-    for (size_t i = 0; i < dimensions[0]; i++)
-    {
-      eval(dst, src,
-           std::span<const size_t,  N - 1>(dimensions.begin() + 1, N - 1),
-           std::span<const ssize_t, N - 1>(strides0.begin() + 1, N - 1),
-           std::span<const ssize_t, N - 1>(strides1.begin() + 1, N - 1));
-      dst += strides0[0];
-      src += strides1[0];
-    }
+    else if constexpr (dimensions.size() == 1  && strides0.size() == 0)
+      for (size_t i = 0; i < dimensions[0]; i++)
+        dst[i] = TOperator<device::Base>()(src[i]);
+
+    else
+      for (size_t i = 0; i < dimensions[0]; i++)
+      {
+        eval(dst, src,
+             dimensions.template last<dimensions.size() - 1>(),
+             strides0.template last<(strides0.size() > 0) ? strides0.size() - 1 : 0>(),
+             strides1.template last<(strides1.size() > 0) ? strides1.size() - 1 : 0>());
+        dst += strides0[0];
+        src += strides1.size() > 0 ? strides1[0] : 0;
+      }
   }
 
  public:
@@ -91,29 +57,20 @@ class UnaryOperator<TOperator<device::Base>>
   requires std::indirectly_copyable<std::ranges::iterator_t<R>, std::ranges::iterator_t<O>>
   void operator()(R&& r, O&& o) const
   {
-    using tensor_type = std::remove_cvref_t<O>;
-    constexpr size_t rank = tensor_type::rank;
-    auto first = std::ranges::cbegin(r);
+    auto first =  std::ranges::cbegin(r);
     auto result = std::ranges::begin(o);
-    auto& dimensions = result.Extents();
-    auto& strides0 = result.Strides();
-    auto& strides1 = first.Strides();
 
-    if constexpr (rank > 1)
-    {
-      if (strides0[rank - 1] == 1 && strides1[rank - 1] == 1)
-      {
-        details::Fold(
-            std::span(dimensions),
-            std::span<const ssize_t, rank - 1>(strides0.begin(), rank - 1),
-            std::span<const ssize_t, rank - 1>(strides1.begin(), rank - 1),
-            [=](auto f_dimensions, auto f_strides0, auto f_strides1) {
-              eval(&*result, &*first, f_dimensions, f_strides0, f_strides1);
-            });
-        return;
-      }
-    }
-    eval(&*result, &*first, std::span(dimensions), std::span(strides0), std::span(strides1));
+    std::span strides0(result.Strides());
+    std::span strides1(first.Strides());
+
+    details::Fold([&](auto dimensions, bool contiguous) {
+        if (contiguous)
+          eval(&*result, &*first, dimensions,
+               strides0.template first<(dimensions.size() > 0) ? dimensions.size() - 1 : 0>(),
+               strides1);
+        else
+          eval(&*result, &*first, dimensions, strides0, strides1);
+    }, std::span(result.Extents()), strides0, strides1);
   }
 };
 

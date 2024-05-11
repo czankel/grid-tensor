@@ -13,118 +13,52 @@ namespace grid {
 
 namespace details {
 
-/// @brief Helper function to reduce the rank in case of contiguous data for unary operators.
-template <typename TOperator, size_t N>
-void Fold(std::span<size_t,  N> dimensions,
-          std::span<const ssize_t, N - 1> strides0,
-          std::span<const ssize_t, N - 1> strides1,
-          TOperator&& op)
-{
-  static_assert(N != std::dynamic_extent, "dynamic_extent not allowed");
-
-  if constexpr (N >= 2)
-  {
-    if (strides0[N - 2] - dimensions[N - 1] == 0 && strides1[N - 2] - dimensions[N - 1] == 0)
-    {
-      dimensions[N - 2] *=  dimensions[N - 1];
-      Fold(dimensions.template first<N - 1>(),
-           strides0.template first<N - 2>(),
-           strides1.template first<N - 2>(),
-           op);
-      return;
-    }
-  }
-  op(std::span<const size_t, N>(dimensions.begin(), N), std::move(strides0), std::move(strides1));
-}
-
-template <typename TOperator, size_t N>
-void Fold(std::span<const size_t,  N> dimensions,
-          std::span<const ssize_t, N - 1> strides0,
-          std::span<const ssize_t, N - 1> strides1,
-          TOperator&& op)
-{
-  static_assert(N != std::dynamic_extent, "dynamic_extent not allowed");
-
-  if constexpr (N >= 2)
-  {
-    if (strides0[N - 2] - dimensions[N - 1] == 0 && strides1[N - 2] - dimensions[N - 1] == 0)
-    {
-      std::array<size_t, N - 1> dim;
-      std::ranges::copy(dimensions.template first<N - 1>(), dim.begin());
-      dim[N - 2] *= dimensions[N - 1];
-
-      Fold(std::span(dim),
-           strides0.template first<N - 2>(),
-           strides1.template first<N - 2>(),
-           op);
-      return;
-    }
-  }
-  op(std::move(dimensions), std::move(strides0), std::move(strides1));
-}
-
 /// @brief Helper function to reduce the rank in case of contiguous data for binary operators.
-template <typename TOperator, size_t N>
-void Fold(std::span<size_t,  N> dimensions,
-          std::span<const ssize_t, N - 1> strides0,
-          std::span<const ssize_t, N - 1> strides1,
-          std::span<const ssize_t, N - 1> strides2,
-          TOperator&& op)
+///
+/// The operator function is called with a boolean flag to indicate that the "lowest" dimension
+/// is contiguous (strides are all implicit 1), and a new dimension span for the remaining
+/// dimension or non-contiguous dimensions.
+template <size_t TRank, typename TOp>
+void Fold(TOp&& op, std::span<const size_t, TRank> dimensions, auto... strides)
 {
-  static_assert(N != std::dynamic_extent, "dynamic_extent not allowed");
+  if constexpr (TRank < 1)
+    op(std::span<const size_t, 0>(), false);
 
-  if constexpr (N >= 2)
+  else if constexpr (((strides.size() == 0) || ...))
+    op(std::move(dimensions), false);
+
+  else if constexpr (TRank == 1 || ((strides.size() == 1) || ...))
+    op(std::move(dimensions), ((strides[0] == 1) && ...));
+
+  // TRank > 1 from here on
+  else if (((strides [TRank - 1] != 1) || ...))
+    op(std::move(dimensions), false);
+
+  else
   {
-    if (strides0[N - 2] - dimensions[N - 1] == 0 &&
-        strides1[N - 2] - dimensions[N - 1] == 0 &&
-        strides2[N - 2] - dimensions[N - 1] == 0)
+    static_assert(sizeof...(strides) > 1);
+    constexpr size_t max_folds = std::min({strides.size()...});
+    size_t fold_dim = dimensions[TRank - 1];
+
+    auto foldfn = [&]<size_t I>() -> bool
     {
-      dimensions[N - 2] *=  dimensions[N - 1];
-      Fold(dimensions.template first<N - 1>(),
-           strides0.template first<N - 2>(),
-           strides1.template first<N - 2>(),
-           strides2.template first<N - 2>(),
-           op);
-      return;
-    }
-  }
-  op(std::span<const size_t, N>(dimensions),
-     std::move(strides0),
-     std::move(strides1),
-     std::move(strides2));
-}
+      if (I == max_folds - 1 || ((strides [strides .size() -I - 2] - fold_dim != 0) || ...))
+      {
+        std::array<size_t, TRank - I> dim;
+        std::ranges::copy(dimensions.template first<TRank - I - 1>(), dim.begin());
+        dim[TRank - I - 1] = fold_dim;
+        op(std::span<const size_t, TRank - I>(dim.begin(), TRank - I), true);
+        return false;
+      }
+      fold_dim *= dimensions[TRank - I - 2];
+      return true;
+    };
 
-template <typename TOperator, size_t N>
-void Fold(std::span<const size_t,  N> dimensions,
-          std::span<const ssize_t, N - 1> strides0,
-          std::span<const ssize_t, N - 1> strides1,
-          std::span<const ssize_t, N - 1> strides2,
-          TOperator&& op)
-{
-  static_assert(N != std::dynamic_extent, "dynamic_extent not allowed");
-
-  if constexpr (N >= 2)
-  {
-    if (strides0[N - 2] - dimensions[N - 1] == 0 &&
-        strides1[N - 2] - dimensions[N - 1] == 0 &&
-        strides2[N - 2] - dimensions[N - 1] == 0)
+    [&] <std::size_t... I>(std::index_sequence<I...>)
     {
-      std::array<size_t, N - 1> dim;
-      std::ranges::copy(dimensions.template first<N - 1>(), dim.begin());
-      dim[N - 2] *= dimensions[N - 1];
-
-      Fold(std::span(dim),
-           strides0.template first<N - 2>(),
-           strides1.template first<N - 2>(),
-           strides2.template first<N - 2>(),
-           op);
-      return;
-    }
+      (foldfn.template operator()<I>() && ...);
+    }(std::make_index_sequence<max_folds>{});
   }
-  op(std::move(dimensions),
-     std::move(strides0),
-     std::move(strides1),
-     std::move(strides2));
 }
 
 } // end of namespace details

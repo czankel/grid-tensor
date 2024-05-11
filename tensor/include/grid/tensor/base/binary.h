@@ -33,66 +33,31 @@ class BinaryOperator<TOperator<device::Base>>
   // Should it? See P0386R2 change: 9.2.3.2p3
   // static constexpr TOperator<device::Base> Operator;
 
-  // operation on a single element
-  template <typename const_pointer, typename pointer>
-  inline void eval(pointer dest, const_pointer src1, const_pointer src2,
-                  std::span<const size_t,  0> dimensions,
-                  std::span<const ssize_t, 0>,
-                  std::span<const ssize_t, 0>,
-                  std::span<const ssize_t, 0>) const
+  template <typename T>
+  inline void eval(T* dest, const T* src1, const T* src2, auto dimensions,
+                   auto strides0, auto strides1, auto strides2) const
   {
-    dest[0] = TOperator<device::Base>()(src1[0], src2[0]);
-  }
+    static_assert(dimensions.size() != std::dynamic_extent, "dynamic_extent not allowed");
 
-  // operation on a single dimension (contiguous)
-  template <typename const_pointer, typename pointer>
-  inline void eval(pointer dest, const_pointer src1, const_pointer src2,
-                  std::span<const size_t,  1> dimensions,
-                  std::span<const ssize_t, 0>,
-                  std::span<const ssize_t, 0>,
-                  std::span<const ssize_t, 0>) const
-  {
-    for (size_t i = 0; i < dimensions[0]; i++)
-      dest[i] = TOperator<device::Base>()(src1[i], src2[i]);
-  }
-
-  // operation on a single dimension (non-contiguous)
-  template <typename const_pointer, typename pointer>
-  inline void eval(pointer dest, const_pointer src1, const_pointer src2,
-                  std::span<const size_t,  1> dimensions,
-                  std::span<const ssize_t, 1> strides0,
-                  std::span<const ssize_t, 1> strides1,
-                  std::span<const ssize_t, 1> strides2) const
-  {
-    for (size_t i = 0; i < dimensions[0]; i++)
-    {
+    if constexpr (dimensions.size() == 0)
       dest[0] = TOperator<device::Base>()(src1[0], src2[0]);
-      dest += strides0[0];
-      src1 += strides1[0];
-      src2 += strides2[0];
-    }
-  }
 
-  // operation on dim >=2 (optimized N != M or unoptimized N == M)
-  template <size_t N, size_t M, typename const_pointer, typename pointer>
-  inline void eval(pointer dest, const_pointer src1, const_pointer src2,
-                   std::span<const size_t,  N> dimensions,
-                   std::span<const ssize_t, M> strides0,
-                   std::span<const ssize_t, M> strides1,
-                   std::span<const ssize_t, M> strides2) const
-  {
-    static_assert(N != std::dynamic_extent, "dynamic_extent not allowed");
-    for (size_t i = 0; i < dimensions[0]; i++)
-    {
-      eval(dest, src1, src2,
-           dimensions.template last<N - 1>(),
-           strides0.template last<M - 1>(),
-           strides1.template last<M - 1>(),
-           strides2.template last<M - 1>());
-      dest += strides0[0];
-      src1 += strides1[0];
-      src2 += strides2[0];
-    }
+    else if constexpr (dimensions.size() == 1  && strides0.size() == 0)
+      for (size_t i = 0; i < dimensions[0]; i++)
+        dest[i] = TOperator<device::Base>()(src1[i], src2[i]);
+
+    else
+      for (size_t i = 0; i < dimensions[0]; i++)
+      {
+        eval(dest, src1, src2,
+             dimensions.template last<dimensions.size() - 1>(),
+             strides0.template last<(strides0.size() > 0) ? strides0.size() - 1 : 0>(),
+             strides1.template last<(strides1.size() > 0) ? strides1.size() - 1 : 0>(),
+             strides2.template last<(strides2.size() > 0) ? strides2.size() - 1 : 0>());
+        dest += strides0[0];
+        src1 += strides1.size() > 0 ? strides1[0] : 0;
+        src2 += strides2.size() > 0 ? strides2[0] : 0;
+      }
   }
 
  public:
@@ -103,36 +68,22 @@ class BinaryOperator<TOperator<device::Base>>
            std::indirectly_copyable<std::ranges::iterator_t<R2>, std::ranges::iterator_t<O>>
   void operator()(R1&& r1, R2&& r2, O&& o) const
   {
-    using tensor_type = std::remove_cvref_t<O>;
-    constexpr size_t rank = tensor_type::rank;
     auto first1 = std::ranges::cbegin(r1);
     auto first2 = std::ranges::cbegin(r2);
     auto result = std::ranges::begin(o);
 
-    auto& dimensions = result.Extents();
-    auto& strides0 = result.Strides();
-    auto [strides1, strides2] = BroadcastStrides(std::span(first1.Strides()), std::span(first2.Strides()));
+    std::span strides0(result.Strides());
+    std::span strides1(first1.Strides());
+    std::span strides2(first2.Strides());
 
-    if constexpr (rank > 1)
-    {
-      if (strides0[rank - 1] == 1 && strides1[rank - 1] == 1 && strides2[rank - 1] == 1)
-      {
-        details::Fold(
-            std::span(dimensions),
-            std::span<const ssize_t, rank - 1>(strides0.begin(), rank - 1),
-            std::span<const ssize_t, rank - 1>(strides1.begin(), rank - 1),
-            std::span<const ssize_t, rank - 1>(strides2.begin(), rank - 1),
-            [=](auto f_dimensions, auto f_strides0, auto f_strides1, auto f_strides2) {
-              eval(&*result, &*first1, &*first2, f_dimensions, f_strides0, f_strides1, f_strides2);
-            });
-        return;
-      }
-    }
-    eval(&*result, &*first1, &*first2,
-         std::span<const size_t, rank>(dimensions.begin(), rank),
-         std::span<const ssize_t, rank>(strides0.begin(), rank),
-         std::span<const ssize_t, rank>(strides1.begin(), rank),
-         std::span<const ssize_t, rank>(strides2.begin(), rank));
+    details::Fold([&](auto dimensions, bool contiguous) {
+        if (contiguous)
+          eval(&*result, &*first1, &*first2, dimensions,
+               strides0.template first<(dimensions.size() > 0) ? dimensions.size() - 1 : 0>(),
+               strides1, strides2);
+        else
+          eval(&*result, &*first1, &*first2, dimensions, strides0, strides1, strides2);
+    }, std::span(result.Extents()), strides0, strides1, strides2);
   }
 };
 
