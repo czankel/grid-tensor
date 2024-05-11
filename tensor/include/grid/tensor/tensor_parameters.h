@@ -195,22 +195,22 @@ template <size_t S1, size_t S2>
 inline auto BroadcastStrides(std::span<const ssize_t, S1> strides1, std::span<const ssize_t, S2> strides2)
 {
   if constexpr (S1 == S2)
-    return std::make_tuple(strides1, strides2);
+    return std::make_tuple(std::move(strides1), std::move(strides2));
   else if constexpr (S1 == 0)
-    return std::make_tuple(std::move(std::array<ssize_t, S2>{}), strides2);
+    return std::make_tuple(std::move(std::array<ssize_t, S2>{}), std::move(strides2));
   else if constexpr (S2 == 0)
-    return std::make_tuple(strides1, std::move(std::array<ssize_t, S1>{}));
+    return std::make_tuple(std::move(strides1), std::move(std::array<ssize_t, S1>{}));
   else if constexpr (S2 > S1)
   {
     std::array<ssize_t, S2> strides{};
     std::ranges::copy(strides1, strides.begin() + S2 - S1);
-    return std::make_tuple(std::move(strides), strides2);
+    return std::make_tuple(std::move(strides), std::move(strides2));
   }
   else
   {
     std::array<ssize_t, S1> strides{};
     std::ranges::copy(strides2, strides.begin() + S1 - S2);
-    return std::make_tuple(strides1, std::move(strides));
+    return std::make_tuple(std::move(strides1), std::move(strides));
   }
 }
 
