@@ -8,3 +8,9 @@ grid_add_sources(gridtensor
 	tensor.cc
 	mmap.cc
 )
+
+if (BUILD_METAL)
+  grid_add_sources(gridtensor
+    metal/device.cc
+  )
+endif()
