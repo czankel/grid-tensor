@@ -114,6 +114,12 @@ class TensorView
   pointer Data()                                          { return data_; }
   const_pointer Data() const                              { return data_; }
 
+  template <typename = void> requires requires (TTensor&& t) {t.Buffer();}
+  auto Buffer()                                           { return tensor_.Buffer(); }
+
+  template <typename = void> requires requires (TTensor&& t) {t.Buffer();}
+  auto Buffer() const                                     { return tensor_.Buffer(); }
+
  private:
   TTensor&                        tensor_;
   std::array<size_t, TViewRank>   dimensions_;
