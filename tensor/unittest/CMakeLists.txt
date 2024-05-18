@@ -5,3 +5,10 @@ grid_add_sources(gridtensor_test
   rms_norm_base.cc
   softmax_base.cc
 )
+
+if (BUILD_METAL)
+grid_add_sources(gridtensor_test
+  tensor_metal.cc
+  addition_metal.cc
+)
+endif()
