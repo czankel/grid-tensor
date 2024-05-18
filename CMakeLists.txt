@@ -25,12 +25,16 @@ project(gridtensor CXX C)
 ## (Ensure to also update cmake/Summary.cmake)
 ##
 
+if (APPLE)
+  option(BUILD_METAL "Build with support for Apple's Metal" ON)
+endif()
+
 option(BUILD_TEST "Build C++ test binaries (need gtest and gbenchmark)" OFF)
 option(BUILD_DOCS "Build documentation" OFF)
 if (LINUX)
   option(BUILD_DEB_PACKAGE "Build a debian package" OFF)
   option(BUILD_RPM_PACKAGE "Build an RPM package" OFF)
-endif ()
+endif()
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 option(BUILD_STATIC_LIBS "Build static libraries" OFF)
 
@@ -221,6 +225,48 @@ if (BUILD_TEST)
 endif()
 
 ##
+## Include Metal libraries if configured
+##
+
+if (BUILD_METAL)
+
+  execute_process(COMMAND zsh "-c" "/usr/bin/xcrun -sdk macosx --show-sdk-version"
+                  OUTPUT_VARIABLE MACOS_VERSION
+                  COMMAND_ERROR_IS_FATAL ANY)
+
+  message(STATUS "Building with SDK for macOS version ${MACOS_VERSION}")
+
+  if (${MACOS_VERSION} GREATER_EQUAL 14.2)
+    set(METAL_CPP_URL https://developer.apple.com/metal/cpp/files/metal-cpp_macOS14.2_iOS17.2.zip)
+  elseif (${MACOS_VERSION} GREATER_EQUAL 14.0)
+    set(METAL_CPP_URL https://developer.apple.com/metal/cpp/files/metal-cpp_macOS14_iOS17-beta.zip)
+  elseif (${MACOS_VERSION} GREATER_EQUAL 13.3)
+    set(METAL_CPP_URL https://developer.apple.com/metal/cpp/files/metal-cpp_macOS13.3_iOS16.4.zip)
+  else()
+    message(FATAL_ERROR "MLX requires macOS >= 13.4 to be built with MLX_BUILD_METAL=ON" )
+  endif()
+
+  option(CMAKE_TLS_VERIFY "Verify SSL certificates" ON)
+  set_property(DIRECTORY PROPERTY EP_UPDATE_DISCONNECTED true)
+
+  message(STATUS "Building METAL sources")
+  add_compile_definitions(_METAL_)
+
+  FetchContent_Declare(
+    metal_cpp
+    URL ${METAL_CPP_URL}
+    DOWNLOAD_EXTRACT_TIMESTAMP NEW
+  )
+
+  FetchContent_MakeAvailable(metal_cpp)
+
+  find_library(METAL_LIB Metal)
+  find_library(FOUNDATION_LIB Foundation)
+  find_library(QUARTZ_LIB QuartzCore)
+
+endif ()
+
+##
 ## Add CMakeLists from sub-directories
 ##
 
@@ -251,6 +297,28 @@ if (UNIX AND NOT APPLE)
 endif()
 
 target_include_directories(gridtensor PUBLIC ${gridtensor_HEADER_DIRS})
+
+if (BUILD_METAL)
+
+  target_include_directories(
+    gridtensor PUBLIC
+    $<BUILD_INTERFACE:${metal_cpp_SOURCE_DIR}>
+    $<INSTALL_INTERFACE:include/metal_cpp>
+  )
+
+  target_link_libraries(gridtensor ${METAL_LIB} ${FOUNDATION_LIB} ${QUARTZ_LIB})
+
+  get_property(gridtensor_metal_PATH GLOBAL PROPERTY gridtensor_metal_PATH)
+  target_compile_definitions(
+    gridtensor PUBLIC METAL_PATH="${gridtensor_metal_PATH}/gridtensor.metallib"
+  )
+
+  add_dependencies(
+    gridtensor
+    gridtensor_metallib
+  )
+
+endif()
 
 ##
 ## Target Tools
