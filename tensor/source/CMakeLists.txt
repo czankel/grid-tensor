@@ -10,6 +10,8 @@ grid_add_sources(gridtensor
 )
 
 if (BUILD_METAL)
+  add_subdirectory(metal/kernels)
+
   grid_add_sources(gridtensor
     metal/device.cc
   )
