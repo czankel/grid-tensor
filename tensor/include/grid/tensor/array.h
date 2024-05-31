@@ -107,7 +107,17 @@ class Array<T, Scalar>
   Array() = default;
 
   // @brief Initializes the data value to init.
-  Array(value_type init) : data_(init) {}
+  Array(size_t s, value_type init) : data_(init)
+  {
+    if (s != 1)
+      throw std::runtime_error("internal error: invalid size for Array<Scalar>");
+  }
+
+  Array(size_t s)
+  {
+    if (s != 1)
+      throw std::runtime_error("internal error: invalid size for Array<Scalar>");
+  }
 
   /// Size returns the size of the entire buffer.
   size_t Size() const                                     { return sizeof(value_type); }

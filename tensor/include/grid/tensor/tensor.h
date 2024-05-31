@@ -84,9 +84,9 @@ class Tensor : public Array<T, TMemory>
   //
 
   /// Constructor for a rank-0 tensor (scalar)
-  Tensor(const value_type& init) : Array<value_type, memory_type>(init) {}
-  Tensor(value_type&& init) : Array<value_type, memory_type>(init) {}
-  Tensor(Uninitialized<value_type>) {}
+  Tensor(const value_type& init) : Array<value_type, memory_type>(1, init) {}
+  Tensor(value_type&& init) : Array<value_type, memory_type>(1, init) {}
+  Tensor(Uninitialized<value_type>) : Array<value_type, memory_type>(1) {}
 
   /// Constructor for a rank-1 tensor (vector) with static brace initialization.
   template <Arithmetic... Ts>
@@ -266,7 +266,7 @@ class Tensor : public Array<T, TMemory>
 
   /// Move constructor
   Tensor(Tensor&& other)
-    : Array<value_type, memory_type>(std::move(static_cast<Array<value_type, memory_type>&&>(other))),
+    : Array<value_type, memory_type>(std::move(other)),
       dimensions_{std::move(other.dimensions_)},
       strides_{std::move(other.strides_)}
   {}
