@@ -61,7 +61,7 @@ template <> class SiluOperator<device::Base>
  public:
   template<std::ranges::input_range R, std::ranges::output_range<std::iter_value_t<std::ranges::iterator_t<R>>> O>
   requires std::indirectly_copyable<std::ranges::iterator_t<R>, std::ranges::iterator_t<O>>
-  void operator()(R r, O o) const
+  void operator()(R&& r, O&& o) const
   {
     auto first = std::ranges::cbegin(r);
     auto result = std::ranges::begin(o);
