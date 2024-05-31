@@ -41,12 +41,29 @@ template <> class MatmulOperator<device::Base>
           strides1[0] - dimensions[1] == 0 &&
           strides2[1] - dimensions[1] == 0)
       {
+        // TODO: optimization for Mat x Vec?
+#if 0
         for (size_t i = 0; i < dimensions[0] * dimensions[1]; i++)
         {
           T sum{0};
           for (size_t k = 0; k < dim_k; k++)
             sum += src1[k] * src2[k];
           dest[i] = sum;
+        }
+#endif
+        size_t i = 0;
+        for (size_t m = 0; m < dimensions[0]; m++)
+        {
+          auto* src2prime = src2;
+          for (size_t n = 0; n < dimensions[1]; n++)
+          {
+            T sum{0};
+            for (size_t k = 0; k < dim_k; k++)
+              sum += src1[k] * src2prime[k];
+            dest[i++] = sum;
+            src2prime += strides2[1];
+          }
+          src1 += strides1[0];
         }
       }
 
@@ -115,44 +132,49 @@ template <> class MatmulOperator<device::Base>
     auto first2 = std::ranges::cbegin(r2);
     auto result = std::ranges::begin(o);
 
+    constexpr size_t rank1 = std::ranges::iterator_t<R1>::rank;
+    constexpr size_t rank2 = std::ranges::iterator_t<R2>::rank;
+
+    size_t dim_k = first1.Extents()[rank1 - 1];
+
     // mat * mat: M_m_k * M_k_n -> M_m_n
-    if constexpr (std::ranges::iterator_t<R1>::rank == 2 && std::ranges::iterator_t<R2>::rank == 2)
+    if constexpr (rank1 == 2 && rank2 == 2)
       Matmul(&*result, &*first1, &*first2,
              std::span<const size_t,  2>(result.Extents()),
-             first1.Extents()[1],
+             dim_k,
              std::span<const ssize_t, 2>(result.Strides()),
              std::span<const ssize_t, 2>(first1.Strides()),
              std::span<const ssize_t, 2>(first2.Strides()));
 
     // mat * vec: M_m_n * V_n = M_m_n * V_n_1 -> V_m_1 = V_m
-    else if constexpr (std::ranges::iterator_t<R1>::rank == 2 && std::ranges::iterator_t<R2>::rank == 1)
+    else if constexpr (rank1 == 2 && rank2 == 1)
     {
       Matmul(&*result, &*first1, &*first2,
              std::array<size_t, 2>{first1.Extents()[0], 1},
-             first1.Extents()[1],
+             dim_k,
              std::array<const ssize_t, 2>{result.Strides()[0], 0},
              std::span<const ssize_t, 2>(first1.Strides()),
              std::array<const ssize_t, 2>{first2.Strides()[0], 0});
     }
 
     // vec * mat: V_m * M_m_n = V_1_m * M_m_n -> V_1_n = V_n
-    else if constexpr (std::ranges::iterator_t<R1>::rank == 1 && std::ranges::iterator_t<R2>::rank == 2)
+    else if constexpr (rank1 == 1 && rank2 == 2)
       Matmul(&*result, &*first1, &*first2,
              std::array<size_t, 2>{1, first2.Extents()[1]},
-             first2.Extents()[0],
+             dim_k,
              std::array<const ssize_t, 2>{0, result.Strides()[0]},
              std::array<const ssize_t, 2>{0, first1.Strides()[0]},
              std::span<const ssize_t, 2>(first2.Strides()));
 
     // vec * vec: V_m * V_m -> scalar
-    else if constexpr (std::ranges::iterator_t<R1>::rank == 1 && std::ranges::iterator_t<R2>::rank == 1)
+    else if constexpr (rank1 == 1 && rank2 == 1)
     {
       Matmul(&*result, &*first1, &*first2,
              std::array<size_t, 2>{1, 1},
-             first1.Extents()[0],
+             dim_k,
              std::array<const ssize_t, 2>{0, 0},
              std::array<const ssize_t, 2>{0, first1.Strides()[0]},
-             std::array<const ssize_t, 2>{0, first2.Strides()[0]});
+             std::array<const ssize_t, 2>{first2.Strides()[0], 0});
     }
   }
 };
