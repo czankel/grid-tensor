@@ -108,6 +108,7 @@ class LLaMAModelT : public LLaMAModel
 };
 
 
+// FIXME: aliasing??
 template <typename T, typename Dev>
 LLaMAModelT<T, Dev>* LLaMAModelT<T, Dev>::Load(LLaMAFile& file)
 {
@@ -245,6 +246,9 @@ std::string LLaMAModelT<T, Dev>::Decode(LLaMAVocab::token prev, LLaMAVocab::toke
   // onvert raw bytes, e.g. <0x01> to actual bytes
   if (symbol[0] == '<')
   {
+    if (symbol == "<unk>")
+      throw std::runtime_error("Failed to find symbol in vocab: " + std::to_string(token));
+
     auto end = symbol.find('>');
     if (end != std::string::npos)
     {
@@ -330,6 +334,7 @@ void LLaMAModelT<T, Dev>::Forward(LLaMAVocab::token token, size_t pos)
             Matmul(
               l.key_cache_.View(Extent(pos + 1), Extent(kv_head_offset, head_size)),
               l.q_.View(Extent(head_offset, head_size))) *
+            // FIXME
             (static_cast<T>(1) / sqrt(static_cast<T>(head_size)))),
           l.value_cache_.View(Extent(pos + 1), Extent(kv_head_offset, head_size)));
     }

@@ -13,6 +13,10 @@
 
 #include <unistd.h>
 
+#ifdef TRACY_ENABLE
+# include <tracy/Tracy.hpp>
+#endif
+
 #include <grid/models/llama.h>
 #include <grid/tensor/tensor_base.h>
 #include <grid/util/demangle.h>

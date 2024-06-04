@@ -69,7 +69,8 @@ class MatmulFunction
     if (tensor1_.Dimensions()[0] != tensor2_.Dimensions()[0])
       throw std::runtime_error("mismatching dimensions in vector product");
 
-    auto result = Tensor<value_type, 0, DeviceMemory<device>>{value_type{0}};
+    // FIXME
+    auto result = Tensor<value_type, 0, Scalar/* DeviceMemory<device>*/>{value_type{0}};
     operator_(result, tensor1_, tensor2_);
     return result;
   }

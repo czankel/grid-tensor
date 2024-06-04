@@ -269,8 +269,9 @@ inline auto Reshape(const TTensor& tensor,
                     const std::array<size_t, TTensor::rank>& dimensions,
                     size_t offset = 0)
 {
+  using value_type = typename TTensor::value_type;
   auto strides = make_strides(dimensions);
-  size_t size = get_buffer_size(dimensions, strides);
+  size_t size = get_buffer_size<value_type>(dimensions, strides);
   // assert orig-size >= size + offset
   return TensorView(tensor, dimensions, strides, size, offset);
 }
@@ -281,7 +282,8 @@ inline auto Reshape(const TTensor& tensor,
                     const std::array<ssize_t, TTensor::rank>& strides,
                     size_t offset = 0)
 {
-  size_t size = get_buffer_size(dimensions, strides);
+  using value_type = typename TTensor::value_type;
+  size_t size = get_buffer_size<value_type>(dimensions, strides);
   // assert orig-size >= size + offset
   return TensorView(tensor, dimensions, strides, size, offset);
 }

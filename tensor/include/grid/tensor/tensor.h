@@ -254,7 +254,10 @@ class Tensor : public Array<T, TMemory>
     : Array<value_type, memory_type>(other, other.Dimensions(), other.Strides(), other.Strides()),
       dimensions_{other.Dimensions()},
       strides_{other.Strides()}
-  {}
+  {
+    // Insight::CopyTensor();
+    // FIXME printf("Tensor Copy (constructor)\n");
+  }
 
   // TODO: will be called when assigning StaticMemory to DeviceMemory
   template <AnyTensor TTensor>
@@ -283,6 +286,7 @@ class Tensor : public Array<T, TMemory>
   template <PrimitiveTensor TTensor>
   Tensor& operator=(const TTensor& other)
   {
+    //printf("Tensor Copy (assign)\n");
     dimensions_ = other.Dimensions();
     strides_ = other.Strides();
     if (array_type::Size() != other.Size())
@@ -333,14 +337,14 @@ class Tensor : public Array<T, TMemory>
   auto Reshape(const std::array<size_t, TViewRank>& dimensions,
                const std::array<ssize_t, TViewRank>& strides)
   {
-    return view::Reshape(*this, std::to_array(dimensions), std::to_array(strides));
+    return view::Reshape(*this, std::move(dimensions), std::move(strides));
   }
 
   template <size_t TViewRank>
   auto Reshape(const std::array<size_t, TViewRank>& dimensions,
                const std::array<ssize_t, TViewRank>& strides) const
   {
-    return view::Reshape(*this, std::to_array(dimensions), std::to_array(strides));
+    return view::Reshape(*this, std::move(dimensions), std::move(strides));
   }
 
 
