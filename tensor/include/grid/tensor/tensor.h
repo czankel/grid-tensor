@@ -255,6 +255,7 @@ class Tensor : public Array<T, TMemory>
       dimensions_{other.Dimensions()},
       strides_{other.Strides()}
   {
+    printf("Copy Same Tensor\n");
     // Insight::CopyTensor();
     // FIXME printf("Tensor Copy (constructor)\n");
   }
@@ -265,7 +266,8 @@ class Tensor : public Array<T, TMemory>
     : Array<value_type, memory_type>(other.Data(), other.Dimensions(), other.Strides(), other.Strides()),
       dimensions_{other.Dimensions()},
       strides_{other.Strides()}
-  {}
+  {printf("Copy ANy Tensor\n");
+  }
 
   /// Move constructor
   Tensor(Tensor&& other)
@@ -306,17 +308,19 @@ class Tensor : public Array<T, TMemory>
 
   /// Operator assign
   template <AnyOperator TOperator>
-  Tensor& operator=(TOperator&& oper)
+  Tensor& operator=(TOperator&& op)
   {
-    return operator=(std::forward<TOperator>(oper)());
+    printf("oeprator=& ... pass this?\n");
+    return std::forward<TOperator>(op)(*this);
   }
 
   template <AnyOperator TOperator>
-  Tensor& operator+=(TOperator&& oper)
+  Tensor& operator+=(TOperator&& op)
   {
-    return operator=(Add(*this, std::forward<TOperator>(oper)()));
+    printf("oeprator+=&& ... pass this?\n");
+    // FIXME
+    return operator=(Add(*this, std::forward<TOperator>(op)()));
   }
-
 
   /// View returns a view of the proivded tensor.
   template <typename... Ts>
@@ -649,6 +653,13 @@ explicit Tensor(const size_t(&)[N], const std::tuple<T*, size_t>&) -> Tensor<T, 
 template <Arithmetic T, size_t N>
 explicit Tensor(const std::array<size_t, N>&, const std::tuple<T*, size_t>&) -> Tensor<T, N, grid::MemoryMapped>;
 
+// copy & move constructors
+template <typename T, size_t N, typename M, typename Dev = device::Base>
+Tensor(const grid::Tensor<T, N, M>&) -> Tensor<T, N, grid::DeviceMemory<Dev>>;
+template <typename T, size_t N, typename M, typename Dev = device::Base>
+Tensor(grid::Tensor<T, N, M>&&) -> Tensor<T, N, grid::DeviceMemory<Dev>>;
+
+
 //
 // Arithmentic operator overloading
 //
@@ -689,6 +700,14 @@ auto operator*(T scalar, TTensor&& tensor)
 {
   return Mul(scalar, std::forward<TTensor>(tensor));
 }
+
+// operator/(TensorType, arithmetic)
+template <TensorConvertible TTensor, Arithmetic T>
+auto operator/(TTensor&& tensor, T scalar)
+{
+  return Div(std::forward<TTensor>(tensor), scalar);
+}
+
 
 } // end of namespace grid
 

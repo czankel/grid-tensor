@@ -55,7 +55,7 @@ template <typename> struct DivOperator;
 ///   shape:    4, 1 <op> shape: 3, 4, 3    -> OK
 ///   shape: 3, 4, 4 <op> shape: 3, 5, 1    -> Error
 ///
-template <typename TOperator, AnyTensor TTensor1, AnyTensor TTensor2>
+template <typename TOperator, TensorConvertible TTensor1, TensorConvertible TTensor2>
 class Binary : public TensorOperator<std::common_type_t<typename std::remove_cvref_t<TTensor1>::value_type,
                                                         typename std::remove_cvref_t<TTensor2>::value_type>,
                                      std::max(std::remove_cvref_t<TTensor1>::rank, std::remove_cvref_t<TTensor2>::rank),
@@ -66,11 +66,25 @@ class Binary : public TensorOperator<std::common_type_t<typename std::remove_cvr
   using typename Binary::TensorOperator::value_type;
   using Binary::TensorOperator::rank;
 
+#if 0
   template <typename T1, typename T2>
   Binary(TOperator, T1&& tensor1, T2&& tensor2)
    : TensorOperator<value_type, rank, Binary<TOperator, TTensor1, TTensor2>>(*this),
      tensor1_(std::forward<T1>(tensor1)),
      tensor2_(std::forward<T2>(tensor2))
+  {}
+#else
+  Binary(TOperator, TTensor1 tensor1, TTensor2 tensor2)
+   : TensorOperator<value_type, rank, Binary<TOperator, TTensor1, TTensor2>>(*this),
+     tensor1_(std::move(tensor1)),
+     tensor2_(std::move(tensor2))
+  {}
+#endif
+
+  Binary(Binary&& other)
+   : TensorOperator<value_type, rank, Binary<TOperator, TTensor1, TTensor2>>(*this),
+     tensor1_(std::move(other.tensor1_)),
+     tensor2_(std::move(other.tensor2_))
   {}
 
   ~Binary() {}
@@ -85,14 +99,50 @@ class Binary : public TensorOperator<std::common_type_t<typename std::remove_cvr
   /// operator()() evaluates the binary operator and returns a tensor.
   auto operator()() const
   {
+    printf("binary: create tensor\n");
     auto dimensions = BroadcastDimensions(tensor1_, tensor2_);
+    printf("dims %lu %lu\n", dimensions[0], dimensions[1]);
     using ResultTensor = Tensor<value_type, rank, DeviceMemory<tensor_device_t<TTensor1>>>;
     auto result = ResultTensor(dimensions, Uninitialized<value_type>{});
 
-    operator_(tensor1_, tensor2_, result);
+    if constexpr (is_operator_v<TTensor1> && is_operator_v<TTensor2>)
+      operator_(tensor1_(), tensor2_(), result);
+    else if constexpr (is_operator_v<TTensor1>)
+      operator_(tensor1_(), tensor2_, result);
+    else if constexpr (is_operator_v<TTensor2>)
+      operator_(tensor1_, tensor2_(), result);
+    else
+      operator_(tensor1_, tensor2_, result);
 
     return result;
   }
+
+  template <AnyTensor TTensor>
+  auto& operator()(TTensor& result) const
+  {
+    printf("binary: operator with result\n");
+#if 0
+    auto dimensions = BroadcastDimensions(tensor1_, tensor2_);
+    if (dimensions != result.Extents())
+      throw std::runtime_exception("Dimensions mismatch");
+#endif
+    if constexpr (is_operator_v<TTensor1> && is_operator_v<TTensor2>)
+      operator_(tensor1_(), tensor2_(), result);
+    else if constexpr (is_operator_v<TTensor1>)
+      operator_(tensor1_(), tensor2_, result);
+    else if constexpr (is_operator_v<TTensor2>)
+      operator_(tensor1_, tensor2_(), result);
+    else
+      operator_(tensor1_, tensor2_, result);
+
+    return result;
+  }
+
+  auto Dimensions() const
+  {
+    return BroadcastDimensions(tensor1_, tensor2_);
+  }
+
 
  private:
   static TOperator operator_;
@@ -100,11 +150,12 @@ class Binary : public TensorOperator<std::common_type_t<typename std::remove_cvr
   TTensor2 tensor2_;
 };
 
-template <typename TOp, typename T1, typename T2> Binary(TOp, T1&&, T2&&)
-  -> Binary<TOp, typename to_tensor<T1>::type, typename to_tensor<T2>::type>;
+//template <typename TOp, typename T1, typename T2> Binary(TOp, T1, T2) -> Binary<TOp, T1, T2>;
+
+  // typename to_tensor<T1>::type, typename to_tensor<T2>::type>;
 
 
-template <typename TOperator, AnyTensor TTensor1, AnyTensor TTensor2>
+template <typename TOperator, TensorConvertible TTensor1, TensorConvertible TTensor2>
 TOperator Binary<TOperator, TTensor1, TTensor2>::operator_;
 
 //
@@ -151,7 +202,7 @@ auto Mul(T scalar, TTensor&& tensor)
       std::forward<TTensor>(tensor), Tensor(scalar));
 }
 
-/// @brief Div multiplies two tensors element-wise (lazily).
+/// @brief Div divides two tensors element-wise (lazily).
 template <TensorConvertible TTensor1, TensorConvertible TTensor2>
 auto Div(TTensor1&& tensor1, TTensor2&& tensor2)
 {
@@ -159,6 +210,13 @@ auto Div(TTensor1&& tensor1, TTensor2&& tensor2)
       std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
 }
 
+/// @brief Div divides a tensors by a scalar
+template <TensorConvertible TTensor, Arithmetic T>
+auto Div(TTensor&& tensor, T scalar)
+{
+  return Binary(BinaryOperator<DivOperator<tensor_device_t<TTensor>>>(),
+      std::forward<TTensor>(tensor), Tensor(scalar));
+}
 
 } // end of namespace grd
 

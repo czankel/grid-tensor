@@ -18,6 +18,8 @@
 #include "../array.h"
 #include "../tensor_parameters.h"
 
+#include "tracy/Tracy.hpp"
+
 namespace grid {
 
 /// brief: Array is a specialization for a dynamically allocated buffer.
@@ -30,12 +32,12 @@ class Array<T, DeviceMemory<device::Base>>
 
  public:
   Array() = default;
-
+#if 1
   // @brief Constructor for a contiguous array with the provided size.
   Array(size_t size)
     : size_(size),
       data_(static_cast<pointer>(operator new[](size_, std::align_val_t(16))))
-  {}
+  { printf("Alloc1 %p %p %lu\n", this, data_, size_); }  // FIXME instrumentalize
 
   // @brief Constructor for a contiguous array with the provided size with initialization.
   Array(size_t size, value_type init)
@@ -44,14 +46,34 @@ class Array<T, DeviceMemory<device::Base>>
   {
     // FIXME
     details::initialize(data_, size_ / sizeof(value_type), init);
+  { printf("Alloc2 %p %p %lu\n", this, data_, size_); }
   }
+#else
+  Array(size_t size)
+    : size_(size),
+      data_(nullptr)
+  {
+    ZoneScoped;
+    data_ = static_cast<pointer>(operator new[](size_, std::align_val_t(16)));
+  }
+
+  // @brief Constructor for a contiguous array with the provided size with initialization.
+  Array(size_t size, value_type init)
+    : size_(size),
+      data_(nullptr)
+  {
+    ZoneScoped;
+    data_ = static_cast<pointer>(operator new[](size_, std::align_val_t(16)));
+    details::initialize(data_, size_ / sizeof(value_type), init);
+  }
+#endif
 
   // @brief Constructor for a non-contiguous array with the provided dimensions and strides.
   template <size_t N>
   Array(const std::array<size_t, N>& dimensions, const std::array<ssize_t, N>& strides)
     : size_(get_buffer_size<value_type>(dimensions, strides)),
       data_(static_cast<pointer>(operator new[](size_, std::align_val_t(16))))
-  {}
+  { printf("Alloc3 %p %p %lu\n", this, data_, size_); }
 
   // @brief Constructor for a non-contiguous array with the provided dimensions and strides with initialization.
   template <size_t N>
@@ -60,6 +82,7 @@ class Array<T, DeviceMemory<device::Base>>
       data_(static_cast<pointer>(operator new[](size_, std::align_val_t(16))))
   {
     details::initialize(data_, dimensions, strides, init);
+  { printf("Alloc4 %p %p %lu\n", this, data_, size_); }
   }
 
   // @brief Move constructor.
@@ -71,6 +94,7 @@ class Array<T, DeviceMemory<device::Base>>
       data_(static_cast<pointer>(operator new[](size_, std::align_val_t(16))))
   {
     memcpy(data_, other.data_, other.size);
+  { printf("Alloc5 %p %p %lu\n", this, data_, size_); }
   }
 
   // @brief Copy constructor from same array type with dimensions and strides
@@ -86,6 +110,7 @@ class Array<T, DeviceMemory<device::Base>>
                   std::span<const size_t, N>(dimensions.begin(), N),
                   std::span<const ssize_t, N>(strides1.begin(), N),
                   std::span<const ssize_t, N>(strides2.begin(), N));
+  { printf("Alloc6 %p %p %lu\n", this, data_, size_); }
   }
 
   // @brief Copy constructor from different array type with dimensions and strides
@@ -101,19 +126,26 @@ class Array<T, DeviceMemory<device::Base>>
                   std::span<const size_t, N>(dimensions.begin(), N),
                   std::span<const ssize_t, N>(strides1.begin(), N),
                   std::span<const ssize_t, N>(strides2.begin(), N));
+  { printf("Alloc7 %p %p %lu\n", this, data_, size_); }
   }
 
 
   ~Array()
   {
+    ZoneScoped;
+  //{ printf("Delete %p %p %lu\n", this, data_, size_); }
     if (data_ != nullptr)
       operator delete[](data_, std::align_val_t(16));
   }
 
   Array& operator=(Array&& other)
   {
+    ZoneScoped;
+  //{ printf("Copy %p %p %lu %p\n", this, data_, size_, other.data_); }
     if (data_ != nullptr)
       operator delete[](data_, std::align_val_t(16));
+
+
 
     size_ = other.size_;
     data_ = std::move(other.data_);
@@ -146,6 +178,7 @@ class Array<T, DeviceMemory<device::Base>>
             const std::array<ssize_t, N>& strides1,
             const std::array<ssize_t, N>& strides2)
   {
+    { printf("Call Copy %p %p %lu %p\n", this, data_, size_, data); }
     if (get_buffer_size<value_type>(dimensions, strides1) > size_)
       throw std::runtime_error("invalid size");
 

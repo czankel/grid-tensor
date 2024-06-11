@@ -71,6 +71,8 @@ class TensorView
   template <AnyTensor TFromTensor> requires (TFromTensor::rank == TViewRank)
   auto operator=(const TFromTensor& rhs)
   {
+    printf("view operator= copy from other tensor dims %lu %lu\n", dimensions_[0], TViewRank > 0 ? dimensions_[1] : 0);
+
     // TODO: make this device agnostic
     details::copy(data_, rhs.Data(),
                   std::span<const size_t, TViewRank>(dimensions_.begin(), TViewRank),
@@ -79,9 +81,10 @@ class TensorView
   }
 
   template <AnyOperator TOperator> // FIXME requires PrimitiveTensor<to_tensor(TOperator)>
-  auto operator=(const TOperator& oper)
+  auto& operator=(const TOperator& op)
   {
-    return this->operator=(oper());
+    printf("view execute operator(this)\n");
+    return op(*this);
   }
 
 

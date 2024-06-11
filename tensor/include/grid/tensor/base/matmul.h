@@ -190,7 +190,7 @@ template <> class MatmulOperator<device::Base>
            std::ranges::output_range<std::iter_value_t<std::ranges::iterator_t<R1>>> O>
   requires std::indirectly_copyable<std::ranges::iterator_t<R1>, std::ranges::iterator_t<O>> &&
            std::indirectly_copyable<std::ranges::iterator_t<R2>, std::ranges::iterator_t<O>>
-  void operator()(O&& o, R1&& r1, R2&& r2) const
+  void operator()(R1&& r1, R2&& r2, O&& o) const
   {
     auto first1 = std::ranges::cbegin(r1);
     auto first2 = std::ranges::cbegin(r2);
@@ -221,8 +221,8 @@ template <> class MatmulOperator<device::Base>
         // semi-contiguous
         else
         {
-            if (strides1[0] - dim_k == 0 && strides2[1] - dim_k == 0)
-              printf("COULD OPTIMIZE\n");
+          if (strides1[0] - dim_k == 0 && strides2[1] - dim_k == 0)
+            printf("COULD OPTIMIZE\n");
           Matmul(&*result, &*first1, &*first2, std::span(extents), dim_k,
                  strides0[0], strides1[0], strides2[1]); }
       }

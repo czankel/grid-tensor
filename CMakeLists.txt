@@ -37,7 +37,9 @@ option(BUILD_STATIC_LIBS "Build static libraries" OFF)
 option(USE_COLORIZE_OUTPUT "Colorize output during compilation" ON)
 option(USE_CPP_CODE_COVERAGE "Compile C/C++ with code coverage flags" OFF)
 option(USE_CCACHE "" OFF)
-option(USE_GOLD_LINKER "Use gold linkder" OFF)
+option(USE_GOLD_LINKER "Use gold linker" OFF)
+
+option(USE_TRACY "Use Tracy profiler" OFF)
 
 ##
 ## Include helper functions
@@ -190,7 +192,7 @@ if(NOT MSVC)
     check_cxx_compiler_flag_and_append("-Wno-unused-but-set-variable")
     check_cxx_compiler_flag_and_append("-Wno-maybe-uninitialized")
   endif()
-  string(APPEND CMAKE_CXX_FLAGS_DEBUG " -fno-omit-frame-pointer -g -O3")
+  string(APPEND CMAKE_CXX_FLAGS_DEBUG " -fno-omit-frame-pointer -g -O3 -rdynamic")
 
   string(APPEND CMAKE_LINKER_FLAGS_DEBUG " -fno-omit-frame-pointer -O0")
   # -ldflags="-X github.com/czankel//config.CneVersion=${VERSION}" FIXME.. or --defsym? -X is not default??
@@ -219,6 +221,25 @@ if (BUILD_TEST)
 
   FetchContent_MakeAvailable(googletest)
 endif()
+
+##
+## Include Tracy profiler if configured
+##
+
+if (BUILD_TRACY)
+  include(FetchContent)
+  FetchContent_Declare(
+    tracy
+    GIT_REPOSITORY https://github.com/wolfpld/tracy.git
+    GIT_TAG        v0.10
+  )
+
+  set(USE_TRACY ON CACHEBOOL"" FORCE)
+
+  FetchContent_MakeAvailable(tracy)
+
+endif()
+
 
 ##
 ## Add CMakeLists from sub-directories
@@ -258,7 +279,19 @@ target_include_directories(gridtensor PUBLIC ${gridtensor_HEADER_DIRS})
 
 add_executable(llama tools/llama.cc models/llama/llama.cc models/llama/karpathy.cc models/llama/ggml.cc)
 target_include_directories(llama PUBLIC ${gridtensor_HEADER_DIRS})
-target_link_libraries(llama gridtensor)
+target_link_libraries(llama PUBLIC gridtensor)
+
+##
+## Tracy
+##
+
+if (BUILD_TRACY)
+  target_include_directories(gridtensor PRIVATE ${Tracy_SOURCE_DIR}/public)
+  target_include_directories(llama PRIVATE ${Tracy_SOURCE_DIR}/public)
+
+  target_link_libraries (llama PUBLIC gridtensor TracyClient)
+  target_link_libraries (gridtensor PUBLIC TracyClient)
+endif()
 
 ##
 ## Install libraries and header files

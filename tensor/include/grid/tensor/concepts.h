@@ -38,12 +38,18 @@ inline constexpr bool is_tensor_v =
 template <typename TTensor>
 concept AnyTensor = is_tensor_v<TTensor>;
 
+//template <typename T, size_t TRank, typename TOperator>
+//class TensorOperator;
+class _TensorOperator;
 
 /// is_operator_v<Operator> checks if a type is tensor operator, which requires to have a member
 /// operator()() overload.
 /// TODO: check also template signature
+//template <typename TOperator, typename T, size_t TRank>
+//inline constexpr bool is_operator_v = std::is_base_of<TensorOperator<T, TRank, TOperator>, TOperator>::value;
 template <typename TOperator>
-inline constexpr bool is_operator_v = requires (const TOperator& t) { { t.operator()() } -> AnyTensor; };
+inline constexpr bool is_operator_v = std::is_base_of<_TensorOperator, TOperator>::value;
+//(const TOperator& t) { { t.operator()() } -> AnyTensor; };
 
 
 // to_tensor provides the type of the tensor or the type of the tensor resulting from a  tensor operation

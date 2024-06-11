@@ -100,6 +100,7 @@ int main(int argc, char** argv)
   std::chrono::steady_clock::time_point start_time;
   start_time = std::chrono::steady_clock::now();
 
+  ZoneScoped;
   model->Predict(prompt, steps);
 
   auto Duration = duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - start_time);

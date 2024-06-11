@@ -82,8 +82,9 @@ void Fold(TOp&& op, std::span<const size_t, TRank> dimensions, auto... strides)
 /// @tparam T         value type
 /// @tparam TRank     rank
 /// @tparam TOperator wrapped operator type
+class _TensorOperator {};
 template <typename T, size_t TRank, typename TOperator>
-class TensorOperator
+class TensorOperator : _TensorOperator
 {
  public:
   using value_type = T;
@@ -95,6 +96,9 @@ class TensorOperator
 
   /// operator() executes the operation.
   auto operator()() const                             { return op_(); }
+
+  template <typename S>
+  auto& operator()(S& t) const                        { return op_(t); }
 
  private:
   TOperator& op_;

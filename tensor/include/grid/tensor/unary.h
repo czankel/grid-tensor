@@ -48,7 +48,9 @@ template <typename> class SiluOperator;
 ///  @tparm TOperator unary operator type
 ///  @tparm TTensor  tensor type
 ///
-template <typename TOperator, AnyTensor TTensor>
+
+static bool stop = false;
+template <typename TOperator, TensorConvertible TTensor>
 class Unary : public TensorOperator<typename std::remove_cvref_t<TTensor>::value_type,
                                     std::remove_cvref_t<TTensor>::rank,
                                     Unary<TOperator, TTensor>>
@@ -63,6 +65,11 @@ class Unary : public TensorOperator<typename std::remove_cvref_t<TTensor>::value
       tensor_(std::forward<T>(tensor))
   {}
 
+  Unary(Unary&& other)
+    : TensorOperator<value_type, rank, Unary<TOperator, TTensor>>(*this),
+      tensor_(std::move(other.tensor_))
+  {}
+
   ~Unary() {}
 
   Unary() = delete;
@@ -70,14 +77,37 @@ class Unary : public TensorOperator<typename std::remove_cvref_t<TTensor>::value
   Unary& operator=(const Unary& other) = delete;
 
  public:
+  using ResultTensor = Tensor<value_type, rank, DeviceMemory<tensor_device_t<TTensor>>>;
 
   /// operator()() evaluates the unary operator and returns a tensor.
   auto operator()() const
   {
-    using ResultTensor = Tensor<value_type, rank, DeviceMemory<tensor_device_t<TTensor>>>;
+    printf("unary operator()\n");
+    printf("create tensor 6:\n");
     auto result = ResultTensor(tensor_.Dimensions(), Uninitialized<value_type>{});
-    operator_(tensor_, result);
+    if (0) //stop)
+      throw std::runtime_error("break");
+
+    if constexpr (is_operator_v<TTensor>)
+      operator_(tensor_(result), result);
+    else
+      operator_(tensor_, result);
     return result;
+  }
+
+  auto& operator()(ResultTensor& result)
+  {
+    printf("unary operator(result)\n");
+    if constexpr (is_operator_v<TTensor>)
+      operator_(tensor_(), result);
+    else
+      operator_(tensor_, result);
+    return result;
+  }
+
+  auto Dimensions() const
+  {
+    return tensor_.Dimensions();
   }
 
  private:
@@ -85,9 +115,12 @@ class Unary : public TensorOperator<typename std::remove_cvref_t<TTensor>::value
   TTensor tensor_;
 };
 
-template <typename TOp, typename T> Unary(TOp, T&&) -> Unary<TOp, typename to_tensor<T>::type>;
+template <typename TOp, typename T> Unary(TOp, T) -> Unary<TOp, T>;
 
-template <typename TOperator, AnyTensor TTensor>
+// typename to_tensor<T>::type>;
+//template <typename TOp, typename T> Unary(TOp, T&&) -> Unary<TOp, T>; // typename to_tensor<T>::type>;
+
+template <typename TOperator, TensorConvertible TTensor>
 TOperator Unary<TOperator, TTensor>::operator_;
 
 //

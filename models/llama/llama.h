@@ -267,7 +267,7 @@ std::string LLaMAModelT<T, Dev>::Decode(LLaMAVocab::token prev, LLaMAVocab::toke
 
   return symbol;
 }
-
+extern bool stop;
 // Note that this is a "lower-rank" implementation going through the calculation for each
 // token vector instead of combining a sequence into a matrix and using higher-rank tensors.
 template <typename T, typename Dev>
@@ -319,6 +319,7 @@ void LLaMAModelT<T, Dev>::Forward(LLaMAVocab::token token, size_t pos)
     // MultiHead(Q,K,V) = concat(head_1, ..., head_h) W_0, with head = Attention(Q_head,K_head,V_head)
     for (size_t head = 0; head < n_heads; head++)
     {
+      // FIXME printf("-------\n FOR HEAD %lu\n", head);
       size_t head_offset = head * head_size;
       size_t kv_head_offset = (head / (n_heads/n_kv_heads)) * head_size;
 
@@ -328,22 +329,49 @@ void LLaMAModelT<T, Dev>::Forward(LLaMAVocab::token token, size_t pos)
       // reduces to:
       // scores [head_offset:head_offset + head_size] =
       //   softmax(K [:pos+1, head:head+head_size] @ q [head:head+head_size] @ V [:pos+1, head:head+head_size]
+      //             [:pos+1] @ [:pos+1, head:head+head_size] -> [head:head+head_size]
+      // note that these are all vector multiplications
+      //stop = true;
+      printf("1\n");
+#if 0
       scores_.View(Extent(head_offset, head_size)) =
         Matmul(
           SoftMax(
             Matmul(
               l.key_cache_.View(Extent(pos + 1), Extent(kv_head_offset, head_size)),
-              l.q_.View(Extent(head_offset, head_size))) *
-            // FIXME
-            (static_cast<T>(1) / sqrt(static_cast<T>(head_size)))),
+              l.q_.View(Extent(head_offset, head_size))) / sqrt(static_cast<T>(head_size)))),
           l.value_cache_.View(Extent(pos + 1), Extent(kv_head_offset, head_size)));
+#else
+      auto score_view = scores_.View(Extent(head_offset, head_size));
+      score_view = l.q_.View(Extent(head_offset, head_size)) / sqrt(static_cast<T>(head_size));
+      score_view =
+        Matmul(
+          SoftMax(
+            Matmul(
+              l.key_cache_.View(Extent(pos + 1), Extent(kv_head_offset, head_size)),
+              score_view)),
+          l.value_cache_.View(Extent(pos + 1), Extent(kv_head_offset, head_size)));
+      // FIXME: options
+      // result = Matmul(Matmul(tensor1, tensor2, interim_result), tensor3)
+      // result = Matmul(Matmul(tensor1, tensor2), tensor3, temporary) --> creates and returns a view of temporary
+      // result = Matmul(Matmul(tensor1, tensor2), Matmul(tensor3, tensor4), temporary, temporary) !!
+      // result = Matmul(Matmul(tensor1, tensor2, interim1), Matmul(tensor3, tensor4,interim2)) 
+      //
+      // result += Matmul() ??
+      // result = Add(result, Matmuul(temp))
+      // Add::operator()(result)
+      // :q
+      // u
+#endif
     }
-
+// FIXME: matvec
     // bring it all together
     // (dim, dim) @ (dim = n_heads * head_size) -> (dim)
     x_ += Matmul(l.wo_, scores_);
+// FIXME: requires a temporary
 
     // (dim) * (dim) -> (dim)
+// FIXME: matvec
     xb_ = RmsNorm(x_) * l.ffn_norm_;
 
     // self.w2(F.silu(self.w1(x)) * self.w3(x))
@@ -351,7 +379,10 @@ void LLaMAModelT<T, Dev>::Forward(LLaMAVocab::token token, size_t pos)
     // silu(w1(x)) * w3(x)  -> (hidden_dim) * (hiddem_dim)      -> (hidden_dim)
     // w2(...)              -> (dim, hidden_dim) @ (hidden_dim) -> (dim)
     x_ += Matmul(l.w2_, Silu(Matmul(l.w1_, xb_)) * Matmul(l.w3_, xb_));
+// FIXME: requires a temporary
   }
+
+// FIXME: only matmul!
 
   // Final RMS norm and classified into logits
   // (vocab_size, dim) @ ((dim, dim) * (dim)) -> (vocab_size)

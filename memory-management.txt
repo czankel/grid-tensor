@@ -1,0 +1,35 @@
+
+
+
+In this example:
+
+  Operation A (Operation B, Operation C)
+
+We need two temporary arrays, ArrayB and ArrayC
+
+
+The functions are rather static, though, nobody would do a new Tensor(...);
+SomeFunc()
+{
+  Tensor x;
+  for ()
+  {
+    Tensor a, b, ...;
+    x = (a op b) op ( ... ) ...;
+  }
+}
+
+Tensors are static, so array allocation could be done statically? Or on first run?
+Sizes could change.... ??? 
+
+Operator(x.View(size), ...)
+
+
+
+
+    
+    
+
+
+
+

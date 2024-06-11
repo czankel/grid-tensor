@@ -24,8 +24,14 @@ namespace grid {
 template <typename> class MatmulOperator;
 template <typename, size_t, typename> class Tensor;
 
-template <AnyTensor TTensor1, AnyTensor TTensor2>
-class MatmulFunction
+template <TensorConvertible TTensor1, TensorConvertible TTensor2>
+class MatmulFunction : public _TensorOperator
+#if 0
+                       TensorOperator<std::commont_type_t<typename std::remove_cvref_t<TTensor1>::value_type,
+                                                          typename std::remove_cvref_t<TTensor2>::value_type>,
+                                      std::max(std::remove_cvref_t<TTensor1>::rank, std::remove_cvref_t<TTensor2>::rank),
+                                      Binary<TOperator, TTensor1, TTensor2>>
+#endif
 {
   using device = tensor_device_t<TTensor1>;
 
@@ -37,9 +43,13 @@ class MatmulFunction
   using const_pointer = const value_type*;
   constexpr static size_t tensor1_rank = tensor1_type::rank;
   constexpr static size_t tensor2_rank = tensor2_type::rank;
-  // TODO: OK for combination of rank-2 and rank-1 but maybe not rank-3 and higher?
   constexpr static size_t rank =
    tensor1_type::rank != 1 || tensor2_type::rank != 1 ? std::min(tensor1_type::rank, tensor2_type::rank) : 0;
+
+  MatmulFunction(MatmulFunction&& other)
+   : tensor1_(std::move(other.tensor1_)),
+     tensor2_(std::move(other.tensor2_))
+  {}
 
   template <typename T1, typename T2>
   requires (tensor1_rank > 0 && tensor2_rank > 0)
@@ -47,6 +57,7 @@ class MatmulFunction
    : tensor1_(std::forward<T1>(tensor1)),
      tensor2_(std::forward<T2>(tensor2))
   {
+    // FIXME: what if ranks are both 0? need throw,,
     if constexpr (tensor1_rank > 0 && tensor2_rank > 0)
     {
       // matmul: lhs columns (dim[rank-1])  and rhs rows (dim[rank-2]) have to match; assume column-vector
@@ -63,16 +74,29 @@ class MatmulFunction
   MatmulFunction(const MatmulFunction& other) = delete;
   MatmulFunction& operator=(const MatmulFunction& other) = delete;
 
+  template <AnyTensor TTensor>
+  auto& operator()(TTensor& result) const
+  {
+    printf("matmul operator(result)\n");
+    if (tensor1_.Dimensions()[tensor1_rank - 1] != tensor2_.Dimensions()[0])
+        throw std::runtime_error("mismatching dimensions in vector product");
+
+   eval(result);
+   return result;
+  }
+
   /// operator()() executes and returns a (scalar) tensor with the 'vector dot' multiplication.
   auto operator()() const requires (tensor1_rank == 1 && tensor2_rank == 1)
   {
     if (tensor1_.Dimensions()[0] != tensor2_.Dimensions()[0])
       throw std::runtime_error("mismatching dimensions in vector product");
 
+    printf("create tensor 1\n");
     // FIXME
     auto result = Tensor<value_type, 0, Scalar/* DeviceMemory<device>*/>{value_type{0}};
-    operator_(result, tensor1_, tensor2_);
-    return result;
+    return eval(std::move(result));
+    //operator_(result, tensor1_, tensor2_);
+    //return result;
   }
 
   /// operator()() executes and returns a (matrix) tensor for a mtrix multiplication.
@@ -83,9 +107,11 @@ class MatmulFunction
     if (dims1[1] != dims2[0])
       throw std::runtime_error("mismatching dimensions in matrix multiplication");
 
+    printf("create tensor 3\n");
     auto result = Tensor<value_type, 2, DeviceMemory<device>>({dims1[0], dims2[1]}, Uninitialized<value_type>{});
-    operator_(result, tensor1_, tensor2_);
-    return result;
+    return eval(std::move(result));
+    //operator_(result, tensor1_, tensor2_);
+    //return result;
   }
 
   /// operator()() executes and returns a (vector) tensor of a matrix * vector multiplication.
@@ -96,9 +122,12 @@ class MatmulFunction
     if (dims1[1] != dims2[0])
       throw std::runtime_error("mismatching dimensions in matrix multiplication");
 
+    printf("create tensor 4:\n");
     auto result = Tensor<value_type, 1, DeviceMemory<device>>(dims1[0], Uninitialized<value_type>{});
-    operator_(result, tensor1_, tensor2_);
-    return result;
+
+    return eval(std::move(result));
+    //operator_(result, tensor1_, tensor2_);
+    //return result;
   }
 
   /// operator()() executes and returns a (vector) tensor of a vector * matrix multiplication.
@@ -109,9 +138,39 @@ class MatmulFunction
     if (dims1[0] != dims2[0])
       throw std::runtime_error("mismatching dimensions in matrix multiplication");
 
+    printf("create tensor 5\n");
     auto result = Tensor<value_type, 1, DeviceMemory<device>>(dims2[1], Uninitialized<value_type>{});
-    operator_(result, tensor1_, tensor2_);
+    return eval(std::move(result));
+    //operator_(result, tensor1_, tensor2_);
+    //return result;
+  }
+
+  inline auto eval(auto&& result) const
+  {
+    // FIXMEa pass result but only if operator_ 9which is??) is non-destructive...
+    if constexpr (is_operator_v<TTensor1> && is_operator_v<TTensor2>)
+      operator_(tensor1_(), tensor2_(), result);
+    else if constexpr (is_operator_v<TTensor1>)
+      operator_(tensor1_(), tensor2_, result);
+    else if constexpr (is_operator_v<TTensor2>)
+      operator_(tensor1_, tensor2_(), result);
+    else
+      operator_(tensor1_, tensor2_, result);
+
     return result;
+ }
+
+  // cache somehow??
+  auto Dimensions() const
+  {
+    if constexpr (tensor1_rank == 1 && tensor2_rank == 1)
+      return std::array<const ssize_t, 0>{};
+    else if constexpr (tensor1_rank == 1)
+      return std::array{tensor2_.Dimensions()[tensor2_rank - 1]};
+    else if constexpr (tensor2_rank == 1)
+      return std::array{tensor1_.Dimensions()[0]};
+    else
+      return std::array{tensor1_.Dimensions()[0], tensor2_.Dimensions()[tensor2_rank - 1]};
   }
 
  private:
@@ -120,8 +179,8 @@ class MatmulFunction
   TTensor2 tensor2_;
 };
 
-template <typename T1, typename T2> MatmulFunction(T1&&, T2&&)
-  -> MatmulFunction<typename to_tensor<T1>::type, typename to_tensor<T2>::type>;
+template <typename T1, typename T2> MatmulFunction(T1, T2)
+  -> MatmulFunction<T1, T2>; // FIXME typename to_tensor<T1>::type, typename to_tensor<T2>::type>;
 
 template <TensorConvertible TTensor1, TensorConvertible TTensor2>
 requires (std::remove_cvref_t<TTensor1>::rank > 0 && std::remove_cvref_t<TTensor2>::rank > 0)

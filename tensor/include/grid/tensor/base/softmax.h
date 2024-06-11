@@ -105,7 +105,10 @@ template <> class SoftMaxOperator<device::Base>
     auto max = Max(&*first, std::span(extents), std::span(result.Strides()));
     auto sum = SumExp(&*result, &*first, max, std::span(extents), std::span(first.Strides()));
 
+    printf("SOFTMAX RESULT RANK %lu\n", result.Rank());
+
     value_type scale = static_cast<value_type>(1)/(sum + eps);
+    printf("Softwmax caling Binary Operator o x scale -> o\n");
     BinaryOperator<MulOperator<device::Base>>()(o, Tensor(scale), o);
   }
 };

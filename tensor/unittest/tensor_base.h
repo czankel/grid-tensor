@@ -12,10 +12,13 @@
 
 #if __cpp_deduction_guides >= 201907L
 
+#include <grid/tensor/concepts.h>
+//#include <grid/tensor/memory.h>I//
+
 struct TensorBaseType
 {
-  template <typename T, size_t N, typename M>
-  using Tensor = grid::Tensor<T, N, M>;
+  template <typename T, size_t N>
+  using Tensor = grid::Tensor<T, N, grid::DeviceMemory<grid::device::Base>>;
 };
 
 #else
