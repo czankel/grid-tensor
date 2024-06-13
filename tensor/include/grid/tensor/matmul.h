@@ -20,12 +20,28 @@ namespace grid {
 //
 // Device-specific operator
 //
+  // TODO: OK for combination of rank-2 and rank-1 but maybe not rank-3 and higher?
 
 template <typename> class MatmulOperator;
 template <typename, size_t, typename> class Tensor;
 
-template <AnyTensor TTensor1, AnyTensor TTensor2>
-class MatmulFunction
+namespace
+{
+  template <typename TTensor1, typename TTensor2>
+  struct MatmulRank
+  {
+    using tensor1_type = std::remove_reference_t<TTensor1>;
+    using tensor2_type = std::remove_reference_t<TTensor2>;
+    constexpr static size_t rank =
+      tensor1_type::rank != 1 || tensor2_type::rank != 1 ? std::min(tensor1_type::rank, tensor2_type::rank) : 0;
+  };
+}
+
+template <TensorConvertible TTensor1, TensorConvertible TTensor2>
+class MatmulFunction : TensorOperator<std::common_type_t<typename std::remove_cvref_t<TTensor1>::value_type,
+                                                          typename std::remove_cvref_t<TTensor2>::value_type>,
+                                      MatmulRank<TTensor1, TTensor2>::rank,
+                                      MatmulFunction<TTensor1, TTensor2>>
 {
   using device = tensor_device_t<TTensor1>;
 
@@ -37,14 +53,15 @@ class MatmulFunction
   using const_pointer = const value_type*;
   constexpr static size_t tensor1_rank = tensor1_type::rank;
   constexpr static size_t tensor2_rank = tensor2_type::rank;
-  // TODO: OK for combination of rank-2 and rank-1 but maybe not rank-3 and higher?
-  constexpr static size_t rank =
-   tensor1_type::rank != 1 || tensor2_type::rank != 1 ? std::min(tensor1_type::rank, tensor2_type::rank) : 0;
+
+  using MatmulFunction::TensorOperator::rank;
+
 
   template <typename T1, typename T2>
   requires (tensor1_rank > 0 && tensor2_rank > 0)
   MatmulFunction(T1&& tensor1, T2&& tensor2)
-   : tensor1_(std::forward<T1>(tensor1)),
+   : TensorOperator<value_type, rank, MatmulFunction<TTensor1, TTensor2>>(*this),
+     tensor1_(std::forward<T1>(tensor1)),
      tensor2_(std::forward<T2>(tensor2))
   {
     if constexpr (tensor1_rank > 0 && tensor2_rank > 0)
@@ -70,7 +87,7 @@ class MatmulFunction
       throw std::runtime_error("mismatching dimensions in vector product");
 
     auto result = Tensor<value_type, 0, DeviceMemory<device>>{value_type{0}};
-    operator_(result, tensor1_, tensor2_);
+    operator_(tensor1_, tensor2_, result);
     return result;
   }
 
@@ -83,7 +100,7 @@ class MatmulFunction
       throw std::runtime_error("mismatching dimensions in matrix multiplication");
 
     auto result = Tensor<value_type, 2, DeviceMemory<device>>({dims1[0], dims2[1]}, Uninitialized<value_type>{});
-    operator_(result, tensor1_, tensor2_);
+    operator_(tensor1_, tensor2_, result);
     return result;
   }
 
@@ -96,7 +113,7 @@ class MatmulFunction
       throw std::runtime_error("mismatching dimensions in matrix multiplication");
 
     auto result = Tensor<value_type, 1, DeviceMemory<device>>(dims1[0], Uninitialized<value_type>{});
-    operator_(result, tensor1_, tensor2_);
+    operator_(tensor1_, tensor2_, result);
     return result;
   }
 
@@ -109,7 +126,7 @@ class MatmulFunction
       throw std::runtime_error("mismatching dimensions in matrix multiplication");
 
     auto result = Tensor<value_type, 1, DeviceMemory<device>>(dims2[1], Uninitialized<value_type>{});
-    operator_(result, tensor1_, tensor2_);
+    operator_(tensor1_, tensor2_, result);
     return result;
   }
 
@@ -132,4 +149,3 @@ auto Matmul(TTensor1&& tensor1, TTensor2&& tensor2)
 } // end of namespace grd
 
 #endif  // GRID_TENSOR_MATMUL_H
-
