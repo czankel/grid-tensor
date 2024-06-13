@@ -686,6 +686,20 @@ auto operator*(T scalar, TTensor&& tensor)
   return Mul(scalar, std::forward<TTensor>(tensor));
 }
 
+// operator/ (TensorType, TensorType)
+template <TensorConvertible TTensor1, TensorConvertible TTensor2>
+auto operator/(TTensor1&& tensor1, TTensor2&& tensor2)
+{
+  return Div(std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
+}
+
+// operator/ (TensorType, arithmetic)
+template <TensorConvertible TTensor, Arithmetic T>
+auto operator/(TTensor&& tensor, T scalar)
+{
+  return Div(std::forward<TTensor>(tensor), scalar);
+}
+
 } // end of namespace grid
 
 /// operator<<(TENSOR) overloads the output operator for tensors.

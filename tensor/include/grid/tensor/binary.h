@@ -151,12 +151,20 @@ auto Mul(T scalar, TTensor&& tensor)
       std::forward<TTensor>(tensor), Tensor(scalar));
 }
 
-/// @brief Div multiplies two tensors element-wise (lazily).
+/// @brief Div divides a first tensor with a second tensors element-wise (lazily).
 template <TensorConvertible TTensor1, TensorConvertible TTensor2>
 auto Div(TTensor1&& tensor1, TTensor2&& tensor2)
 {
   return Binary(BinaryOperator<DivOperator<tensor_device_t<TTensor1>>>(),
       std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
+}
+
+/// @brief Div divides a tensor by a scalar
+template <TensorConvertible TTensor, Arithmetic T>
+auto Div(TTensor&& tensor, T scalar)
+{
+  return Binary(BinaryOperator<DivOperator<tensor_device_t<TTensor>>>(),
+      std::forward<TTensor>(tensor), Tensor(scalar));
 }
 
 
