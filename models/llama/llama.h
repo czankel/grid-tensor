@@ -245,6 +245,9 @@ std::string LLaMAModelT<T, Dev>::Decode(LLaMAVocab::token prev, LLaMAVocab::toke
   // onvert raw bytes, e.g. <0x01> to actual bytes
   if (symbol[0] == '<')
   {
+    if (symbol == "<unk>")
+      throw std::runtime_error("Failed to find symbol in vocab: " + std::to_string(token));
+
     auto end = symbol.find('>');
     if (end != std::string::npos)
     {
