@@ -333,14 +333,14 @@ class Tensor : public Array<T, TMemory>
   auto Reshape(const std::array<size_t, TViewRank>& dimensions,
                const std::array<ssize_t, TViewRank>& strides)
   {
-    return view::Reshape(*this, std::to_array(dimensions), std::to_array(strides));
+    return view::Reshape(*this, std::move(dimensions), std::move(strides));
   }
 
   template <size_t TViewRank>
   auto Reshape(const std::array<size_t, TViewRank>& dimensions,
                const std::array<ssize_t, TViewRank>& strides) const
   {
-    return view::Reshape(*this, std::to_array(dimensions), std::to_array(strides));
+    return view::Reshape(*this, std::move(dimensions), std::move(strides));
   }
 
 
