@@ -23,10 +23,6 @@ struct MemoryMapped {};
 /// Saclar is a single (read-write) scalar value.
 struct Scalar {};
 
-
 } // end of namespace grid
 
-
 #endif  // GRID_TENSOR_MEMORY_H
-
-

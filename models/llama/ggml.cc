@@ -241,7 +241,7 @@ void GgmlFile::Load()
   parameters_.dim_ = GetValue<uint32_t>(model_arch_ + ".embedding_length");
   parameters_.vocab_size_ = GetValue<std::vector<std::string>>("tokenizer.ggml.tokens").size();
   parameters_.hidden_dim_ = GetValue<uint32_t>(model_arch_ + ".feed_forward_length");
-  parameters_.num_layers_ = GetValue<uint32_t>(model_arch_ + ".block_count"); 
+  parameters_.num_layers_ = GetValue<uint32_t>(model_arch_ + ".block_count");
   parameters_.num_heads_ = GetValue<uint32_t>(model_arch_ + ".attention.head_count");
   parameters_.num_kv_heads_ = GetValue<uint32_t>(model_arch_ + ".attention.head_count_kv");
   parameters_.max_seq_len_ = GetValue<uint32_t>(model_arch_ + ".context_length");
