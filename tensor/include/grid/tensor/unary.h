@@ -109,7 +109,6 @@ auto RmsNorm(TTensor&& tensor)
   return Unary(RmsNormOperator<tensor_device_t<TTensor>>(), std::forward<TTensor>(tensor));
 }
 
-
 /// @brief SoftMax returns a tensor with the SoftMax applied to the provided tensor.
 template <TensorConvertible TTensor>
 auto SoftMax(TTensor&& tensor)
@@ -117,14 +116,12 @@ auto SoftMax(TTensor&& tensor)
   return Unary(SoftMaxOperator<tensor_device_t<TTensor>>(), std::forward<TTensor>(tensor));
 }
 
-
 /// @brief Silu returns a tensor with SiLU activation applied to the provided tensor.
 template <TensorConvertible TTensor>
 auto Silu(TTensor&& tensor)
 {
   return Unary(SiluOperator<tensor_device_t<TTensor>>(), std::forward<TTensor>(tensor));
 }
-
 
 } // end of namespace grd
 
