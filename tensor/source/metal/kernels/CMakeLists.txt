@@ -10,6 +10,8 @@ set(gridtensor_metal_PATH ${CMAKE_CURRENT_BINARY_DIR})
 set(
   KERNELS
   "binary"
+  "unary"
+  "gemm"
 )
 
 function(build_kernel TARGET SRCFILE)

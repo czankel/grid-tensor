@@ -101,6 +101,12 @@ auto Copy(TTensor&& tensor)
   return Unary(UnaryOperator<CopyOperator<tensor_device_t<TTensor>>>(), std::forward<TTensor>(tensor));
 }
 
+/// @brief Neg returns a copy of the negated tensor.
+template <TensorConvertible TTensor>
+auto Neg(TTensor&& tensor)
+{
+  return Unary(UnaryOperator<NegOperator<tensor_device_t<TTensor>>>(), std::forward<TTensor>(tensor));
+}
 
 /// @brief RmsNorm returns a tensor of the RMS normalized tensor.
 template <TensorConvertible TTensor>

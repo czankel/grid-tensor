@@ -11,7 +11,6 @@
 #ifndef GRID_TENSOR_METAL_BINARY_H
 #define GRID_TENSOR_METAL_BINARY_H
 
-#include <stdio.h>
 #include <grid/util/demangle.h>
 
 #include "device.h"
@@ -28,7 +27,8 @@ class BinaryOperator<TOperator<device::Metal>>
   {
     constexpr size_t rank = dimensions.size();
 
-    // TODO: clean this up
+#if 0
+// >>>>>>>>>>>>>>>>>>>>>>>.
     static MTL::CommandQueue* queue;
     if (queue == nullptr)
     {
@@ -44,19 +44,25 @@ class BinaryOperator<TOperator<device::Metal>>
 
     command_buffer->retain();
     //    assert(command_buffer != nullptr);
+
     MTL::ComputeCommandEncoder* enc = command_buffer->computeCommandEncoder();
     enc->retain();
+// =========================
+#endif
+    auto& device = device::Metal::GetDevice();
+    auto& encoder = device.Encoder();
+// <<<<<<<<<<<<<<<<<<<<<<<<<
 
-    enc->setBuffer(src1, 0, 0);
-    enc->setBuffer(src2, 0, 1);
-    enc->setBuffer(dest, 0, 2);
+    encoder->setBuffer(src1, 0, 0);
+    encoder->setBuffer(src2, 0, 1);
+    encoder->setBuffer(dest, 0, 2);
 
     size_t s1 = strides1.size();
     size_t s2 = strides2.size();
 
     MTL::ComputePipelineState* pipeline;
     if (rank == 0 ||
-        (rank == 1 && (s1 == 0 || strides1[s2 - 1] == 1) && (s2 == 0 || strides2[s2 - 1] == 1)))
+        (rank == 1 && (s1 == 0 || strides1[s1 - 1] == 1) && (s2 == 0 || strides2[s2 - 1] == 1)))
     {
       // FIXME constexpr (doesn't work with strings??)
       std::string quantities = s1 == 0 && s2 == 0? "SS" : s1 == 0? "SV" : s2 == 0? "VS" : "VV";
@@ -64,17 +70,24 @@ class BinaryOperator<TOperator<device::Metal>>
         kernel("BinaryOperator" + quantities + std::string(TOperator<device::Metal>::kernel_name));
 
       pipeline = kernel.ComputePipelineState();
-      enc->setComputePipelineState(pipeline);
+      encoder->setComputePipelineState(pipeline);
 
+      // FIXME: is this wrong? strides0 might have wrong value here?
       size_t array_length = 1;
       if constexpr (rank > 0)
-        array_length = strides0[0] * dimensions[0];
+      {
+        array_length = dimensions[0];
+        if (s1 != 0)
+          array_length *= strides0[0];
+      }
 
       MTL::Size grid_size = MTL::Size(array_length, 1, 1);
       NS::UInteger thread_group_size_ = std::min(array_length, pipeline->maxTotalThreadsPerThreadgroup());
       MTL::Size thread_group_size = MTL::Size(thread_group_size_, 1, 1);
 
-      enc->dispatchThreads(grid_size, thread_group_size);
+      encoder.DispatchThreads(grid_size, thread_group_size);
+
+      device.Wait();  // FIXME
     }
     else
     {
@@ -82,12 +95,14 @@ class BinaryOperator<TOperator<device::Metal>>
         kernel("BinaryOperatorRank" + std::to_string(rank) + std::string(TOperator<device::Metal>::kernel_name));
 
       pipeline = kernel.ComputePipelineState();
-      enc->setComputePipelineState(pipeline);
+      encoder->setComputePipelineState(pipeline);
 
       auto [b_strides1, b_strides2] = BroadcastStrides(strides1, strides2);
-      enc->setBytes(b_strides1.data(), b_strides1.size() * sizeof(size_t), 3);
-      enc->setBytes(b_strides2.data(), b_strides2.size() * sizeof(size_t), 4);
+      encoder->setBytes(b_strides1.data(), b_strides1.size() * sizeof(size_t), 3);
+      encoder->setBytes(b_strides2.data(), b_strides2.size() * sizeof(size_t), 4);
 
+      // FIXME: move to utils.h
+// >>
       std::array<size_t, 3> dims = { 0, 0, 0 };
       size_t old_sum, sum = 0;
       do
@@ -102,20 +117,11 @@ class BinaryOperator<TOperator<device::Metal>>
       auto group_size = MTL::Size{1ul << dims[0], 1ul << dims[1], 1ul << dims[2]};
       MTL::Size grid_size =
         MTL::Size(dimensions[rank - 1], rank > 1 ? dimensions[rank - 2] : 1, rank > 2 ? dimensions[rank - 3] : 1);
+// <<
+      encoder.DispatchThreads(grid_size, group_size);
 
-      enc->dispatchThreads(grid_size, group_size);
+      device.Wait(); // FIXME
     }
-
-    enc->endEncoding();
-
-    command_buffer->commit();
-    command_buffer->waitUntilCompleted();
-
-    MTL::CommandBufferStatus status = command_buffer->status();
-    std::cout << "status: " << status << std::endl;
-
-    enc->release();
-    command_buffer->release();
   }
 
  public:
