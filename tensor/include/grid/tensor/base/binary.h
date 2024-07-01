@@ -27,7 +27,7 @@ namespace grid {
 ///
 ///  @tparm TOperator binary operator
 template <template <typename> typename TOperator>
-class BinaryOperator<TOperator<device::Base>>
+class BinaryOperator<TOperator, device::Base>
 {
   // TODO: gcc doesn't like this constexpr, which would be use later as just Operator(args).
   // Should it? See P0386R2 change: 9.2.3.2p3

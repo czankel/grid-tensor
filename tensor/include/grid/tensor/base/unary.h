@@ -25,7 +25,7 @@ namespace grid {
 ///
 ///  @tparm TOperator unary operator
 template <template <typename> typename TOperator>
-class UnaryOperator<TOperator<device::Base>>
+class UnaryOperator<TOperator, device::Base>
 {
   template <typename T>
   inline void eval(T* dst, const T* src, auto dimensions, auto strides0, auto strides1) const

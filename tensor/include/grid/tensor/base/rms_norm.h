@@ -77,7 +77,7 @@ template <> class RmsNormOperator<device::Base>
     auto [value, count] = SumSquare(&*first, std::span(extents), std::span(first.Strides()));
 
     value_type scale = 1.0f/sqrtf(value / count + eps);
-    BinaryOperator<MulOperator<device::Base>>()(r, Tensor(scale), o);
+    BinaryOperator<MulOperator, device::Base>()(r, Tensor(scale), o);
   }
 };
 

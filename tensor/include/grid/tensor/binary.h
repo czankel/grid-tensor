@@ -19,7 +19,7 @@
 namespace grid {
 
 /// BinaryOperator is a empty definition for device-specific operators.
-template <typename> class BinaryOperator;
+template <template <typename> typename, typename> class BinaryOperator;
 template <typename, size_t, typename> class Tensor;
 
 
@@ -115,7 +115,7 @@ TOperator Binary<TOperator, TTensor1, TTensor2>::operator_;
 template <TensorConvertible TTensor1, TensorConvertible TTensor2>
 auto Add(TTensor1&& tensor1, TTensor2&& tensor2)
 {
-  return Binary(BinaryOperator<AddOperator<tensor_device_t<TTensor1>>>(),
+  return Binary(BinaryOperator<AddOperator, tensor_device_t<TTensor1>>(),
       std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
 }
 
@@ -123,7 +123,7 @@ auto Add(TTensor1&& tensor1, TTensor2&& tensor2)
 template <TensorConvertible TTensor1, TensorConvertible TTensor2>
 auto Sub(TTensor1&& tensor1, TTensor2&& tensor2)
 {
-  return Binary(BinaryOperator<SubOperator<tensor_device_t<TTensor1>>>(),
+  return Binary(BinaryOperator<SubOperator, tensor_device_t<TTensor1>>(),
       std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
 }
 
@@ -131,7 +131,7 @@ auto Sub(TTensor1&& tensor1, TTensor2&& tensor2)
 template <TensorConvertible TTensor1, TensorConvertible TTensor2>
 auto Mul(TTensor1&& tensor1, TTensor2&& tensor2)
 {
-  return Binary(BinaryOperator<MulOperator<tensor_device_t<TTensor1>>>(),
+  return Binary(BinaryOperator<MulOperator, tensor_device_t<TTensor1>>(),
       std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
 }
 
@@ -139,7 +139,7 @@ auto Mul(TTensor1&& tensor1, TTensor2&& tensor2)
 template <TensorConvertible TTensor, Arithmetic T>
 auto Mul(TTensor&& tensor, T scalar)
 {
-  return Binary(BinaryOperator<MulOperator<tensor_device_t<TTensor>>>(),
+  return Binary(BinaryOperator<MulOperator, tensor_device_t<TTensor>>(),
       std::forward<TTensor>(tensor), Tensor(scalar));
 }
 
@@ -147,7 +147,7 @@ auto Mul(TTensor&& tensor, T scalar)
 template <Arithmetic T, TensorConvertible TTensor>
 auto Mul(T scalar, TTensor&& tensor)
 {
-  return Binary(BinaryOperator<MulOperator<tensor_device_t<TTensor>>>(),
+  return Binary(BinaryOperator<MulOperator, tensor_device_t<TTensor>>(),
       std::forward<TTensor>(tensor), Tensor(scalar));
 }
 
@@ -155,7 +155,7 @@ auto Mul(T scalar, TTensor&& tensor)
 template <TensorConvertible TTensor1, TensorConvertible TTensor2>
 auto Div(TTensor1&& tensor1, TTensor2&& tensor2)
 {
-  return Binary(BinaryOperator<DivOperator<tensor_device_t<TTensor1>>>(),
+  return Binary(BinaryOperator<DivOperator, tensor_device_t<TTensor1>>(),
       std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
 }
 
@@ -163,7 +163,7 @@ auto Div(TTensor1&& tensor1, TTensor2&& tensor2)
 template <TensorConvertible TTensor, Arithmetic T>
 auto Div(TTensor&& tensor, T scalar)
 {
-  return Binary(BinaryOperator<DivOperator<tensor_device_t<TTensor>>>(),
+  return Binary(BinaryOperator<DivOperator, tensor_device_t<TTensor>>(),
       std::forward<TTensor>(tensor), Tensor(scalar));
 }
 

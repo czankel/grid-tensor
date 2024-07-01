@@ -18,7 +18,7 @@
 
 namespace grid {
 
-template <typename> class UnaryOperator;
+template <template <typename> typename, typename> class UnaryOperator;
 
 //
 // Unary Operators
@@ -98,7 +98,7 @@ TOperator Unary<TOperator, TTensor>::operator_;
 template <TensorConvertible TTensor>
 auto Copy(TTensor&& tensor)
 {
-  return Unary(UnaryOperator<CopyOperator<tensor_device_t<TTensor>>>(), std::forward<TTensor>(tensor));
+  return Unary(UnaryOperator<CopyOperator, tensor_device_t<TTensor>>(), std::forward<TTensor>(tensor));
 }
 
 
