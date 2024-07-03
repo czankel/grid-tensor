@@ -38,7 +38,10 @@ class Array<T, DeviceMemory<device::Metal>>
     // Allocate new buffer
     size_t mode = MTL::ResourceStorageModeShared | MTL::ResourceHazardTrackingModeTracked;
     auto& device = device::Metal::GetDevice();
-    return device.NewBuffer(size, mode);
+    auto* buffer = device.NewBuffer(size, mode);
+    if (buffer == nullptr)
+      throw std::runtime_error("failed to allocate buffer");
+    return buffer;
   }
 
   inline void Free(MTL::Buffer* buffer)
@@ -50,13 +53,15 @@ class Array<T, DeviceMemory<device::Metal>>
  public:
   Array() = default;
 
+  // TODO: size is in bytes not element numbers, revisit...
+
   // @brief Constructor for a contiguous array with the provided size.
   Array(size_t size) : size_(size), buffer_(Allocate(size)) {}
 
   // @brief Constructor for a contiguous array with the provided size with initialization.
   Array(size_t size, value_type init) : size_(size), buffer_(Allocate(size))
   {
-    details::initialize(Data(), size_, init);
+    details::initialize(Data(), size_ / sizeof(value_type), init);
   }
 
   // @brief Constructor for a non-contiguous array with the provided dimensions and strides.
