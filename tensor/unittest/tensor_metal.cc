@@ -10,6 +10,8 @@
 #include <grid/tensor/mmap.h>
 #include <grid/tensor/metal/tensor.h>
 #include <grid/tensor/metal/comparison.h>
+#include <grid/tensor/metal/generator.h>
+#include <grid/tensor/metal/unary.h>
 
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"

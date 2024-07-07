@@ -15,7 +15,6 @@
 
 #include "device.h"
 #include "kernels.h"
-#include "utils.h"
 
 namespace grid {
 
@@ -28,8 +27,31 @@ class BinaryOperator<TOperator, device::Metal>
   {
     constexpr size_t rank = dimensions.size();
 
+#if 0
+// >>>>>>>>>>>>>>>>>>>>>>>.
+    static MTL::CommandQueue* queue;
+    if (queue == nullptr)
+    {
+      auto& dev = device::Metal::GetDevice();
+      queue = dev.GetQueue();
+    }
+    if (queue == nullptr)
+      throw std::runtime_error("Failed to create queue");
+
+    MTL::CommandBuffer* command_buffer = queue->commandBufferWithUnretainedReferences();
+    if (!command_buffer)
+      throw std::runtime_error("failed to create command buffer");
+
+    command_buffer->retain();
+    //    assert(command_buffer != nullptr);
+
+    MTL::ComputeCommandEncoder* enc = command_buffer->computeCommandEncoder();
+    enc->retain();
+// =========================
+#endif
     auto& device = device::Metal::GetDevice();
     auto& encoder = device.Encoder();
+// <<<<<<<<<<<<<<<<<<<<<<<<<
 
     encoder->setBuffer(src1, 0, 0);
     encoder->setBuffer(src2, 0, 1);
@@ -65,7 +87,7 @@ class BinaryOperator<TOperator, device::Metal>
 
       encoder.DispatchThreads(grid_size, thread_group_size);
 
-      device.Wait(); // FIXME use callback or manage dispaltched jobs
+      device.Wait();  // FIXME use callback / manage streams
     }
     else
     {
@@ -79,10 +101,26 @@ class BinaryOperator<TOperator, device::Metal>
       encoder->setBytes(b_strides1.data(), b_strides1.size() * sizeof(size_t), 3);
       encoder->setBytes(b_strides2.data(), b_strides2.size() * sizeof(size_t), 4);
 
-      auto [ grid_size, group_size] = GetBlockSize(dimensions);
+      // FIXME: move to utils.h
+// >>
+      std::array<size_t, 3> dims = { 0, 0, 0 };
+      size_t old_sum, sum = 0;
+      do
+      {
+        old_sum = sum;
+        for (size_t i = 1; i <= rank && sum < 10; i++)
+          if (dimensions[rank - i] > (2ul << dims[rank - i]))
+            dims[rank - i]++, sum++;
+      }
+      while (sum != old_sum);
+
+      auto group_size = MTL::Size{1ul << dims[0], 1ul << dims[1], 1ul << dims[2]};
+      MTL::Size grid_size =
+        MTL::Size(dimensions[rank - 1], rank > 1 ? dimensions[rank - 2] : 1, rank > 2 ? dimensions[rank - 3] : 1);
+// <<
       encoder.DispatchThreads(grid_size, group_size);
 
-      device.Wait(); // FIXME use callback or manage dispaltched jobs
+      device.Wait(); // FIXME
     }
   }
 

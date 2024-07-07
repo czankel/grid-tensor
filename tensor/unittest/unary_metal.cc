@@ -8,19 +8,18 @@
 
 #include <grid/tensor/tensor.h>
 #include <grid/tensor/metal/tensor.h>
+#include <grid/tensor/base/tensor.h>
 
 #include <grid/tensor/binary.h>
 
-#include <grid/tensor/metal/binary.h>
 #include <grid/tensor/metal/comparison.h>
-#include <grid/tensor/metal/generator.h>
 #include <grid/tensor/metal/unary.h>
 
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
 
-#include "addition.h"
+#include "unary.h"
 #include "tensor_metal.h"
 
 
-INSTANTIATE_TYPED_TEST_SUITE_P(AdditionTestMetal, AdditionTestSuite, TensorMetalType);
+INSTANTIATE_TYPED_TEST_SUITE_P(UnaryTestMetal, UnaryTestSuite, TensorMetalType);

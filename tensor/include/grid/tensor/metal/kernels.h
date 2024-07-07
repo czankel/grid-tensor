@@ -26,6 +26,7 @@ class Kernel
   Kernel(std::string name)
   {
     auto& dev = device::Metal::GetDevice();
+    // FIXME: use templated specialized  struct<int> { constexpr name = "int"; }; ...
     auto tp = grid::Demangle(typeid(T).name());
     if (tp == "int")
       tp = "int32_t";
