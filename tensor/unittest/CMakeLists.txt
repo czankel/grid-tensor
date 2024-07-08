@@ -4,6 +4,7 @@ grid_add_sources(gridtensor_test
   multiplication_base.cc
   rms_norm_base.cc
   softmax_base.cc
+  unary_base.cc
 )
 
 if (BUILD_METAL)
