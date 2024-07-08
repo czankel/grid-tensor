@@ -14,10 +14,38 @@
 #include <Metal/Metal.hpp>
 #include <QuartzCore/QuartzCore.hpp>
 
+#include <iostream>
 
 #include <grid/tensor/metal/device.h>
 
 using namespace grid::device;
+
+//
+// CommandEncoder
+//
+
+// TODO: could make these inline
+void CommandEncoder::DispatchThreadgroups(MTL::Size grid_dims, MTL::Size group_dims)
+{
+  encoder_->dispatchThreadgroups(grid_dims, group_dims);
+}
+
+
+void CommandEncoder::DispatchThreads(MTL::Size grid_dims, MTL::Size group_dims)
+{
+  encoder_->dispatchThreads(grid_dims, group_dims);
+}
+
+//
+// Metal
+//
+
+// TODO: placeholder, resetting command_encoder_ waits and releases the encoder
+void Metal::Wait()
+{
+  command_encoder_ = nullptr;
+}
+
 
 Metal::Metal()
 {
@@ -32,10 +60,7 @@ Metal::Metal()
   if (error != nullptr)
     throw std::runtime_error("failed to create metal library");
 
-#if 0 // FIXME
-  NS::AutoreleasePool* pool_;
-  pool_ = NS::AutoreleasePool::alloc()->init();
-#endif
+  queue_ = mtl_device_->newCommandQueue();
 }
 
 
@@ -47,15 +72,41 @@ Metal& Metal::GetDevice()
   return *g_device_;
 }
 
-#if 0
-inline void check_error(MTL::CommandBuffer* cbuf) {
-  if (cbuf->status() == MTL::CommandBufferStatusError) {
-    std::ostringstream msg;
-    msg << "[METAL] Command buffer execution failed: "
-        << cbuf->error()->localizedDescription()->utf8String();
-    throw std::runtime_error(msg.str());
-  }
+
+MTL::ComputePipelineState* Metal::GetKernel(const std::string& name)
+{
+  if (auto it = kernels_.find(name); it != kernels_.end())
+    return it->second;
+
+  auto function_name = NS::String::string(name.c_str(), NS::ASCIIStringEncoding);
+  auto mtl_function = library_->newFunction(function_name);
+  if (!mtl_function)
+    throw std::runtime_error("Failed to find metal function: " + name);
+
+  NS::Error* error = nullptr;
+  auto kernel = mtl_device_->newComputePipelineState(mtl_function, &error);
+  if (error)
+    throw std::runtime_error(error->localizedDescription()->utf8String());
+
+  kernels_.insert({name, kernel});
+
+  return kernel;
 }
-#endif
+
+
+CommandEncoder& Metal::Encoder()
+{
+  if (command_encoder_ == nullptr)
+  {
+    MTL::CommandBuffer* command_buffer = queue_->commandBufferWithUnretainedReferences();
+
+    if (!command_buffer)
+      throw std::runtime_error("failed to create command buffer");
+
+    command_buffer->retain();
+    command_encoder_ = std::make_unique<CommandEncoder>(command_buffer);
+  }
+  return *command_encoder_;
+}
 
 grid::device::Metal* grid::device::Metal::g_device_;

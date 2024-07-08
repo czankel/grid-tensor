@@ -16,11 +16,57 @@
 
 namespace grid::device {
 
+class CommandEncoder
+{
+ public:
+  CommandEncoder(const CommandEncoder&) = delete;
+  CommandEncoder& operator=(const CommandEncoder&) = delete;
+
+  CommandEncoder(MTL::CommandBuffer* command_buffer)
+    : command_buffer_(command_buffer),
+      encoder_(command_buffer->computeCommandEncoder(MTL::DispatchTypeConcurrent))
+  {
+    encoder_->retain();
+    command_buffer_->retain();
+  }
+
+
+  ~CommandEncoder()
+  {
+    encoder_->endEncoding();
+    command_buffer_->commit();
+    command_buffer_->waitUntilCompleted();
+
+    // TODO: do we need to actually check (when callbacks are implemented)?
+#if 0
+    MTL::CommandBufferStatus status = command_buffer_->status();
+    std::cout << "status: " << status << std::endl;
+#endif
+
+    command_buffer_->release();
+    encoder_->release();
+  }
+
+  /// @brief Return the Metal encoder instance.
+  MTL::ComputeCommandEncoder* operator->()            { return encoder_; }
+
+  /// @brief Dispatch threadsgroups.
+  void DispatchThreadgroups(MTL::Size grid_dims, MTL::Size group_dims);
+
+  /// @brief Dispatch threads.
+  void DispatchThreads(MTL::Size grid_dims, MTL::Size group_dims);
+
+ private:
+  MTL::CommandBuffer*          command_buffer_;
+  MTL::ComputeCommandEncoder*  encoder_;
+};
+
+
 /// Metal is a Device that implements a singleton for managing the GPU devices.
 class Metal : public Device
 {
   // Private constructor
-  Metal();// = delete;
+  Metal();
 
   Metal(Metal&) = delete;
   Metal& operator=(Metal&) = delete;
@@ -33,52 +79,40 @@ class Metal : public Device
     }
   }
 
+  /// @brief Return the default device (singleton)
   static Metal& GetDevice();
 
+  /// @brief Create a new metal device buffer.
   // TODO use smart ptr?
   MTL::Buffer* NewBuffer(size_t length, MTL::ResourceOptions options)
   {
     return mtl_device_->newBuffer(length, options);
   }
 
-  MTL::ComputePipelineState* GetKernel(const std::string& name)
-  {
-    if (auto it = kernels_.find(name); it != kernels_.end())
-      return it->second;
+  /// @brief Find the kernel in the library.
+  MTL::ComputePipelineState* GetKernel(const std::string& name);
 
-    auto function_name = NS::String::string(name.c_str(), NS::ASCIIStringEncoding);
-    auto mtl_function = library_->newFunction(function_name);
-    if (!mtl_function)
-      throw std::runtime_error("Failed to find metal function: " + name);
+  // TODO: make it multi-stream
+  /// @brief Return the default encoder (singleton)
+  CommandEncoder& Encoder();
 
-    NS::Error* error = nullptr;
-    auto kernel = mtl_device_->newComputePipelineState(mtl_function, &error);
-    if (error)
-      throw std::runtime_error(error->localizedDescription()->utf8String());
+  // TODO Sync queues, wait for completion, etc... set callback...
+  void Wait();
 
-    kernels_.insert({name, kernel});
-
-    return kernel;
-  }
-
-  MTL::CommandQueue* GetQueue()
-  {
-    if (queue_ == nullptr)
-    {
-      // TODO: use pool? support multiple queues (per thread/stream)? Need to lock?
-      queue_ = mtl_device_->newCommandQueue();
-    }
-    return queue_;
-  }
 
  private:
-  static Metal* g_device_;
-  MTL::Device* mtl_device_;
+  static Metal*       g_device_;
 
-  MTL::Library* library_;
+  MTL::Device*        mtl_device_;
+
+  MTL::Library*       library_;
+  MTL::CommandQueue*  queue_;
+
+  std::unique_ptr<CommandEncoder> command_encoder_;
+
   std::unordered_map<std::string, MTL::ComputePipelineState*> kernels_;
-  MTL::CommandQueue* queue_;
 };
+
 
 } // end of namespace grid::device
 
