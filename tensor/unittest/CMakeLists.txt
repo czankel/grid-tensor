@@ -11,5 +11,6 @@ if (BUILD_METAL)
 grid_add_sources(gridtensor_test
   tensor_metal.cc
   addition_metal.cc
+  unary_metal.cc
 )
 endif()
