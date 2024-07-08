@@ -20,18 +20,6 @@ namespace grid {
 
 template <template <typename> typename, typename> class UnaryOperator;
 
-//
-// Unary Operators
-//
-
-template <typename> struct CopyOperator;
-template <typename> struct NegOperator;
-
-template <typename> class RmsNormOperator;
-template <typename> class SoftMaxOperator;
-template <typename> class SiluOperator;
-
-
 /// @brief Unary is a wrapper for a device-specific unary operator implementation.
 ///
 /// Unary provides a lazy-implementation that only stores the tensor and evaluates
@@ -91,8 +79,16 @@ template <typename TOperator, AnyTensor TTensor>
 TOperator Unary<TOperator, TTensor>::operator_;
 
 //
-// Exported unary functions
+// Elementary Unary Operators
 //
+
+template <typename> struct CopyOperator;
+template <typename> struct NegOperator;
+
+template <typename> class RmsNormOperator;
+template <typename> class SoftMaxOperator;
+template <typename> class SiluOperator;
+
 
 /// @brief Copy returns a copy of the tensor.
 template <TensorConvertible TTensor>
@@ -101,6 +97,12 @@ auto Copy(TTensor&& tensor)
   return Unary(UnaryOperator<CopyOperator, tensor_device_t<TTensor>>(), std::forward<TTensor>(tensor));
 }
 
+/// @brief Neg returns a copy of the negated tensor.
+template <TensorConvertible TTensor>
+auto Neg(TTensor&& tensor)
+{
+  return Unary(UnaryOperator<NegOperator, tensor_device_t<TTensor>>(), std::forward<TTensor>(tensor));
+}
 
 /// @brief RmsNorm returns a tensor of the RMS normalized tensor.
 template <TensorConvertible TTensor>
