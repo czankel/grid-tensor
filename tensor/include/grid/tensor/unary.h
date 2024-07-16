@@ -106,6 +106,7 @@ auto Neg(TTensor&& tensor)
 
 /// @brief RmsNorm returns a tensor of the RMS normalized tensor.
 template <TensorConvertible TTensor>
+requires (std::remove_cvref_t<TTensor>::rank <= 2)
 auto RmsNorm(TTensor&& tensor)
 {
   return Unary(RmsNormOperator<tensor_device_t<TTensor>>(), std::forward<TTensor>(tensor));
