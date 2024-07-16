@@ -32,9 +32,13 @@ TYPED_TEST_P(RmsNormTestSuite, TensorNormRmsRank2)
 {
   typename TypeParam::Tensor tensor = grid::Tensor{ { 1.618f, 2.f, 3.14f, 5.382f, -8.5f},
                                                     { 13.f, -21.f, 34.77f, 55.f, 43.5f} };
+  float scale1 = 4.851669788360596;
+  float scale2 = 36.70477676391602;
+  grid::Tensor expected{ { 1.618f / scale1,    2.f / scale1, 3.14f / scale1, 5.382f / scale1, -8.5f / scale1 },
+                         { 13.f / scale2, -21.f / scale2, 34.77f / scale2,  55.f / scale2, 43.5f / scale2 } };
+
   typename TypeParam::Tensor result = grid::RmsNorm(tensor);
-  // TODO: check actual result
-  EXPECT_EQ(result.Rank(), 2);
+  EXPECT_EQ(result, expected);
 }
 
 REGISTER_TYPED_TEST_SUITE_P(RmsNormTestSuite,
