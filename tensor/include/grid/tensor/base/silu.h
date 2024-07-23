@@ -26,46 +26,46 @@ template <> class SiluOperator<device::Base>
 
   template <typename T>
   inline void
-  Silu(T* dst, const T* src,
+  Silu(T* d, const T* x,
        std::span<const size_t,  1> dimensions,
-       std::span<const ssize_t, 1> strides0,
-       std::span<const ssize_t, 1> strides1) const
+       std::span<const ssize_t, 1> strides_d,
+       std::span<const ssize_t, 1> strides_x) const
   {
     for (size_t i = 0; i < dimensions[0]; i++)
     {
-      *dst = *src / (1.0f + exp(-*src));
-      dst += strides0[0];
-      src += strides1[0];
+      *d = *x / (1.0f + exp(-*x));
+      d += strides_d[0];
+      x += strides_x[0];
     }
   }
 
   template <typename T, size_t _N>
   inline void
-  Silu(T* dst, const T* src,
+  Silu(T* d, const T* x,
        std::span<const size_t,  _N> dimensions,
-       std::span<const ssize_t, _N> strides0,
-       std::span<const ssize_t, _N> strides1) const
+       std::span<const ssize_t, _N> strides_d,
+       std::span<const ssize_t, _N> strides_x) const
   {
     static_assert(_N != std::dynamic_extent, "dynamic_extent not allowed");
     for (size_t i = 0; i < dimensions[0]; i++)
     {
-      Silu(dst, src,
+      Silu(d, x,
            std::span<const size_t,  _N - 1>(dimensions.begin() + 1, _N - 1),
-           std::span<const ssize_t, _N - 1>(strides0.begin() + 1, _N - 1),
-           std::span<const ssize_t, _N - 1>(strides1.begin() + 1, _N - 1));
-      dst += strides0[0];
-      src += strides1[0];
+           std::span<const ssize_t, _N - 1>(strides_d.begin() + 1, _N - 1),
+           std::span<const ssize_t, _N - 1>(strides_x.begin() + 1, _N - 1));
+      d += strides_d[0];
+      x += strides_x[0];
     }
   }
 
  public:
-  template<std::ranges::input_range R, std::ranges::output_range<std::iter_value_t<std::ranges::iterator_t<R>>> O>
-  requires std::indirectly_copyable<std::ranges::iterator_t<R>, std::ranges::iterator_t<O>>
-  void operator()(R&& r, O&& o) const
+  template<std::ranges::input_range I, std::ranges::output_range<std::iter_value_t<std::ranges::iterator_t<I>>> O>
+  requires std::indirectly_copyable<std::ranges::iterator_t<I>, std::ranges::iterator_t<O>>
+  void operator()(I&& in, O&& out) const
   {
-    auto first = std::ranges::cbegin(r);
-    auto result = std::ranges::begin(o);
-    Silu(&*result, &*first, result.Extents(), first.Strides(), result.Strides());
+    auto first_d = std::ranges::begin(out);
+    auto first_x = std::ranges::cbegin(in);
+    Silu(&*first_d, &*first_x, first_d.Extents(), first_x.Strides(), first_d.Strides());
   }
 };
 

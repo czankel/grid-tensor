@@ -20,37 +20,38 @@ template <template <typename> typename TOperator>
 class GeneratorOperator<TOperator<device::Base>>
 {
   template <typename T, std::copy_constructible F>
-  inline void generate(T* dst,
+  inline void generate(T* d,
                        std::span<const size_t, 1> dimensions,
                        std::span<const ssize_t, 1> strides,
                        F gen) const
   {
-    for (size_t i = 0; i < dimensions[0]; i++, dst += strides[0])
-      TOperator<device::Base>()(dst, gen);
+    for (size_t i = 0; i < dimensions[0]; i++, d += strides[0])
+      TOperator<device::Base>()(d, gen);
   }
 
   template <typename T, size_t N, std::copy_constructible F>
-  inline void generate(T* dst,
+  inline void generate(T* d,
                        std::span<const size_t, N> dimensions,
                        std::span<const ssize_t, N> strides,
                        F gen) const
   {
-    for (size_t i = 0; i < dimensions[0]; i++, dst += strides[0])
-      generate(dst,
+    for (size_t i = 0; i < dimensions[0]; i++, d += strides[0])
+      generate(d,
                std::span<const size_t, N - 1>(dimensions.begin() + 1, dimensions.end()),
                std::span<const ssize_t, N - 1>(strides.begin() + 1, strides.end()),
                std::move(gen));
   }
 
  public:
-  template<std::ranges::input_range R, std::copy_constructible F>
-  void operator()(R&& r, F gen) const
+  template<typename O, std::copy_constructible F>
+  requires std::invocable<F&> && std::ranges::output_range<O, std::invoke_result_t<F&>>
+  void operator()(O&& out, F gen) const
   {
-    using tensor_type = std::remove_cvref_t<R>;
+    using tensor_type = std::remove_cvref_t<O>;
     constexpr size_t rank = tensor_type::rank;
-    auto first = std::ranges::begin(r);
+    auto fist_d = std::ranges::begin(out);
 
-    generate(&*first, std::span<const size_t, rank>{first.Extents()}, std::span{first.Strides()}, std::move(gen));
+    generate(&*fist_d, std::span<const size_t, rank>{fist_d.Extents()}, std::span{fist_d.Strides()}, std::move(gen));
   }
 };
 
@@ -60,13 +61,13 @@ class GeneratorOperator<TOperator<device::Base>>
 
 template <> struct FillOperator<device::Base>
 {
-  template <typename T> inline void operator()(T* dest, const T val) const { *dest = val; }
+  template <typename T> inline void operator()(T* d, const T val) const { *d = val; }
 };
 
 template <> struct FunctionOperator<device::Base>
 {
   // FIXME requires std::invocable<F&> && std::indirectly_writable<O, std::invoke_result_t<F&>>
-  template <typename T, typename F> inline void operator()(T* dest, F&& gen) const { *dest = std::invoke(gen); }
+  template <typename T, typename F> inline void operator()(T* d, F&& gen) const { *d = std::invoke(gen); }
 };
 
 

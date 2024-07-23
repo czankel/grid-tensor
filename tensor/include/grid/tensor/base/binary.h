@@ -34,56 +34,56 @@ class BinaryOperator<TOperator, device::Base>
   // static constexpr TOperator<device::Base> Operator;
 
   template <typename T>
-  inline void eval(T* dest, const T* src1, const T* src2, auto dimensions,
-                   auto strides0, auto strides1, auto strides2) const
+  inline void eval(T* d, const T* x, const T* y,
+                   auto dimensions, auto strides_d, auto strides_x, auto strides_y) const
   {
     static_assert(dimensions.size() != std::dynamic_extent, "dynamic_extent not allowed");
 
     if constexpr (dimensions.size() == 0)
-      dest[0] = TOperator<device::Base>()(src1[0], src2[0]);
+      d[0] = TOperator<device::Base>()(x[0], y[0]);
 
-    else if constexpr (dimensions.size() == 1  && strides0.size() == 0)
+    else if constexpr (dimensions.size() == 1  && strides_d.size() == 0)
       for (size_t i = 0; i < dimensions[0]; i++)
-        dest[i] = TOperator<device::Base>()(src1[i], src2[i]);
+        d[i] = TOperator<device::Base>()(x[i], y[i]);
 
     else
       for (size_t i = 0; i < dimensions[0]; i++)
       {
-        eval(dest, src1, src2,
+        eval(d, x, y,
              dimensions.template last<dimensions.size() - 1>(),
-             strides0.template last<(strides0.size() > 0) ? strides0.size() - 1 : 0>(),
-             strides1.template last<(strides1.size() > 0) ? strides1.size() - 1 : 0>(),
-             strides2.template last<(strides2.size() > 0) ? strides2.size() - 1 : 0>());
-        dest += strides0[0];
-        src1 += strides1.size() > 0 ? strides1[0] : 0;
-        src2 += strides2.size() > 0 ? strides2[0] : 0;
+             strides_d.template last<(strides_d.size() > 0) ? strides_d.size() - 1 : 0>(),
+             strides_x.template last<(strides_x.size() > 0) ? strides_x.size() - 1 : 0>(),
+             strides_y.template last<(strides_y.size() > 0) ? strides_y.size() - 1 : 0>());
+        d += strides_d[0];
+        x += strides_x.size() > 0 ? strides_x[0] : 0;
+        y += strides_y.size() > 0 ? strides_y[0] : 0;
       }
   }
 
  public:
-  template<std::ranges::input_range R1,
-           std::ranges::input_range R2,
-           std::ranges::output_range<std::iter_value_t<std::ranges::iterator_t<R1>>> O>
-  requires std::indirectly_copyable<std::ranges::iterator_t<R1>, std::ranges::iterator_t<O>> &&
-           std::indirectly_copyable<std::ranges::iterator_t<R2>, std::ranges::iterator_t<O>>
-  void operator()(R1&& r1, R2&& r2, O&& o) const
+  template<std::ranges::input_range I1,
+           std::ranges::input_range I2,
+           std::ranges::output_range<std::iter_value_t<std::ranges::iterator_t<I1>>> O>
+  requires std::indirectly_copyable<std::ranges::iterator_t<I1>, std::ranges::iterator_t<O>> &&
+           std::indirectly_copyable<std::ranges::iterator_t<I2>, std::ranges::iterator_t<O>>
+  void operator()(I1&& in1, I2&& in2, O&& out) const
   {
-    auto first1 = std::ranges::cbegin(r1);
-    auto first2 = std::ranges::cbegin(r2);
-    auto result = std::ranges::begin(o);
+    auto first_d = std::ranges::begin(out);
+    auto first_x = std::ranges::cbegin(in1);
+    auto first_y = std::ranges::cbegin(in2);
 
-    std::span strides0(result.Strides());
-    std::span strides1(first1.Strides());
-    std::span strides2(first2.Strides());
+    std::span strides_d(first_d.Strides());
+    std::span strides_x(first_x.Strides());
+    std::span strides_y(first_y.Strides());
 
     details::Fold([&](auto dimensions, bool contiguous) {
         if (contiguous)
-          eval(&*result, &*first1, &*first2, dimensions,
-               strides0.template first<(dimensions.size() > 0) ? dimensions.size() - 1 : 0>(),
-               strides1, strides2);
+          eval(&*first_d, &*first_x, &*first_y, dimensions,
+               strides_d.template first<(dimensions.size() > 0) ? dimensions.size() - 1 : 0>(),
+               strides_x, strides_y);
         else
-          eval(&*result, &*first1, &*first2, dimensions, strides0, strides1, strides2);
-    }, std::span(result.Extents()), strides0, strides1, strides2);
+          eval(&*first_d, &*first_x, &*first_y, dimensions, strides_d, strides_x, strides_y);
+    }, std::span(first_d.Extents()), strides_d, strides_x, strides_y);
   }
 };
 

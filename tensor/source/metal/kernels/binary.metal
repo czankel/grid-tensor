@@ -23,37 +23,37 @@ struct DivOperator { template<typename T> inline T operator()(T x, T y) { return
 template <typename Op, typename T, typename U>
 [[kernel]] void BinaryOperatorSS(device const T* a,
                                  device const T* b,
-                                 device U* c,
+                                 device U* d,
                                  uint index [[thread_position_in_grid]])
 {
-  c[index] = Op()(a[0], b[0]);
+  d[index] = Op()(a[0], b[0]);
 }
 
 template <typename Op, typename T, typename U>
 [[kernel]] void BinaryOperatorSV(device const T* a,
                                  device const T* b,
-                                 device U* c,
+                                 device U* d,
                                  uint index [[thread_position_in_grid]])
 {
-  c[index] = Op()(a[0], b[index]);
+  d[index] = Op()(a[0], b[index]);
 }
 
 template <typename Op, typename T, typename U>
 [[kernel]] void BinaryOperatorVS(device const T* a,
                                  device const T* b,
-                                 device U* c,
+                                 device U* d,
                                  uint index [[thread_position_in_grid]])
 {
-  c[index] = Op()(a[index], b[0]);
+  d[index] = Op()(a[index], b[0]);
 }
 
 template <typename Op, typename T, typename U>
 [[kernel]] void BinaryOperatorVV(device const T* a,
                                  device const T* b,
-                                 device U* c,
+                                 device U* d,
                                  uint index [[thread_position_in_grid]])
 {
-  c[index] = Op()(a[index], b[index]);
+  d[index] = Op()(a[index], b[index]);
 }
 
 #define FAST_FUNCTION(R, O, T) \
@@ -73,20 +73,20 @@ INSTANTIATE3(FAST_FUNCTION, (FAST_RANKS), (FAST_OPS), (FAST_TYPES))
 template <typename Op, typename T, typename U>
 [[kernel]] void BinaryOperatorRank1(device const T* a,
                                     device const T* b,
-                                    device U* c,
+                                    device U* d,
                                     constant const size_t& a_stride,
                                     constant const size_t& b_stride,
                                     uint pos [[thread_position_in_grid]])
 {
   auto a_idx = metal::pos_to_index(pos, a_stride);
   auto b_idx = metal::pos_to_index(pos, b_stride);
-  c[pos] = Op()(a[a_idx], b[b_idx]);
+  d[pos] = Op()(a[a_idx], b[b_idx]);
 }
 
 template <typename Op, typename T, typename U>
 [[kernel]] void BinaryOperatorRank2(device const T* a,
                                     device const T* b,
-                                    device U* c,
+                                    device U* d,
                                     constant const size_t a_strides[2],
                                     constant const size_t b_strides[2],
                                     uint2 pos [[thread_position_in_grid]],
@@ -95,13 +95,13 @@ template <typename Op, typename T, typename U>
   auto a_idx = metal::pos_to_index(pos, a_strides);
   auto b_idx = metal::pos_to_index(pos, b_strides);
   size_t c_idx = pos.x + (size_t)grid_dim.x * pos.y;
-  c[c_idx] = Op()(a[a_idx], b[b_idx]);
+  d[c_idx] = Op()(a[a_idx], b[b_idx]);
 }
 
 template <typename Op, typename T, typename U>
 [[kernel]] void BinaryOperatorRank3(device const T* a,
                                     device const T* b,
-                                    device U* c,
+                                    device U* d,
                                     constant const size_t a_strides[3],
                                     constant const size_t b_strides[3],
                                     uint3 pos [[thread_position_in_grid]],
@@ -110,7 +110,7 @@ template <typename Op, typename T, typename U>
   auto a_idx = metal::pos_to_index(pos, a_strides);
   auto b_idx = metal::pos_to_index(pos, b_strides);
   size_t c_idx = pos.x + (size_t)grid_dim.x * (pos.y + (size_t)grid_dim.y * pos.z);
-  c[c_idx] = Op()(a[a_idx], b[b_idx]);
+  d[c_idx] = Op()(a[a_idx], b[b_idx]);
 }
 
 

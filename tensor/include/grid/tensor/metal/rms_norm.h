@@ -26,9 +26,9 @@ namespace {
 
 template <> class RmsNormOperator<device::Metal>
 {
-  // TODO: assumes "x" and "W" are contiguous
+  // TODO: assumes "x" and "w" are contiguous
   template <typename T>
-  void eval(MTL::Buffer* y, const MTL::Buffer* x, auto dimensions, auto strides0, auto strides1) const
+  void eval(MTL::Buffer* d, const MTL::Buffer* x, auto dimensions, auto strides_d, auto strides_x) const
   {
     // TODO: define these at a more centralized location, are these defined in any metal headers?
     const int line_limit = 4096;
@@ -66,7 +66,7 @@ template <> class RmsNormOperator<device::Metal>
 
     encoder->setBuffer(x, 0, 0);
     // 1 is unused
-    encoder->setBuffer(y, 0, 2);
+    encoder->setBuffer(d, 0, 2);
     encoder->setBytes(&eps, sizeof(eps), 3);
     encoder->setBytes(&row_size, sizeof(int), 4);
     // 5 is unused
@@ -80,8 +80,8 @@ template <> class RmsNormOperator<device::Metal>
 
 
   template <typename T>
-  void eval(MTL::Buffer* y, const MTL::Buffer* x, const MTL::Buffer* W,
-            auto dimensions, auto strides0, auto strides1, auto strides2) const
+  void eval(MTL::Buffer* d, const MTL::Buffer* x, const MTL::Buffer* w,
+            auto dimensions, auto strides_d, auto strides_x, auto strides_w) const
   {
     const int simd_size = 32;
     const int line_limit = 4096;
@@ -113,14 +113,14 @@ template <> class RmsNormOperator<device::Metal>
     MTL::Size grid_size = MTL::Size(n_rows * threadgroup_size, 1, 1);
     MTL::Size group_size = MTL::Size(threadgroup_size, 1, 1);
 
-    uint32_t w_stride = strides2.back();
+    uint32_t w_stride = strides_w.back();
     T eps = Eps<T>::default_value;
 
     encoder->setComputePipelineState(pipeline);
 
     encoder->setBuffer(x, 0, 0);
-    encoder->setBuffer(W, 0, 1);
-    encoder->setBuffer(y, 0, 2);
+    encoder->setBuffer(w, 0, 1);
+    encoder->setBuffer(d, 0, 2);
     encoder->setBytes(&eps, sizeof(eps), 3);
     encoder->setBytes(&row_size, sizeof(int), 4);
     encoder->setBytes(&w_stride, sizeof(uint32_t), 5);
@@ -132,40 +132,40 @@ template <> class RmsNormOperator<device::Metal>
 
  public:
 
-  // y = RMS(x) * x  -- Note: requires contiguous (not asserted)
-  template<std::ranges::input_range R, std::ranges::output_range<std::iter_value_t<std::ranges::iterator_t<R>>> O>
-  requires std::indirectly_copyable<std::ranges::iterator_t<R>, std::ranges::iterator_t<O>>
-  void operator()(R&& r, O&& o) const
+  // d = RMS(x) * x  -- Note: requires contiguous (not asserted)
+  template<std::ranges::input_range I, std::ranges::output_range<std::iter_value_t<std::ranges::iterator_t<I>>> O>
+  requires std::indirectly_copyable<std::ranges::iterator_t<I>, std::ranges::iterator_t<O>>
+  void operator()(I&& in, O&& out) const
   {
     using value_type = std::iter_value_t<std::ranges::iterator_t<O>>;
 
-    auto first1 = std::ranges::cbegin(r);
-    auto result = std::ranges::begin(o);
+    auto first_d = std::ranges::begin(out);
+    auto first_x = std::ranges::cbegin(in);
 
-    std::span strides0(result.Strides());
-    std::span strides1(first1.Strides());
+    std::span strides_d(first_d.Strides());
+    std::span strides_x(first_x.Strides());
 
-    eval<value_type>(result.Buffer(), first1.Buffer(), first1.Extents(), strides0, strides1);
+    eval<value_type>(first_d.Buffer(), first_x.Buffer(), first_x.Extents(), strides_d, strides_x);
   }
 
 
-  // y = RMS(x) * x @ W  -- Note: required contiguous (not asserted)
-  template<std::ranges::input_range R1, std::ranges::input_range R2,
-           std::ranges::output_range<std::iter_value_t<std::ranges::iterator_t<R1>>> O>
-  requires std::indirectly_copyable<std::ranges::iterator_t<R1>, std::ranges::iterator_t<O>>
-  void operator()(R1&& r1, R2&& r2, O&& o) const
+  // d = IMS(x) * x @ W  -- Note: required contiguous (not asserted)
+  template<std::ranges::input_range I1, std::ranges::input_range I2,
+           std::ranges::output_range<std::iter_value_t<std::ranges::iterator_t<I1>>> O>
+  requires std::indirectly_copyable<std::ranges::iterator_t<I1>, std::ranges::iterator_t<O>>
+  void operator()(I1&& in1, I2&& in2, O&& out) const
   {
     using value_type = std::iter_value_t<std::ranges::iterator_t<O>>;
 
-    auto first1 = std::ranges::cbegin(r1);
-    auto first2 = std::ranges::cbegin(r2);
-    auto result = std::ranges::begin(o);
+    auto first_r = std::ranges::begin(out);
+    auto first_x = std::ranges::cbegin(in1);
+    auto first_W = std::ranges::cbegin(in2);
 
-    std::span strides0(result.Strides());
-    std::span strides1(first1.Strides());
-    std::span strides2(first2.Strides());
+    std::span strides_r(first_r.Strides());
+    std::span strides_x(first_x.Strides());
+    std::span strides_W(first_W.Strides());
 
-    eval<value_type>(result->Buffer(), first1->Buffer(), nullptr, first1.Dimensions(), strides0, strides1, strides2);
+    eval<value_type>(first_r->Buffer(), first_x->Buffer(), nullptr, first_x.Dimensions(), strides_r, strides_x, strides_W);
   }
 };
 

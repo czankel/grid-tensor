@@ -24,20 +24,20 @@ template <template <typename> typename TOperator>
 class UnaryOperator<TOperator, device::Metal>
 {
   template <typename T>
-  void eval(MTL::Buffer* dst, const MTL::Buffer* src, auto dimensions, auto strides0, auto strides1) const
+  void eval(MTL::Buffer* d, const MTL::Buffer* x, auto dimensions, auto strides_d, auto strides_x) const
   {
     constexpr size_t rank = dimensions.size();
 
     auto& device = device::Metal::GetDevice();
     auto& encoder = device.Encoder();
 
-    encoder->setBuffer(src, 0, 0);
-    encoder->setBuffer(dst, 0, 1);
+    encoder->setBuffer(x, 0, 0);
+    encoder->setBuffer(d, 0, 1);
 
-    size_t s1 = strides1.size();
+    size_t s1 = strides_x.size();
 
     MTL::ComputePipelineState* pipeline;
-    if (rank == 0 || (rank == 1 && (s1 == 0 || strides1[s1 - 1] == 1)))
+    if (rank == 0 || (rank == 1 && (s1 == 0 || strides_x[s1 - 1] == 1)))
     {
       std::string quantity = s1 == 0 ? "S" : "V";
       static metal::Kernel<T> kernel("UnaryOperator" + quantity + std::string(TOperator<device::Metal>::kernel_name));
@@ -49,8 +49,8 @@ class UnaryOperator<TOperator, device::Metal>
       if constexpr (rank > 0)
       {
         array_length = dimensions[0];
-        if (strides0.size() != 0)
-          array_length *= strides0[0];
+        if (strides_d.size() != 0)
+          array_length *= strides_d[0];
       }
 
       MTL::Size grid_size = MTL::Size(array_length, 1, 1);
@@ -66,7 +66,7 @@ class UnaryOperator<TOperator, device::Metal>
       static metal::Kernel<T>
         kernel("UnaryOperatorRank" + std::to_string(rank) + std::string(TOperator<device::Metal>::kernel_name));
 
-      encoder->setBytes(strides1.data(), strides1.size() * sizeof(size_t), 3);
+      encoder->setBytes(strides_x.data(), strides_x.size() * sizeof(size_t), 3);
 
       auto [ grid_size, group_size] = GetBlockSize(dimensions);
       encoder.DispatchThreads(grid_size, group_size);
@@ -77,27 +77,27 @@ class UnaryOperator<TOperator, device::Metal>
 
 
  public:
-  template<std::ranges::input_range R,
-           std::ranges::output_range<std::iter_value_t<std::ranges::iterator_t<R>>> O>
-  requires std::indirectly_copyable<std::ranges::iterator_t<R>, std::ranges::iterator_t<O>>
-  void operator()(R&& r, O&& o) const
+  template<std::ranges::input_range I,
+           std::ranges::output_range<std::iter_value_t<std::ranges::iterator_t<I>>> O>
+  requires std::indirectly_copyable<std::ranges::iterator_t<I>, std::ranges::iterator_t<O>>
+  void operator()(I&& in, O&& out) const
   {
     using value_type = std::iter_value_t<std::ranges::iterator_t<O>>;
 
-    auto first =  std::ranges::cbegin(r);
-    auto result = std::ranges::begin(o);
+    auto first_d = std::ranges::begin(out);
+    auto first_x = std::ranges::cbegin(in);
 
-    std::span strides0(result.Strides());
-    std::span strides1(first.Strides());
+    std::span strides_d(first_d.Strides());
+    std::span strides_x(first_x.Strides());
 
     details::Fold([&](auto dimensions, bool contiguous) {
         if (contiguous)
-          eval<value_type>(result.Buffer(), first.Buffer(), dimensions,
-               strides0.template first<(dimensions.size() > 0) ? dimensions.size() - 1 : 0>(),
-               strides1);
+          eval<value_type>(first_d.Buffer(), first_x.Buffer(), dimensions,
+               strides_d.template first<(dimensions.size() > 0) ? dimensions.size() - 1 : 0>(),
+               strides_x);
         else
-          eval<value_type>(result.Buffer(), first.Buffer(), dimensions, strides0, strides1);
-    }, std::span(result.Extents()), strides0, strides1);
+          eval<value_type>(first_d.Buffer(), first_x.Buffer(), dimensions, strides_d, strides_x);
+    }, std::span(first_d.Extents()), strides_d, strides_x);
   }
 };
 
