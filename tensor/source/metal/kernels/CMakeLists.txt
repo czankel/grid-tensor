@@ -12,6 +12,7 @@ set(
   "binary"
   "gemm"
   "rms_norm"
+  "softmax"
   "unary"
 )
 

@@ -13,6 +13,7 @@ grid_add_sources(gridtensor_test
   addition_metal.cc
   multiplication_metal.cc
   rms_norm_metal.cc
+  softmax_metal.cc
   unary_metal.cc
 )
 endif()
