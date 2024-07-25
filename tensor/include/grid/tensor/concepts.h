@@ -115,8 +115,14 @@ struct tensor_is_convertible_to
 
 // Use "Base" as the default device if none is defined. TODO: can this be removed (and include above)?
 template <typename> struct tensor_device { using type = device::Base; };
+
 template <template <typename, size_t, typename> typename TTensor, typename T, size_t TRank, typename TDevice>
 struct tensor_device<TTensor<T, TRank, DeviceMemory<TDevice>>> { using type = TDevice; };
+
+template <PrimitiveTensor TTensor, size_t TViewRank> class TensorView;
+template <PrimitiveTensor TTensor, size_t TViewRank>
+struct tensor_device<TensorView<TTensor, TViewRank>> { using type = tensor_device<std::remove_cvref_t<TTensor>>::type; };
+
 template <AnyOperator TOperator>
 struct tensor_device<TOperator> { using type = tensor_device<typename to_tensor<TOperator>::type>::type; };
 
