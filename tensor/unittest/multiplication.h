@@ -260,9 +260,9 @@ TYPED_TEST_P(MultiplicationTestSuite, TensorVecMatNonContiguous)
 
 TYPED_TEST_P(MultiplicationTestSuite, TensorScaleRight)
 {
-  typename TypeParam::Tensor tensor1 = grid::Tensor{ { 4.4, 6.6, 8.8 }, { 7.7, 5.5, 3.3 } };
-  typename TypeParam::Tensor tensor2 = grid::Tensor{ 1.0/11. };
-  grid::Tensor expected{ { 0.4, 0.6, 0.8 }, { 0.7, 0.5, 0.3 } };
+  typename TypeParam::Tensor tensor1 = grid::Tensor{ { 4.4f, 6.6f, 8.8f }, { 7.7f, 5.5f, 3.3f } };
+  typename TypeParam::Tensor tensor2 = grid::Tensor{ 1.0f/11.f };
+  grid::Tensor expected{ { 0.4f, 0.6f, 0.8f }, { 0.7f, 0.5f, 0.3f } };
 
   typename TypeParam::Tensor result = tensor1 * tensor2;
   EXPECT_EQ(result, expected);
@@ -270,9 +270,9 @@ TYPED_TEST_P(MultiplicationTestSuite, TensorScaleRight)
 
 TYPED_TEST_P(MultiplicationTestSuite, TensorScalexLeft)
 {
-  typename TypeParam::Tensor tensor1 = grid::Tensor{ 1.0/11. };
-  typename TypeParam::Tensor tensor2 = grid::Tensor{ { 4.4, 6.6, 8.8 }, { 7.7, 5.5, 3.3 } };
-  grid::Tensor expected{ { 0.4, 0.6, 0.8 }, { 0.7, 0.5, 0.3 } };
+  typename TypeParam::Tensor tensor1 = grid::Tensor{ 1.0f/11.f };
+  typename TypeParam::Tensor tensor2 = grid::Tensor{ { 4.4f, 6.6f, 8.8f }, { 7.7f, 5.5f, 3.3f } };
+  grid::Tensor expected{ { 0.4f, 0.6f, 0.8f }, { 0.7f, 0.5f, 0.3f } };
 
   typename TypeParam::Tensor result = tensor1 * tensor2;
   EXPECT_EQ(result, expected);
