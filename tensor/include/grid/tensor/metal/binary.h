@@ -31,19 +31,19 @@ class BinaryOperator<TOperator, device::Metal>
     auto& device = device::Metal::GetDevice();
     auto& encoder = device.Encoder();
 
-    encoder->setBuffer(x, 0, 0);
-    encoder->setBuffer(y, 0, 1);
-    encoder->setBuffer(d, 0, 2);
+    encoder->setBuffer(d, 0, 0);
+    encoder->setBuffer(x, 0, 1);
+    encoder->setBuffer(y, 0, 2);
 
-    size_t s1 = strides_x.size();
-    size_t s2 = strides_y.size();
+    size_t s_x = strides_x.size();
+    size_t s_y = strides_y.size();
 
     MTL::ComputePipelineState* pipeline;
     if (rank == 0 ||
-        (rank == 1 && (s1 == 0 || strides_x[s1 - 1] == 1) && (s2 == 0 || strides_y[s2 - 1] == 1)))
+        (rank == 1 && (s_x == 0 || strides_x[s_x - 1] == 1) && (s_y == 0 || strides_y[s_y - 1] == 1)))
     {
       // TODO find a way to use constexpr with strings
-      std::string quantities = s1 == 0 && s2 == 0? "SS" : s1 == 0? "SV" : s2 == 0? "VS" : "VV";
+      std::string quantities = s_x == 0 && s_y == 0? "SS" : s_x == 0? "SV" : s_y == 0? "VS" : "VV";
       static metal::Kernel<T>
         kernel("BinaryOperator" + quantities + std::string(TOperator<device::Metal>::kernel_name));
 
@@ -54,7 +54,7 @@ class BinaryOperator<TOperator, device::Metal>
       if constexpr (rank > 0)
       {
         array_length = dimensions[0];
-        if (s1 != 0)
+        if (s_x != 0)
           array_length *= strides_d[0];
       }
 

@@ -19,25 +19,25 @@ struct NegOperator  { template<typename T> inline T operator()(T x) { return -x;
 //
 
 template <typename Op, typename T, typename U>
-[[kernel]] void UnaryOperatorS(device const T* a,
-                               device U* c,
+[[kernel]] void UnaryOperatorS(device U* d,
+                               device const T* x,
                                uint index [[thread_position_in_grid]])
 {
-  c[index] = Op()(a[index]);
+  d[index] = Op()(x[index]);
 }
 
 template <typename Op, typename T, typename U>
-[[kernel]] void UnaryOperatorV(device const T* a,
-                               device U* c,
+[[kernel]] void UnaryOperatorV(device U* d,
+                               device const T* x,
                                uint index [[thread_position_in_grid]])
 {
-  c[index] = Op()(a[index]);
+  d[index] = Op()(x[index]);
 }
 
 
 #define FAST_FUNCTION(R, O, T) \
   template [[host_name(stringify(UnaryOperator ## R ## O ## T))]]  \
-  [[kernel]] void UnaryOperator ## R <O ## Operator, T>(device const T*, device T*, uint);
+  [[kernel]] void UnaryOperator ## R <O ## Operator, T>(device T*, device const T*, uint);
 
 #define FAST_RANKS S, V
 #define FAST_OPS   Copy, Neg
@@ -50,37 +50,37 @@ INSTANTIATE3(FAST_FUNCTION, (FAST_RANKS), (FAST_OPS), (FAST_TYPES))
 //
 
 template <typename Op, typename T, typename U>
-[[kernel]] void UnaryOperatorRank1(device const T* a,
-                                   device U* c,
-                                   constant const size_t& a_stride,
+[[kernel]] void UnaryOperatorRank1(device U* d,
+                                   device const T* x,
+                                   constant const size_t& stride_x,
                                    uint pos [[thread_position_in_grid]])
 {
-  auto a_idx = metal::pos_to_index(pos, a_stride);
-  c[pos] = Op()(a[a_idx]);
+  auto idx_x = metal::pos_to_index(pos, stride_x);
+  d[pos] = Op()(x[idx_x]);
 }
 
 template <typename Op, typename T, typename U>
-[[kernel]] void UnaryOperatorRank2(device const T* a,
-                                   device U* c,
-                                   constant const size_t a_strides[2],
+[[kernel]] void UnaryOperatorRank2(device U* d,
+                                   device const T* x,
+                                   constant const size_t strides_x[2],
                                    uint2 pos [[thread_position_in_grid]],
                                    uint2 grid_dim [[threads_per_grid]])
 {
-  auto a_idx = metal::pos_to_index(pos, a_strides);
+  auto idx_x = metal::pos_to_index(pos, strides_x);
   size_t c_idx = pos.x + (size_t)grid_dim.x * pos.y;
-  c[c_idx] = Op()(a[a_idx]);
+  d[c_idx] = Op()(x[idx_x]);
 }
 
 template <typename Op, typename T, typename U>
-[[kernel]] void UnaryOperatorRank3(device const T* a,
-                                   device U* c,
-                                   constant const size_t a_strides[3],
+[[kernel]] void UnaryOperatorRank3(device U* d,
+                                   device const T* x,
+                                   constant const size_t strides_x[3],
                                    uint3 pos [[thread_position_in_grid]],
                                    uint3 grid_dim [[threads_per_grid]])
 {
-  auto a_idx = metal::pos_to_index(pos, a_strides);
+  auto idx_x = metal::pos_to_index(pos, strides_x);
   size_t c_idx = pos.x + (size_t)grid_dim.x * (pos.y + (size_t)grid_dim.y * pos.z);
-  c[c_idx] = Op()(a[a_idx]);
+  d[c_idx] = Op()(x[idx_x]);
 }
 
 
@@ -90,7 +90,7 @@ template <typename Op, typename T, typename U>
 #define RANK1_FUNCTION(O, T) \
   template [[host_name(stringify(UnaryOperatorRank1 ## O ## T))]]  \
   [[kernel]] void UnaryOperatorRank1<O ## Operator, T, T>( \
-    device const T*, device T*, \
+    device T*, device const T*, \
     constant const size_t&, uint);
 
 INSTANTIATE2(RANK1_FUNCTION, (FULL_OPS), (FULL_TYPES))
@@ -98,7 +98,7 @@ INSTANTIATE2(RANK1_FUNCTION, (FULL_OPS), (FULL_TYPES))
 #define RANK2_FUNCTION(O, T) \
   template [[host_name(stringify(UnaryOperatorRank2 ## O ## T))]]  \
   [[kernel]] void UnaryOperatorRank2<O ## Operator, T, T>( \
-    device const T*, device T*, \
+    device T*, device const T*, \
     constant const size_t[2], uint2, uint2);
 
 INSTANTIATE2(RANK2_FUNCTION, (FULL_OPS), (FULL_TYPES))
@@ -106,7 +106,7 @@ INSTANTIATE2(RANK2_FUNCTION, (FULL_OPS), (FULL_TYPES))
 #define RANK3_FUNCTION(O, T) \
   template [[host_name(stringify(UnaryOperatorRank3 ## O ## T))]]  \
   [[kernel]] void UnaryOperatorRank3<O ## Operator, T, T>( \
-    device const T*, device T*, \
+    device T*, device const T*, \
     constant const size_t[3], uint3, uint3);
 
 INSTANTIATE2(RANK3_FUNCTION, (FULL_OPS), (FULL_TYPES))

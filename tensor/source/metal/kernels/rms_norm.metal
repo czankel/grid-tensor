@@ -16,9 +16,9 @@
 #include "utils.h"
 
 template <typename T, int N_READS = 4>	 // 4 per simd thread?
-[[kernel]] void RmsNormLine(const device T* x,
+[[kernel]] void RmsNormLine(device T* d,
+                            const device T* x,
                             const device T*,
-                            device T* y,
                             constant float& eps,
                             constant uint& dim,
                             constant uint&,
@@ -73,21 +73,21 @@ template <typename T, int N_READS = 4>	 // 4 per simd thread?
 
   threadgroup_barrier(metal::mem_flags::mem_threadgroup);
 
-  y += gid * dim + lid * N_READS;
+  d += gid * dim + lid * N_READS;
   if (lid * N_READS + N_READS <= dim)
     for (int i = 0; i < N_READS; i++)
-      y[i] = static_cast<T>(x[i] * local_inv_mean[0]);
+      d[i] = static_cast<T>(x[i] * local_inv_mean[0]);
   else
     for (int i = 0; i < N_READS; i++)
       if ((lid * N_READS + i) < dim)
-        y[i] = static_cast<T>(x[i] * local_inv_mean[0]);
+        d[i] = static_cast<T>(x[i] * local_inv_mean[0]);
 }
 
 
 template <typename T, int N_READS = 4>
-[[kernel]] void RmsNormLoop(const device T* x,
+[[kernel]] void RmsNormLoop(device T* d,
+                            const device T* x,
                             const device T*,
-                            device T* y,
                             constant float& eps,
                             constant uint& dim,
                             constant uint&,
@@ -139,26 +139,26 @@ template <typename T, int N_READS = 4>
 
   metal::threadgroup_barrier(metal::mem_flags::mem_threadgroup);
 
-  y += gid * dim + lid + N_READS;
+  d += gid * dim + lid + N_READS;
   for (uint r = 0; r < dim; r += line_size * N_READS)
     if (r + lid * N_READS + N_READS <= dim)
       for (int i = 0; i < N_READS; i++)
-        y[r + i] = static_cast<T>(x[r + i] * local_inv_mean[0]);
+        d[r + i] = static_cast<T>(x[r + i] * local_inv_mean[0]);
 
     else
       for (int i = 0; i < N_READS; i++)
         if ((r + lid * N_READS + i) < dim)
-          y[r + i] = static_cast<T>(x[r + i] * local_inv_mean[0]);
+          d[r + i] = static_cast<T>(x[r + i] * local_inv_mean[0]);
 }
 
 
 template <typename T, int N_READS = 4>	 // 4 per simd thread?
-[[kernel]] void RmsNormWeightLine(const device T* x,
-                                  const device T* W,
-                                  device T* y,
+[[kernel]] void RmsNormWeightLine(device T* d,
+                                  const device T* x,
+                                  const device T* w,
                                   constant float& eps,
                                   constant uint& dim,
-                                  constant uint& w_stride,
+                                  constant uint& stride_w,
                                   threadgroup float* local_inv_mean [[threadgroup(0)]],
                                   threadgroup float* local_sums [[threadgroup(1)]],
                                   uint gid [[threadgroup_position_in_grid]],
@@ -169,7 +169,7 @@ template <typename T, int N_READS = 4>	 // 4 per simd thread?
 {
   float acc = 0;
   x += gid * dim + lid * N_READS;
-  W += w_stride * lid * N_READS;
+  w += stride_w * lid * N_READS;
 
   if (lid * N_READS + N_READS <= dim)
   {
@@ -211,24 +211,24 @@ template <typename T, int N_READS = 4>	 // 4 per simd thread?
 
   threadgroup_barrier(metal::mem_flags::mem_threadgroup);
 
-  y += gid * dim + lid * N_READS;
+  d += gid * dim + lid * N_READS;
   if (lid * N_READS + N_READS <= dim)
     for (int i = 0; i < N_READS; i++)
-      y[i] = W[w_stride * i] * static_cast<T>(x[i] * local_inv_mean[0]);
+      d[i] = w[stride_w * i] * static_cast<T>(x[i] * local_inv_mean[0]);
   else
     for (int i = 0; i < N_READS; i++)
       if ((lid * N_READS + i) < dim)
-        y[i] = W[w_stride * i] * static_cast<T>(x[i] * local_inv_mean[0]);
+        d[i] = w[stride_w * i] * static_cast<T>(x[i] * local_inv_mean[0]);
 }
 
 
 template <typename T, int N_READS = 4>
-[[kernel]] void RmsNormWeightLoop(const device T* x,
-                                  const device T* W,
-                                  device T* y,
+[[kernel]] void RmsNormWeightLoop(device T* d,
+                                  const device T* x,
+                                  const device T* w,
                                   constant float& eps,
                                   constant uint& dim,
-                                  constant uint& w_stride,
+                                  constant uint& stride_w,
                                   threadgroup float* local_inv_mean [[threadgroup(0)]],
                                   threadgroup float* local_sums [[threadgroup(1)]],
                                   uint gid [[threadgroup_position_in_grid]],
@@ -240,7 +240,7 @@ template <typename T, int N_READS = 4>
   float acc = 0;
 
   x += gid * dim + lid * N_READS;
-  W += w_stride * lid * N_READS;
+  w += stride_w * lid * N_READS;
 
   for (uint r = 0; r < dim; r+= line_size * N_READS)
     if (r + lid * N_READS + N_READS <= dim)
@@ -278,16 +278,16 @@ template <typename T, int N_READS = 4>
 
   metal::threadgroup_barrier(metal::mem_flags::mem_threadgroup);
 
-  y += gid * dim + lid + N_READS;
+  d += gid * dim + lid + N_READS;
   for (uint r = 0; r < dim; r += line_size * N_READS)
     if (r + lid * N_READS + N_READS <= dim)
       for (int i = 0; i < N_READS; i++)
-        y[r + i] = W[w_stride * (i + r)] * static_cast<T>(x[r + i] * local_inv_mean[0]);
+        d[r + i] = w[stride_w * (i + r)] * static_cast<T>(x[r + i] * local_inv_mean[0]);
 
     else
       for (int i = 0; i < N_READS; i++)
         if ((r + lid * N_READS + i) < dim)
-          y[r + i] = W[w_stride * (i + r)] * static_cast<T>(x[r + i] * local_inv_mean[0]);
+          d[r + i] = w[stride_w * (i + r)] * static_cast<T>(x[r + i] * local_inv_mean[0]);
 }
 
 #define RMS_NORM_OPS Line, Loop, WeightLine, WeightLoop
@@ -296,8 +296,8 @@ template <typename T, int N_READS = 4>
 #define RMS_NORM_FUNCTION(O, T) \
   template [[host_name(stringify(RmsNorm ## O ## T))]]  \
   [[kernel]] void RmsNorm ## O<T>( \
-    device const T*, device const T*, \
     device T*, \
+    device const T*, device const T*, \
     constant float&, \
     constant uint&, \
     constant uint&, \

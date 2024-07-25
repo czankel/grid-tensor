@@ -21,44 +21,44 @@ struct DivOperator { template<typename T> inline T operator()(T x, T y) { return
 //
 
 template <typename Op, typename T, typename U>
-[[kernel]] void BinaryOperatorSS(device const T* a,
-                                 device const T* b,
-                                 device U* d,
+[[kernel]] void BinaryOperatorSS(device U* d,
+                                 device const T* x,
+                                 device const T* y,
                                  uint index [[thread_position_in_grid]])
 {
-  d[index] = Op()(a[0], b[0]);
+  d[index] = Op()(x[0], y[0]);
 }
 
 template <typename Op, typename T, typename U>
-[[kernel]] void BinaryOperatorSV(device const T* a,
-                                 device const T* b,
-                                 device U* d,
+[[kernel]] void BinaryOperatorSV(device U* d,
+                                 device const T* x,
+                                 device const T* y,
                                  uint index [[thread_position_in_grid]])
 {
-  d[index] = Op()(a[0], b[index]);
+  d[index] = Op()(x[0], y[index]);
 }
 
 template <typename Op, typename T, typename U>
-[[kernel]] void BinaryOperatorVS(device const T* a,
-                                 device const T* b,
-                                 device U* d,
+[[kernel]] void BinaryOperatorVS(device U* d,
+                                 device const T* x,
+                                 device const T* y,
                                  uint index [[thread_position_in_grid]])
 {
-  d[index] = Op()(a[index], b[0]);
+  d[index] = Op()(x[index], y[0]);
 }
 
 template <typename Op, typename T, typename U>
-[[kernel]] void BinaryOperatorVV(device const T* a,
-                                 device const T* b,
-                                 device U* d,
+[[kernel]] void BinaryOperatorVV(device U* d,
+                                 device const T* x,
+                                 device const T* y,
                                  uint index [[thread_position_in_grid]])
 {
-  d[index] = Op()(a[index], b[index]);
+  d[index] = Op()(x[index], y[index]);
 }
 
 #define FAST_FUNCTION(R, O, T) \
   template [[host_name(stringify(BinaryOperator ## R ## O ## T))]]  \
-  [[kernel]] void BinaryOperator ## R <O ## Operator, T, T>(device const T*, device const T*, device T*, uint);
+  [[kernel]] void BinaryOperator ## R <O ## Operator, T, T>(device T*, device const T*, device const T*, uint);
 
 #define FAST_RANKS SS, SV, VS, VV
 #define FAST_OPS   Add, Sub, Mul, Div
@@ -71,46 +71,46 @@ INSTANTIATE3(FAST_FUNCTION, (FAST_RANKS), (FAST_OPS), (FAST_TYPES))
 //
 
 template <typename Op, typename T, typename U>
-[[kernel]] void BinaryOperatorRank1(device const T* a,
-                                    device const T* b,
-                                    device U* d,
-                                    constant const size_t& a_stride,
-                                    constant const size_t& b_stride,
+[[kernel]] void BinaryOperatorRank1(device U* d,
+                                    device const T* x,
+                                    device const T* y,
+                                    constant const size_t& stride_x,
+                                    constant const size_t& stride_y,
                                     uint pos [[thread_position_in_grid]])
 {
-  auto a_idx = metal::pos_to_index(pos, a_stride);
-  auto b_idx = metal::pos_to_index(pos, b_stride);
-  d[pos] = Op()(a[a_idx], b[b_idx]);
+  auto idx_x = metal::pos_to_index(pos, stride_x);
+  auto idx_y = metal::pos_to_index(pos, stride_y);
+  d[pos] = Op()(x[idx_x], y[idx_y]);
 }
 
 template <typename Op, typename T, typename U>
-[[kernel]] void BinaryOperatorRank2(device const T* a,
-                                    device const T* b,
-                                    device U* d,
-                                    constant const size_t a_strides[2],
-                                    constant const size_t b_strides[2],
+[[kernel]] void BinaryOperatorRank2(device U* d,
+                                    device const T* x,
+                                    device const T* y,
+                                    constant const size_t strides_x[2],
+                                    constant const size_t strides_y[2],
                                     uint2 pos [[thread_position_in_grid]],
                                     uint2 grid_dim [[threads_per_grid]])
 {
-  auto a_idx = metal::pos_to_index(pos, a_strides);
-  auto b_idx = metal::pos_to_index(pos, b_strides);
+  auto idx_x = metal::pos_to_index(pos, strides_x);
+  auto idx_y = metal::pos_to_index(pos, strides_y);
   size_t c_idx = pos.x + (size_t)grid_dim.x * pos.y;
-  d[c_idx] = Op()(a[a_idx], b[b_idx]);
+  d[c_idx] = Op()(x[idx_x], y[idx_y]);
 }
 
 template <typename Op, typename T, typename U>
-[[kernel]] void BinaryOperatorRank3(device const T* a,
-                                    device const T* b,
-                                    device U* d,
-                                    constant const size_t a_strides[3],
-                                    constant const size_t b_strides[3],
+[[kernel]] void BinaryOperatorRank3(device U* d,
+                                    device const T* x,
+                                    device const T* y,
+                                    constant const size_t strides_x[3],
+                                    constant const size_t strides_y[3],
                                     uint3 pos [[thread_position_in_grid]],
                                     uint3 grid_dim [[threads_per_grid]])
 {
-  auto a_idx = metal::pos_to_index(pos, a_strides);
-  auto b_idx = metal::pos_to_index(pos, b_strides);
+  auto idx_x = metal::pos_to_index(pos, strides_x);
+  auto idx_y = metal::pos_to_index(pos, strides_y);
   size_t c_idx = pos.x + (size_t)grid_dim.x * (pos.y + (size_t)grid_dim.y * pos.z);
-  d[c_idx] = Op()(a[a_idx], b[b_idx]);
+  d[c_idx] = Op()(x[idx_x], y[idx_y]);
 }
 
 
@@ -120,7 +120,7 @@ template <typename Op, typename T, typename U>
 #define RANK1_FUNCTION(O, T) \
   template [[host_name(stringify(BinaryOperatorRank1 ## O ## T))]]  \
   [[kernel]] void BinaryOperatorRank1<O ## Operator, T, T>( \
-    device const T*, device const T*, device T*, \
+    device T*, device const T*, device const T*, \
     constant const size_t&, constant const size_t&, uint);
 
 INSTANTIATE2(RANK1_FUNCTION, (FULL_OPS), (FULL_TYPES))
@@ -128,7 +128,7 @@ INSTANTIATE2(RANK1_FUNCTION, (FULL_OPS), (FULL_TYPES))
 #define RANK2_FUNCTION(O, T) \
   template [[host_name(stringify(BinaryOperatorRank2 ## O ## T))]]  \
   [[kernel]] void BinaryOperatorRank2<O ## Operator, T, T>( \
-    device const T*, device const T*, device T*, \
+    device T*, device const T*, const device T*, \
     constant const size_t[2], constant const size_t[2], uint2, uint2);
 
 INSTANTIATE2(RANK2_FUNCTION, (FULL_OPS), (FULL_TYPES))
@@ -136,7 +136,7 @@ INSTANTIATE2(RANK2_FUNCTION, (FULL_OPS), (FULL_TYPES))
 #define RANK3_FUNCTION(O, T) \
   template [[host_name(stringify(BinaryOperatorRank3 ## O ## T))]]  \
   [[kernel]] void BinaryOperatorRank3<O ## Operator, T, T>( \
-    device const T*, device const T*, device T*, \
+    device T*, device const T*, device const T*, \
     constant const size_t[3], constant const size_t[3], uint3, uint3);
 
 INSTANTIATE2(RANK3_FUNCTION, (FULL_OPS), (FULL_TYPES))

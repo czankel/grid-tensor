@@ -31,8 +31,8 @@ class UnaryOperator<TOperator, device::Metal>
     auto& device = device::Metal::GetDevice();
     auto& encoder = device.Encoder();
 
-    encoder->setBuffer(x, 0, 0);
-    encoder->setBuffer(d, 0, 1);
+    encoder->setBuffer(d, 0, 0);
+    encoder->setBuffer(x, 0, 1);
 
     size_t s1 = strides_x.size();
 
