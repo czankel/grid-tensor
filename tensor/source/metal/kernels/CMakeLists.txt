@@ -10,6 +10,7 @@ set(gridtensor_metal_PATH ${CMAKE_CURRENT_BINARY_DIR})
 set(
   KERNELS
   "binary"
+  "gemm"
   "rms_norm"
   "unary"
 )
