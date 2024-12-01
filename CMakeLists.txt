@@ -29,7 +29,7 @@ if (APPLE)
   option(BUILD_METAL "Build with support for Apple's Metal" ON)
 endif()
 
-option(BUILD_TEST "Build C++ test binaries (need gtest and gbenchmark)" OFF)
+option(BUILD_TEST "Build C++ test binaries (fetches googletest and Google benchmark)" OFF)
 option(BUILD_DOCS "Build documentation" OFF)
 if (LINUX)
   option(BUILD_DEB_PACKAGE "Build a debian package" OFF)
@@ -213,15 +213,28 @@ if (BUILD_TEST)
   FetchContent_Declare(
     googletest
     GIT_REPOSITORY https://github.com/google/googletest.git
-    GIT_TAG        release-1.12.1
+    GIT_TAG        v1.15.2
+    OVERRIDE_FIND_PACKAGE
   )
 
   set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-  set(BUILD_GMOCK OFF CACHE BOOL "" FORCE)
-  set(BUILD_GTEST OFF CACHE BOOL "" FORCE)
+  set(BUILD_GMOCK ON CACHE BOOL "" FORCE)
   set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
 
   FetchContent_MakeAvailable(googletest)
+endif()
+
+
+if (BUILD_TEST)
+  include(FetchContent)
+  FetchContent_Declare(
+    benchmark
+    GIT_REPOSITORY https://github.com/google/benchmark.git
+    GIT_TAG        v1.8.4
+  )
+
+  set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "" FORCE)
+  FetchContent_MakeAvailable(benchmark)
 endif()
 
 ##
@@ -381,6 +394,17 @@ if (BUILD_TEST)
   target_include_directories(gridtensor_test PRIVATE ${googletest_SOURCE_DIR}/googletest/include)
   target_include_directories(gridtensor_test PRIVATE ${googletest_SOURCE_DIR}/googlemock/include)
 endif()
+
+##
+## Google Benchmark
+##
+
+if (BUILD_TEST)
+  get_property(gridtensor_benchmark_SOURCES GLOBAL PROPERTY gridtensor_benchmark_SOURCES)
+  add_executable(gridtensor_benchmark ${gridtensor_benchmark_SOURCES})
+  target_link_libraries(gridtensor_benchmark gridtensor benchmark::benchmark benchmark::benchmark_main)
+endif()
+
 
 ##
 ## Documentation (Doxygen)

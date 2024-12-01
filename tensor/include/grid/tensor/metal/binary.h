@@ -64,7 +64,7 @@ class BinaryOperator<TOperator, device::Metal>
 
       encoder.DispatchThreads(grid_size, thread_group_size);
 
-      device.Wait(); // TODO: use callback or manage dispaltched jobs
+      device.Wait(); // TODO: use callback or manage dispaltched jobs takes a lot of time...
     }
     else
     {

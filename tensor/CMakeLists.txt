@@ -8,4 +8,5 @@ add_subdirectory(source)
 
 if(BUILD_TEST)
   add_subdirectory(unittest)
+  add_subdirectory(benchmark)
 endif()
