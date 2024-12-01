@@ -256,7 +256,7 @@ std::string LLaMAModelT<T>::Decode(LLaMAVocab::token prev, LLaMAVocab::token tok
   else
   {
     std::string sep("\u2581");
-    std::string::size_type pos = 0;
+    std::string::size_type pos;
     while ((pos = symbol.find(sep, pos)) != std::string::npos)
       symbol.replace(pos, sep.size(), " ");
   }
