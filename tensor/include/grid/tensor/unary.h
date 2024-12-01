@@ -18,19 +18,7 @@
 
 namespace grid {
 
-template <typename> class UnaryOperator;
-
-//
-// Unary Operators
-//
-
-template <typename> struct CopyOperator;
-template <typename> struct NegOperator;
-
-template <typename> class RmsNormOperator;
-template <typename> class SoftMaxOperator;
-template <typename> class SiluOperator;
-
+template <template <typename> typename, typename> class UnaryOperator;
 
 /// @brief Unary is a wrapper for a device-specific unary operator implementation.
 ///
@@ -49,15 +37,13 @@ template <typename> class SiluOperator;
 ///  @tparm TTensor  tensor type
 ///
 template <typename TOperator, AnyTensor TTensor>
-class Unary : public TensorOperator<
-              typename std::remove_cvref_t<TTensor>::value_type,
-              std::remove_cvref_t<TTensor>::rank,
-              Unary<TOperator, TTensor>>
+class Unary : public TensorOperator<typename std::remove_cvref_t<TTensor>::value_type,
+                                    std::remove_cvref_t<TTensor>::rank,
+                                    Unary<TOperator, TTensor>>
 {
  public:
-  using tensor_type = std::remove_reference_t<TTensor>;
-  using value_type = tensor_type::value_type;
-  constexpr static size_t rank = tensor_type::rank;
+  using typename Unary::TensorOperator::value_type;
+  using Unary::TensorOperator::rank;
 
   template <typename T>
   Unary(TOperator, T&& tensor)
@@ -93,24 +79,39 @@ template <typename TOperator, AnyTensor TTensor>
 TOperator Unary<TOperator, TTensor>::operator_;
 
 //
-// Exported unary functions
+// Elementary Unary Operators
 //
+
+template <typename> struct CopyOperator;
+template <typename> struct NegOperator;
+
+// FIXME: move out
+template <typename> class RmsNormOperator;
+template <typename> class SoftMaxOperator;
+template <typename> class SiluOperator;
+
 
 /// @brief Copy returns a copy of the tensor.
 template <TensorConvertible TTensor>
 auto Copy(TTensor&& tensor)
 {
-  return Unary(UnaryOperator<CopyOperator<tensor_device_t<TTensor>>>(), std::forward<TTensor>(tensor));
+  return Unary(UnaryOperator<CopyOperator, tensor_device_t<TTensor>>(), std::forward<TTensor>(tensor));
 }
 
+/// @brief Neg returns a copy of the negated tensor.
+template <TensorConvertible TTensor>
+auto Neg(TTensor&& tensor)
+{
+  return Unary(UnaryOperator<NegOperator, tensor_device_t<TTensor>>(), std::forward<TTensor>(tensor));
+}
 
 /// @brief RmsNorm returns a tensor of the RMS normalized tensor.
 template <TensorConvertible TTensor>
+requires (std::remove_cvref_t<TTensor>::rank <= 2)
 auto RmsNorm(TTensor&& tensor)
 {
   return Unary(RmsNormOperator<tensor_device_t<TTensor>>(), std::forward<TTensor>(tensor));
 }
-
 
 /// @brief SoftMax returns a tensor with the SoftMax applied to the provided tensor.
 template <TensorConvertible TTensor>
@@ -119,14 +120,12 @@ auto SoftMax(TTensor&& tensor)
   return Unary(SoftMaxOperator<tensor_device_t<TTensor>>(), std::forward<TTensor>(tensor));
 }
 
-
 /// @brief Silu returns a tensor with SiLU activation applied to the provided tensor.
 template <TensorConvertible TTensor>
 auto Silu(TTensor&& tensor)
 {
   return Unary(SiluOperator<tensor_device_t<TTensor>>(), std::forward<TTensor>(tensor));
 }
-
 
 } // end of namespace grd
 

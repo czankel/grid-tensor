@@ -19,7 +19,7 @@
 namespace grid {
 
 /// BinaryOperator is a empty definition for device-specific operators.
-template <typename> class BinaryOperator;
+template <template <typename> typename, typename> class BinaryOperator;
 template <typename, size_t, typename> class Tensor;
 
 
@@ -55,27 +55,16 @@ template <typename> struct DivOperator;
 ///   shape:    4, 1 <op> shape: 3, 4, 3    -> OK
 ///   shape: 3, 4, 4 <op> shape: 3, 5, 1    -> Error
 ///
-// FIXME: could possiblye be optimized with TensorOperator<TTensor1, TTensor2, std::max> or not, need T and rank
-
-// FIXME could come in handy somehere... template <typename T> using tp = std::remove_cvref_t<T>;
-
 template <typename TOperator, AnyTensor TTensor1, AnyTensor TTensor2>
-class Binary : public TensorOperator<
-               std::common_type_t<typename std::remove_cvref_t<TTensor1>::value_type,
-                                  typename std::remove_cvref_t<TTensor2>::value_type>,
-               std::max(std::remove_cvref_t<TTensor1>::rank, std::remove_cvref_t<TTensor2>::rank),
-               Binary<TOperator, TTensor1, TTensor2>>
+class Binary : public TensorOperator<std::common_type_t<typename std::remove_cvref_t<TTensor1>::value_type,
+                                                        typename std::remove_cvref_t<TTensor2>::value_type>,
+                                     std::max(std::remove_cvref_t<TTensor1>::rank, std::remove_cvref_t<TTensor2>::rank),
+                                     Binary<TOperator, TTensor1, TTensor2>>
 
 {
  public:
-  using tensor1_type = std::remove_reference_t<TTensor1>;
-  using tensor2_type = std::remove_reference_t<TTensor2>;
-  using value_type = typename Binary::TensorOperator::value_type;
-  //using value_type = TensorOperator::value_type;
-  ////std::common_type_t<typename tensor1_type::value_type, typename tensor2_type::value_type>;
-  using pointer = value_type*;
-  using const_pointer = const value_type*;
-  constexpr static size_t rank = std::max(tensor1_type::rank, tensor2_type::rank);
+  using typename Binary::TensorOperator::value_type;
+  using Binary::TensorOperator::rank;
 
   template <typename T1, typename T2>
   Binary(TOperator, T1&& tensor1, T2&& tensor2)
@@ -126,42 +115,56 @@ TOperator Binary<TOperator, TTensor1, TTensor2>::operator_;
 template <TensorConvertible TTensor1, TensorConvertible TTensor2>
 auto Add(TTensor1&& tensor1, TTensor2&& tensor2)
 {
-  return Binary(BinaryOperator<AddOperator<tensor_device_t<TTensor1>>>(), std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
+  return Binary(BinaryOperator<AddOperator, tensor_device_t<TTensor1>>(),
+      std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
 }
 
 /// @brief Sub subtracts two tensors element-wise (lazily).
 template <TensorConvertible TTensor1, TensorConvertible TTensor2>
 auto Sub(TTensor1&& tensor1, TTensor2&& tensor2)
 {
-  return Binary(BinaryOperator<SubOperator<tensor_device_t<TTensor1>>>(), std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
+  return Binary(BinaryOperator<SubOperator, tensor_device_t<TTensor1>>(),
+      std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
 }
 
 /// @brief Mul multiplies two tensors element-wise (lazily).
 template <TensorConvertible TTensor1, TensorConvertible TTensor2>
 auto Mul(TTensor1&& tensor1, TTensor2&& tensor2)
 {
-  return Binary(BinaryOperator<MulOperator<tensor_device_t<TTensor1>>>(), std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
+  return Binary(BinaryOperator<MulOperator, tensor_device_t<TTensor1>>(),
+      std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
 }
 
 /// @brief Mul multiplies a tensors with a scalar.
 template <TensorConvertible TTensor, Arithmetic T>
 auto Mul(TTensor&& tensor, T scalar)
 {
-  return Binary(BinaryOperator<MulOperator<tensor_device_t<TTensor>>>(), std::forward<TTensor>(tensor), Tensor(scalar));
+  return Binary(BinaryOperator<MulOperator, tensor_device_t<TTensor>>(),
+      std::forward<TTensor>(tensor), Tensor(scalar));
 }
 
 /// @brief Mul multiplies a scalar with a tensors.
 template <Arithmetic T, TensorConvertible TTensor>
 auto Mul(T scalar, TTensor&& tensor)
 {
-  return Binary(BinaryOperator<MulOperator<tensor_device_t<TTensor>>>(), std::forward<TTensor>(tensor), Tensor(scalar));
+  return Binary(BinaryOperator<MulOperator, tensor_device_t<TTensor>>(),
+      std::forward<TTensor>(tensor), Tensor(scalar));
 }
 
-/// @brief Div multiplies two tensors element-wise (lazily).
+/// @brief Div divides a first tensor with a second tensors element-wise (lazily).
 template <TensorConvertible TTensor1, TensorConvertible TTensor2>
 auto Div(TTensor1&& tensor1, TTensor2&& tensor2)
 {
-  return Binary(BinaryOperator<DivOperator<tensor_device_t<TTensor1>>>(), std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
+  return Binary(BinaryOperator<DivOperator, tensor_device_t<TTensor1>>(),
+      std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
+}
+
+/// @brief Div divides a tensor by a scalar
+template <TensorConvertible TTensor, Arithmetic T>
+auto Div(TTensor&& tensor, T scalar)
+{
+  return Binary(BinaryOperator<DivOperator, tensor_device_t<TTensor>>(),
+      std::forward<TTensor>(tensor), Tensor(scalar));
 }
 
 

@@ -37,6 +37,7 @@ class LLaMAModelT : public LLaMAModel
   /// Using two tensor types, a dynamically allocated default tensor and a memory-mapped file tensors.
   using Tensor1D = Tensor<T, 1, DeviceMemory<Dev>>;
   using Tensor2D = Tensor<T, 2, DeviceMemory<Dev>>;
+  // FIXME: rename TensorFile to TensorMapped?
   using TensorFile1D = Tensor<T, 1, MemoryMapped>;
   using TensorFile2D = Tensor<T, 2, MemoryMapped>;
 
@@ -245,6 +246,9 @@ std::string LLaMAModelT<T, Dev>::Decode(LLaMAVocab::token prev, LLaMAVocab::toke
   // onvert raw bytes, e.g. <0x01> to actual bytes
   if (symbol[0] == '<')
   {
+    if (symbol == "<unk>")
+      throw std::runtime_error("Failed to find symbol in vocab: " + std::to_string(token));
+
     auto end = symbol.find('>');
     if (end != std::string::npos)
     {
@@ -294,6 +298,8 @@ void LLaMAModelT<T, Dev>::Forward(LLaMAVocab::token token, size_t pos)
     auto k = l.key_cache_.View(pos).Data();
     for (size_t i = 0; i < dim; i+=2)
     {
+      // FIXME: rot % PI?
+      // xx % headsize could be like 16k or more... roughly * 10*
       float rot = (float) pos / powf(10000.0f, (float)(i % head_size) / (float)head_size);
       float fcr = cosf(rot);
       float fci = sinf(rot);
@@ -329,8 +335,7 @@ void LLaMAModelT<T, Dev>::Forward(LLaMAVocab::token token, size_t pos)
           SoftMax(
             Matmul(
               l.key_cache_.View(Extent(pos + 1), Extent(kv_head_offset, head_size)),
-              l.q_.View(Extent(head_offset, head_size))) *
-            (static_cast<T>(1) / sqrt(static_cast<T>(head_size)))),
+              l.q_.View(Extent(head_offset, head_size))) / sqrt(static_cast<T>(head_size))),
           l.value_cache_.View(Extent(pos + 1), Extent(kv_head_offset, head_size)));
     }
 

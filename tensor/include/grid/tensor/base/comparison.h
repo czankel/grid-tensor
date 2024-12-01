@@ -15,82 +15,82 @@ namespace grid {
 
 template <typename T, size_t>
 inline std::enable_if_t<!std::is_floating_point_v<T>, bool>
-equals(const T* src1, const T* src2,
+equals(const T* x, const T* y,
        std::span<const size_t,  0>,
        std::span<const ssize_t, 0>,
        std::span<const ssize_t, 0>)
 {
-  return *src1 == *src2;
+  return *x == *y;
 }
 
 template <typename T, size_t>
 inline std::enable_if_t<std::is_floating_point_v<T>, bool>
-equals(const T* src1, const T* src2,
+equals(const T* x, const T* y,
        std::span<const size_t,  0>,
        std::span<const ssize_t, 0>,
        std::span<const ssize_t, 0>)
 {
-  auto max = std::max(std::abs(*src1), std::abs(*src2));
+  auto max = std::max(std::abs(*x), std::abs(*y));
   T eps = max * std::numeric_limits<T>::epsilon() * T{10};
-  return std::abs(*src1 - *src2) <= eps;
+  return std::abs(*x - *y) <= eps;
 }
 
 template <typename T, size_t>
 inline std::enable_if_t<!std::is_floating_point_v<T>, bool>
-equals(const T* src1, const T* src2,
+equals(const T* x, const T* y,
        std::span<const size_t,  1> dimensions,
-       std::span<const ssize_t, 1> strides1,
-       std::span<const ssize_t, 1> strides2)
+       std::span<const ssize_t, 1> strides_x,
+       std::span<const ssize_t, 1> strides_y)
 {
   for (size_t i = 0; i < dimensions[0]; i++)
   {
-    if (*src1 != *src2)
+    if (*x != *y)
       return false;
-    src1 += strides1[0];
-    src2 += strides2[0];
+    x += strides_x[0];
+    y += strides_y[0];
   }
   return true;
 }
 
 template <typename T, size_t>
 inline std::enable_if_t<std::is_floating_point_v<T>, bool>
-equals(const T* src1, const T* src2,
+equals(const T* x, const T* y,
        std::span<const size_t,  1> dimensions,
-       std::span<const ssize_t, 1> strides1,
-       std::span<const ssize_t, 1> strides2)
+       std::span<const ssize_t, 1> strides_x,
+       std::span<const ssize_t, 1> strides_y)
 {
   for (size_t i = 0; i < dimensions[0]; i++)
   {
-    auto max = std::max(std::abs(*src1), std::abs(*src2));
+    auto max = std::max(std::abs(*x), std::abs(*y));
     T eps = max * std::numeric_limits<T>::epsilon() * T{10};
 
-    if (std::abs(*src1 - *src2) > eps)
+    if (std::abs(*x - *y) > eps)
       return false;
 
-    src1 += strides1[0];
-    src2 += strides2[0];
+    x += strides_x[0];
+    y += strides_y[0];
   }
   return true;
 }
 
 template <typename T, size_t N>
 inline std::enable_if_t<(N > 1), bool>
-equals(const T* src1, const T* src2,
+equals(const T* x, const T* y,
        std::span<const size_t,  N> dimensions,
-       std::span<const ssize_t, N> strides1,
-       std::span<const ssize_t, N> strides2)
+       std::span<const ssize_t, N> strides_x,
+       std::span<const ssize_t, N> strides_y)
 {
   static_assert(N != std::dynamic_extent, "dynamic_extent not allowed");
   for (size_t i = 0; i < dimensions[0]; i++)
   {
-    if (!equals<T, N - 1>(src1, src2,
+    if (!equals<T, N - 1>(x, y,
                              std::span<const size_t,  N - 1>(dimensions.begin() + 1, N - 1),
-                             std::span<const ssize_t, N - 1>(strides1.begin() + 1, N - 1),
-                             std::span<const ssize_t, N - 1>(strides2.begin() + 1, N - 1)))
+                             std::span<const ssize_t, N - 1>(strides_x.begin() + 1, N - 1),
+                             std::span<const ssize_t, N - 1>(strides_y.begin() + 1, N - 1)))
       return false;
 
-    src1 += strides1[0];
-    src2 += strides2[0];
+    x += strides_x[0];
+    y += strides_y[0];
   }
   return true;
 }

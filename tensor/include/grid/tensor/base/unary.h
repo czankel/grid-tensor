@@ -17,78 +17,60 @@
 
 #include "../concepts.h"
 #include "../unary.h"
+#include "../tensor_operator.h"
 
 namespace grid {
 
 /// UnaryOperator<Operator> implements element-wise unary operation on a tensors.
 ///
-///  @tparm TOperator binary operator
+///  @tparm TOperator unary operator
 template <template <typename> typename TOperator>
-class UnaryOperator<TOperator<device::Base>>
+class UnaryOperator<TOperator, device::Base>
 {
-  // static constexpr TOperator<device::Base> Operator();
-
-  // operation on a single element
-  template <typename const_pointer, typename pointer>
-  inline void eval(pointer dest, const_pointer src,
-                   std::span<const size_t,  0> dimensions,
-                   std::span<const ssize_t, 0>,
-                   std::span<const ssize_t, 0>) const
+  template <typename T>
+  inline void eval(T* d, const T* x, auto dimensions, auto strides_d, auto strides_x) const
   {
-    TOperator<device::Base>()(dest, src);
-  }
+    static_assert(dimensions.size() != std::dynamic_extent, "dynamic_extent not allowed");
 
-  // operation on a single dimension (unoptimized)
-  template <typename const_pointer, typename pointer>
-  inline void eval(pointer dest, const_pointer src,
-                   std::span<const size_t,  1> dimensions,
-                   std::span<const ssize_t, 1>,
-                   std::span<const ssize_t, 1> strides1) const
-  {
-    for (size_t i = 0; i < dimensions[0]; i++)
-    {
-      TOperator<device::Base>()(dest + i, src);
-      src += strides1[0];
-    }
-  }
+    if constexpr (dimensions.size() == 0)
+      d[0] = TOperator<device::Base>()(x[0]);
 
-  // operation on higher dimensions (unoptimized)
-  template <size_t N, typename const_pointer, typename pointer> inline
-  //template <size_t N> inline
-  void eval(pointer dest, const_pointer src,
-            std::span<const size_t,  N> dimensions,
-            std::span<const ssize_t, N> strides0,
-            std::span<const ssize_t, N> strides1) const
-  {
-    static_assert(N != std::dynamic_extent, "dynamic_extent not allowed");
-    for (size_t i = 0; i < dimensions[0]; i++)
-    {
-      eval(dest, src,
-           std::span<const size_t,  N - 1>(dimensions.begin() + 1, N - 1),
-           std::span<const ssize_t, N - 1>(strides0.begin() + 1, N - 1),
-           std::span<const ssize_t, N - 1>(strides1.begin() + 1, N - 1));
+    else if constexpr (dimensions.size() == 1  && strides_d.size() == 0)
+      for (size_t i = 0; i < dimensions[0]; i++)
+        d[i] = TOperator<device::Base>()(x[i]);
 
-      dest += strides0[0];
-      src += strides1[0];
-    }
+    else
+      for (size_t i = 0; i < dimensions[0]; i++)
+      {
+        eval(d, x,
+             dimensions.template last<dimensions.size() - 1>(),
+             strides_d.template last<(strides_d.size() > 0) ? strides_d.size() - 1 : 0>(),
+             strides_x.template last<(strides_x.size() > 0) ? strides_x.size() - 1 : 0>());
+        d += strides_d[0];
+        x += strides_x.size() > 0 ? strides_x[0] : 0;
+      }
   }
 
  public:
-  template<std::ranges::input_range R,
-           std::ranges::output_range<std::iter_value_t<std::ranges::iterator_t<R>>> O>
-  requires std::indirectly_copyable<std::ranges::iterator_t<R>, std::ranges::iterator_t<O>>
-  void operator()(R&& r, O&& o) const
+  template<std::ranges::input_range I,
+           std::ranges::output_range<std::iter_value_t<std::ranges::iterator_t<I>>> O>
+  requires std::indirectly_copyable<std::ranges::iterator_t<I>, std::ranges::iterator_t<O>>
+  void operator()(I&& in, O&& out) const
   {
-    using tensor_type = std::remove_cvref_t<O>;
-    constexpr size_t rank = tensor_type::rank;
-    auto first = std::ranges::cbegin(r);
-    auto result = std::ranges::begin(o);
+    auto first_d = std::ranges::begin(out);
+    auto first_x = std::ranges::cbegin(in);
 
-    // FIXME fold ...
-    eval(&*result, &*first,
-         std::span<const size_t, rank>(result.Extents()),
-         std::span<const ssize_t, rank>(result.Strides()),
-         std::span<const ssize_t, rank>(first.Strides()));
+    std::span strides_d(first_d.Strides());
+    std::span strides_x(first_x.Strides());
+
+    details::Fold([&](auto dimensions, bool contiguous) {
+        if (contiguous)
+          eval(&*first_d, &*first_x, dimensions,
+               strides_d.template first<(dimensions.size() > 0) ? dimensions.size() - 1 : 0>(),
+               strides_x);
+        else
+          eval(&*first_d, &*first_x, dimensions, strides_d, strides_x);
+    }, std::span(first_d.Extents()), strides_d, strides_x);
   }
 };
 
@@ -98,14 +80,12 @@ class UnaryOperator<TOperator<device::Base>>
 
 template <> struct CopyOperator<device::Base>
 {
-  template<typename T>
-  inline void operator()(T* dest, const T* src) const { *dest = *src; }
+  template<typename T> inline T operator()(const T x) const { return x; }
 };
 
 template <> struct NegOperator<device::Base>
 {
-  template<typename T>
-  inline void operator()(T* dest, const T* src) const { *dest = -*src; }
+  template<typename T> inline T operator()(const T x) const { return -x; }
 };
 
 

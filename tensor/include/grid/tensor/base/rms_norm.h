@@ -13,6 +13,8 @@
 
 #include <math.h>
 #include <tuple>
+#include <iomanip>
+
 
 #include "binary.h"
 
@@ -28,56 +30,54 @@ namespace {
 template <> class RmsNormOperator<device::Base>
 {
  private:
+
   template <typename T>
   inline auto
-  SumSquare(const T* src,
-            std::span<const size_t,  1> dimensions,
-            std::span<const ssize_t, 1> strides) const
+  SumSquare(const T* x, const size_t dim, const ssize_t stride) const
   {
     T value{0};
-    size_t count = dimensions[0];
-    for (size_t i = 0; i < dimensions[0]; i++, src += strides[0])
-      value += *src * *src;
-    return std::tuple{value, count};
-  }
-
-  template <typename T, size_t N>
-  inline auto
-  SumSquare(const T* src,
-            std::span<const size_t,  N> dimensions,
-            std::span<const ssize_t, N> strides) const
-  {
-    static_assert(N != std::dynamic_extent, "dynamic_extent not allowed");
-    T value{0};
-    size_t count = 0;
-    for (size_t i = 0; i < dimensions[0]; i++, src += strides[0])
-    {
-      auto [s, c] = SumSquare(src,
-                              std::span<const size_t,  N - 1>(dimensions.begin() + 1, N - 1),
-                              std::span<const ssize_t, N - 1>(strides.begin() + 1, N - 1));
-      value += s;
-      count += c;
-    }
-    return std::tuple{value, count};
+    for (size_t i = 0; i < dim; i++, x += stride)
+      value += *x * *x;
+    return value;
   }
 
  public:
-  template<std::ranges::input_range R, std::ranges::output_range<std::iter_value_t<std::ranges::iterator_t<R>>> O>
-  requires std::indirectly_copyable<std::ranges::iterator_t<R>, std::ranges::iterator_t<O>>
-  void operator()(R&& r, O&& o) const
+  template<std::ranges::input_range I, std::ranges::output_range<std::iter_value_t<std::ranges::iterator_t<I>>> O>
+  requires std::indirectly_copyable<std::ranges::iterator_t<I>, std::ranges::iterator_t<O>>
+  void operator()(I&& in, O&& out) const
   {
     using tensor_type = std::remove_cvref_t<O>;
     using value_type = tensor_type::value_type;
     constexpr value_type eps = Eps<value_type>::default_value;
+    constexpr size_t rank = tensor_type::rank;
 
-    auto first = std::ranges::cbegin(r);
-    auto result = std::ranges::begin(o);
-    auto& extents = result.Extents();
+    auto first_d = std::ranges::begin(out);
+    auto first_x = std::ranges::cbegin(in);
+    auto& extents = first_d.Extents();
 
-    auto [value, count] = SumSquare(&*first, std::span(extents), std::span(result.Strides()));
-
-    value_type scale = 1.0f/sqrtf(value / count + eps);
-    BinaryOperator<MulOperator<device::Base>>()(r, Tensor(scale), o);
+    size_t stride_x = first_x.Strides().back();
+    size_t row_size = extents.back();
+    size_t n_rows = std::accumulate(std::begin(extents), std::end(extents) - 1, 1, std::multiplies<size_t>());
+    if (n_rows == 1)
+    {
+      auto sum = SumSquare(&*first_x, row_size, stride_x);
+      value_type scale = sqrtf(sum / row_size + eps);
+      printf("SCALE %f, %ld %f\n", sum, row_size, scale);
+      BinaryOperator<DivOperator, device::Base>()(in, Tensor(scale), out);
+    }
+    else
+    {
+      // TODO could there be an alias issue?
+      auto x = &*first_x;
+      Tensor scale({n_rows}, Uninitialized<value_type>{});
+      for (size_t row = 0; row < n_rows; row++)
+      {
+        auto sum = SumSquare(x, row_size, stride_x);
+        scale.Data()[row] = sqrtf(sum / row_size + eps);
+        x += first_x.Strides()[rank - 2];
+      }
+      BinaryOperator<DivOperator, device::Base>()(in, Tensor(scale), out);
+    }
   }
 };
 

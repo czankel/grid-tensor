@@ -8,16 +8,24 @@
 
 // DO NOT INCLUDE THIS FILE DIRECTLY
 
-#ifndef GRID_TENSOR_BASE_ARRAY_H
-#define GRID_TENSOR_BASE_ARRAY_H
+#ifndef GRID_TENSOR_CUDA_ARRAY_H
+#define GRID_TENSOR_CUDA_ARRAY_H
 
-#include <array>
-#include <exception>
+#include <stdexcept>
 
-#include "../array.h"
 #include "device.h"
 
+#include "../array.h"
+#include "../tensor_parameters.h"
+
+
 namespace grid {
+
+// FIXME wrapper
+void CudaMallocManaged(void** ptr, size_t size);
+void CudaFree(void* ptr);
+
+// FIXME: initialize in device to avoid memory copy from host to device
 
 /// brief: Array is a specialization for a dynamically allocated buffer.
 template <typename T>
@@ -30,28 +38,77 @@ class Array<T, DeviceMemory<device::Cuda>>
  public:
   Array() = default;
 
-  // Explicity disallow copy construction as Array isn't fully aware of any buffer structure.
-  Array(const Array& other) = delete;
+  // @brief Allocates a buffer of the provided size.
+  Array(size_t size) : size_(size)
+  {
+    CudaMallocManaged((void**)&data_, size_);
+  }
+
+  // @brief Constructor for a contiguous array with the provided size with initialization.
+  Array(size_t size, value_type init) : size_(size)
+  {
+    CudaMallocManaged((void**)&data_, size_);
+    details::initialize(Data(), size_ / sizeof(value_type), init);
+  }
+
+  // @brief Constructor for a non-contiguous array with the provided dimensions and strides.
+  template <size_t N>
+  Array(const std::array<size_t, N>& dimensions, const std::array<ssize_t, N>& strides)
+    : size_(get_buffer_size<value_type>(dimensions, strides))
+  {
+    CudaMallocManaged((void**)&data_, size_);
+  }
+
+  // @brief Constructor for a non-contiguous array with the provided dimensions and strides with initialization.
+  template <size_t N>
+  Array(const std::array<size_t, N>& dimensions, const std::array<ssize_t, N>& strides, value_type init)
+    : size_(get_buffer_size<value_type>(dimensions, strides))
+  {
+    CudaMallocManaged((void**)&data_, size_);
+    details::initialize(Data(), dimensions, strides, init);
+  }
+
+  // @brief Copy constructor of contiguous arrays.
+  Array(const Array& other) : size_(other.size_)
+  {
+    CudaMallocManaged((void**)&data_, size_);
+    memcpy(data_, other.data_, other.size_);
+  }
+
+  // @brief Copy constructor with dimensions and strides
+  template <size_t N>
+  Array(const_pointer data,
+        const std::array<size_t, N>& dimensions,
+        const std::array<ssize_t, N>& strides1,
+        const std::array<ssize_t, N>& strides2)
+    : size_(get_buffer_size<value_type>(dimensions, strides1))
+  {
+    CudaMallocManaged((void**)&data_, size_);
+    details::copy(data_, data,
+                  std::span<const size_t, N>(dimensions.begin(), N),
+                  std::span<const ssize_t, N>(strides1.begin(), N),
+                  std::span<const ssize_t, N>(strides2.begin(), N));
+  }
 
   // @brief Move constructor.
-  Array(Array&& other) : size_(other.size_), data_(std::move(other.data_)) { other.data_ = nullptr; }
-
-  // @brief Allocates a buffer of the provided size.
-  Array(size_t size)
-    : size_(size),
-      data_(static_cast<pointer>(operator new[](size_, std::align_val_t(16))))
-  {}
+  Array(Array&& other)
+    : size_(other.size_),
+      data_(std::move(other.data_))
+  {
+    other.data_ = nullptr;
+  }
 
   ~Array()
   {
     if (data_ != nullptr)
-      operator delete[](data_, std::align_val_t(16));
+      CudaFree(data_);
   }
+
 
   Array& operator=(Array&& other)
   {
     if (data_ != nullptr)
-      operator delete[](data_, std::align_val_t(16));
+      CudaFree(data_);
 
     size_ = other.size_;
     data_ = std::move(other.data_);
@@ -69,8 +126,8 @@ class Array<T, DeviceMemory<device::Cuda>>
     if (size != size_)
     {
       if (data_ != nullptr)
-        operator delete[](data_, std::align_val_t(16));
-      data_ = static_cast<pointer>(operator new[](size_, std::align_val_t(16)));
+        CudaFree(data_);
+      CudaMallocManaged((void**)&data_, size_);
     }
 
     return *this;
@@ -94,4 +151,4 @@ class Array<T, DeviceMemory<device::Cuda>>
 
 } // end of namespace grid
 
-#endif  // GRID_TENSOR_BASE_ARRAY_H
+#endif  // GRID_TENSOR_CUDA_ARRAY_H

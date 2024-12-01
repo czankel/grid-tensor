@@ -10,8 +10,5 @@ grid_add_sources(gridtensor
 )
 
 if (BUILD_CUDA)
-grid_add_sources(gridtensor
-  cuda/binary.cu
-  cuda/wrapper.cu
-)
+  add_subdirectory(cuda)
 endif()

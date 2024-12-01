@@ -10,8 +10,6 @@
 #include <grid/tensor/mmap.h>
 #include <grid/tensor/cuda/tensor.h>
 #include <grid/tensor/cuda/comparison.h>
-#include <grid/tensor/cuda/generate.h>
-#include <grid/tensor/cuda/unary.h>
 
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"

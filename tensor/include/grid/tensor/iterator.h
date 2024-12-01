@@ -126,11 +126,11 @@ class Iterator
   friend bool operator==(const Iterator& a, const Iterator& b) { return a.index_ == b.index_; }
 
   // iterator extensions
-  size_t                            Rank()              { return rank; }
+  constexpr size_t                  Rank() const        { return rank; }
   const std::array<size_t, rank>&   Extents() const     { return tensor_->Dimensions(); }
   const std::array<ssize_t, rank>&  Strides() const     { return tensor_->Strides(); }
   const std::array<size_t, rank>&   Coordinates() const { return coordinates_; }
-
+  auto                              Buffer()            { return tensor_->Buffer(); }
  private:
   std::array<size_t, rank>  coordinates_;
   TTensor*                  tensor_;
@@ -243,10 +243,11 @@ class ConstIterator
   friend bool operator==(const ConstIterator& a, const ConstIterator& b) { return a.index_ == b.index_; }
 
   // iterator extensions
-  size_t                            Rank()              { return rank; }
+  constexpr size_t                  Rank() const        { return rank; }
   const std::array<size_t, rank>&   Extents() const     { return tensor_->Dimensions(); }
   const std::array<ssize_t, rank>&  Strides() const     { return tensor_->Strides(); }
   const std::array<size_t, rank>&   Coordinates() const { return coordinates_; }
+  auto                              Buffer()            { return tensor_->Buffer(); }
 
  private:
   std::array<size_t, rank>  coordinates_;

@@ -14,7 +14,6 @@
 
 struct TensorCudaType
 {
-  template <typename T, size_t RANK>
-  using Tensor = grid::Tensor<T, RANK, grid::DeviceMemory<grid::device::Cuda>>;
+  template <typename T, size_t R>
+  using Tensor = grid::Tensor<T, R, grid::DeviceMemory<grid::device::Cuda>>;
 };
-

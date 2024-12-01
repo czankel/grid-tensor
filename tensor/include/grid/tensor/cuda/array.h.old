@@ -8,22 +8,16 @@
 
 // DO NOT INCLUDE THIS FILE DIRECTLY
 
-#ifndef GRID_TENSOR_CUDA_ARRAY_H
-#define GRID_TENSOR_CUDA_ARRAY_H
+#ifndef GRID_TENSOR_BASE_ARRAY_H
+#define GRID_TENSOR_BASE_ARRAY_H
 
 #include <array>
-#include <stdexcept>
+#include <exception>
 
 #include "../array.h"
-#include "../memory.h"
-
 #include "device.h"
 
 namespace grid {
-
-// FIXME wrapper
-void CudaMalloc(void** ptr, size_t size);
-void CudaFree(void* ptr);
 
 /// brief: Array is a specialization for a dynamically allocated buffer.
 template <typename T>
@@ -46,21 +40,18 @@ class Array<T, DeviceMemory<device::Cuda>>
   Array(size_t size)
     : size_(size),
       data_(static_cast<pointer>(operator new[](size_, std::align_val_t(16))))
-  {
-    CudaMalloc((void**)&data_, size_);
-    printf("allocated %lu %p\n", size_, data_);
-  }
+  {}
 
   ~Array()
   {
     if (data_ != nullptr)
-      CudaFree(data_);
+      operator delete[](data_, std::align_val_t(16));
   }
 
   Array& operator=(Array&& other)
   {
     if (data_ != nullptr)
-      CudaFree(data_);
+      operator delete[](data_, std::align_val_t(16));
 
     size_ = other.size_;
     data_ = std::move(other.data_);
@@ -78,8 +69,8 @@ class Array<T, DeviceMemory<device::Cuda>>
     if (size != size_)
     {
       if (data_ != nullptr)
-        cudaFree(data_);
-      CudaMalloc((void**)&data_, size_);
+        operator delete[](data_, std::align_val_t(16));
+      data_ = static_cast<pointer>(operator new[](size_, std::align_val_t(16)));
     }
 
     return *this;
@@ -103,4 +94,4 @@ class Array<T, DeviceMemory<device::Cuda>>
 
 } // end of namespace grid
 
-#endif  // GRID_TENSOR_CUDA_ARRAY_H
+#endif  // GRID_TENSOR_BASE_ARRAY_H

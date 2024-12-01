@@ -10,11 +10,9 @@
 #include <grid/tensor/cuda/tensor.h>
 
 #include <grid/tensor/binary.h>
-#include <grid/tensor/cuda/binary.h>
-#include <grid/tensor/base/comparison.h>  // FIXME
-#include <grid/tensor/cuda/generate.h>
-#include <grid/tensor/cuda/unary.h>
 
+#include <grid/tensor/cuda/binary.h>
+#include <grid/tensor/base/comparison.h>
 
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"

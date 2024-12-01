@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <ranges>
 
+#include "device.h"
 #include "../concepts.h"
 #include "../unary.h"
 
@@ -24,90 +25,39 @@ namespace grid {
 ///
 ///  @tparm TOperator binary operator
 template <template <typename> typename TOperator>
-class UnaryOperator<TOperator<device::Cuda>>
+class UnaryOperator<TOperator, device::Cuda>
 {
   // static constexpr TOperator<device::Cuda> Operator();
+  //
+  //
+  //
+  template <typename T, size_t R>
+  void EvalContiguous(T*, const T*, const T*, std::span<const size_t, R>,
+                      std::span<const ssize_t, R>, std::span<const ssize_t, R>) const;
 
-  // operation on a single element
-  template <typename const_pointer, typename pointer>
-  inline void eval(pointer dest, const_pointer src,
-                   std::span<const size_t,  0> dimensions,
-                   std::span<const ssize_t, 0>,
-                   std::span<const ssize_t, 0>) const
-  {
-    TOperator<device::Cuda>()(dest, src);
-  }
-
-  // operation on a single dimension (unoptimized)
-  template <typename const_pointer, typename pointer>
-  inline void eval(pointer dest, const_pointer src,
-                   std::span<const size_t,  1> dimensions,
-                   std::span<const ssize_t, 1>,
-                   std::span<const ssize_t, 1> strides1) const
-  {
-    for (size_t i = 0; i < dimensions[0]; i++)
-    {
-      TOperator<device::Cuda>()(dest + i, src);
-      src += strides1[0];
-    }
-  }
-
-  // operation on higher dimensions (unoptimized)
-  template <size_t N, typename const_pointer, typename pointer> inline
-  //template <size_t N> inline
-  void eval(pointer dest, const_pointer src,
-            std::span<const size_t,  N> dimensions,
-            std::span<const ssize_t, N> strides0,
-            std::span<const ssize_t, N> strides1) const
-  {
-    static_assert(N != std::dynamic_extent, "dynamic_extent not allowed");
-    for (size_t i = 0; i < dimensions[0]; i++)
-    {
-      eval(dest, src,
-           std::span<const size_t,  N - 1>(dimensions.begin() + 1, N - 1),
-           std::span<const ssize_t, N - 1>(strides0.begin() + 1, N - 1),
-           std::span<const ssize_t, N - 1>(strides1.begin() + 1, N - 1));
-
-      dest += strides0[0];
-      src += strides1[0];
-    }
-  }
 
  public:
-  template<std::ranges::input_range R,
-           std::ranges::output_range<std::iter_value_t<std::ranges::iterator_t<R>>> O>
-  requires std::indirectly_copyable<std::ranges::iterator_t<R>, std::ranges::iterator_t<O>>
-  void operator()(R&& r, O&& o) const
+
+#if !defined(__CUDACC__)
+
+  template<std::ranges::input_range I,
+           std::ranges::output_range<std::iter_value_t<std::ranges::iterator_t<I>>> O>
+  requires std::indirectly_copyable<std::ranges::iterator_t<I>, std::ranges::iterator_t<O>>
+  void operator()(I&& in, O&& out) const
   {
-    using tensor_type = std::remove_cvref_t<O>;
-    constexpr size_t rank = tensor_type::rank;
-    auto first = std::ranges::cbegin(r);
-    auto result = std::ranges::begin(o);
+    auto first_d = std::ranges::begin(out);
+    auto first_x = std::ranges::cbegin(in);
 
-    // FIXME fold ...
-    eval(&*result, &*first,
-         std::span<const size_t, rank>(result.Extents()),
-         std::span<const ssize_t, rank>(result.Strides()),
-         std::span<const ssize_t, rank>(first.Strides()));
+    std::span strides_d(first_d.Strides());
+    std::span strides_x(first_x.Strides());
+
+    details::Fold([&](auto folded_dims, const bool contiguous) {
+
+    }, std::span(first_d.Extents()), strides_d, strides_x);
   }
+
+#endif  // !__CUDACC__
 };
-
-//
-// Operators
-//
-
-template <> struct CopyOperator<device::Cuda>
-{
-  template<typename T>
-  inline void operator()(T* dest, const T* src) const { *dest = *src; }
-};
-
-template <> struct NegOperator<device::Cuda>
-{
-  template<typename T>
-  inline void operator()(T* dest, const T* src) const { *dest = -*src; }
-};
-
 
 } // end of namespace grid
 

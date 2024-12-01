@@ -8,8 +8,10 @@
 
 #include <grid/tensor/tensor.h>
 #include <grid/tensor/base/tensor.h>
+
 #include <grid/tensor/base/comparison.h>
 #include <grid/tensor/base/softmax.h>
+#include <grid/tensor/base/unary.h>
 
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"

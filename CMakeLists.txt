@@ -267,10 +267,12 @@ endif()
 target_include_directories(gridtensor PUBLIC ${gridtensor_HEADER_DIRS})
 
 if (BUILD_CUDA)
-set_target_properties(gridtensor PROPERTIES CUDA_ARCHITECTURES "75")
-set_target_properties(gridtensor PROPERTIES CUDA_STANDARD 20)
-#target_compile_features(gridtensor INTERFACE cxx_std_20)
-enable_language(CUDA)
+  set_target_properties(gridtensor PROPERTIES CUDA_ARCHITECTURES "75")
+  set_target_properties(gridtensor PROPERTIES CUDA_STANDARD 20)
+
+  #target_compile_features(gridtensor INTERFACE cxx_std_20)
+  enable_language(CUDA)
+  #target_linkelibraries(gridtensor ${CUDA_LIBS})
 endif ()
 
 ##

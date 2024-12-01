@@ -11,6 +11,8 @@
 
 #include <algorithm>
 
+#include "concepts.h"
+
 namespace grid {
 
 // get_array(iniitlizer_list)
@@ -149,7 +151,7 @@ std::array<ssize_t, TRank> make_strides(const std::array<size_t, TRank>& dimensi
 template <typename T, typename U, typename V>
 size_t get_buffer_size(U&& dimensions, V&& strides)
 {
-  size_t size = 0;
+  size_t size = 1;  // default is rank-0, which has size 1
   auto di = std::forward<U>(dimensions).begin();
   auto si = std::forward<V>(strides).begin();
   for (; di != dimensions.end() && si != strides.end(); ++di, ++si)
@@ -190,29 +192,27 @@ inline auto BroadcastDimensions(const TTensor1& tensor1, const TTensor2& tensor2
   }
 }
 
-template <typename TTensor1, typename TTensor2>
-inline auto BroadcastStrides(const TTensor1& tensor1, const TTensor2& tensor2)
+/// @brief Helper function to align strides returning an array if a stride needs to be extended.
+template <size_t S1, size_t S2>
+inline auto BroadcastStrides(std::span<const ssize_t, S1> strides1, std::span<const ssize_t, S2> strides2)
 {
-  constexpr size_t rank1 = TTensor1::rank;
-  constexpr size_t rank2 = TTensor2::rank;
-
-  if constexpr (rank1 == rank2)
-    return std::make_tuple(std::cref(tensor1.Strides()), std::cref(tensor2.Strides()));
-  else if constexpr (rank1 == 0)
-    return std::make_tuple(std::array<ssize_t, rank2>{0}, std::cref(tensor2.Strides()));
-  else if constexpr (rank2 == 0)
-    return std::make_tuple(std::cref(tensor1.Strides()), std::array<ssize_t, rank1>{0});
-  else if constexpr (rank2 > rank1)
+  if constexpr (S1 == S2)
+    return std::make_tuple(std::move(strides1), std::move(strides2));
+  else if constexpr (S1 == 0)
+    return std::make_tuple(std::move(std::array<ssize_t, S2>{}), std::move(strides2));
+  else if constexpr (S2 == 0)
+    return std::make_tuple(std::move(strides1), std::move(std::array<ssize_t, S1>{}));
+  else if constexpr (S2 > S1)
   {
-    std::array<ssize_t, rank2> strides{0};
-    std::ranges::copy(tensor1.Strides(), strides.begin() + rank2 - rank1);
-    return std::make_tuple(strides, std::cref(tensor2.Strides()));
+    std::array<ssize_t, S2> strides{};
+    std::ranges::copy(strides1, strides.begin() + S2 - S1);
+    return std::make_tuple(std::move(strides), std::move(strides2));
   }
   else
   {
-    std::array<ssize_t, rank1> strides{0};
-    std::ranges::copy(tensor2.Strides(), strides.begin() + rank1 - rank2);
-    return std::make_tuple(std::cref(tensor1.Strides()), strides);
+    std::array<ssize_t, S1> strides{};
+    std::ranges::copy(strides2, strides.begin() + S1 - S2);
+    return std::make_tuple(std::move(strides1), std::move(strides));
   }
 }
 

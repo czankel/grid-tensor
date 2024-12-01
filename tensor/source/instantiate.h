@@ -6,8 +6,8 @@
 // The contents of this file are confidential and proprietary to Chris Zankel.
 //
 
-#ifndef TENSOR_METAL_KERNELS_UTILS_H
-#define TENSOR_METAL_KERNELS_UTILS_H
+#ifndef TENSOR_SOURCE_INSTANTIATE_H
+#define TENSOR_SOURCE_INSTANTIATE_H
 
 // FIXME: doesn't this alrady exist somewhere?
 #define stringify_(s) #s
@@ -31,7 +31,7 @@
                     19,18,17,16,15,14,13,12,11,10, \
                      9, 8, 7, 6, 5, 4, 3, 2, 1, 0
 
-// helper to extract the list of arguments passed to the macro. 
+// helper to extract the list of arguments passed to the macro.
 #define ARG_LIST(...) __VA_ARGS__
 
 // Instantiate the actual function for the number of iteration groups
@@ -136,4 +136,4 @@
 #define INSTANTIATE2(FN, X, Y)    ITER2(PP_NARG X, FN, 2,  , X, Y)
 #define INSTANTIATE1(FN, X)       ITER1(PP_NARG X, FN, 1,  ,  , X)
 
-#endif  // TENSOR_METAL_KERNELS_UTILS_H
+#endif  // TENSOR_SOURCE_INSTANTIATE_H

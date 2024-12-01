@@ -15,14 +15,22 @@ namespace grid::device {
 
 class Cuda : public Device
 {
+  Cuda();
+  Cuda(Cuda&) = delete;
+  Cuda& operator =(Cuda&) = delete;
+
  public:
+  ~Cuda();
+
+  /// @brief Returns the default devices (using a singleton)
+  static Cuda& GetDevice();
+
+  /// @brief Returns the number of devices in the system
   static int GetDeviceCount();
 
-  /*
-  static cudaDeviceProp GetDeviceProp();
-  cudaDeviceProp deviceProp;
-  checkCudaErrors(cudaGetDeviceProperties(&deviceProp, devID));
-  */
+ private:
+  static Cuda*      g_device_;
+};
 
 } // end of namespace grid::device
 

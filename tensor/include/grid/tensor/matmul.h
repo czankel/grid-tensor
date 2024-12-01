@@ -14,39 +14,43 @@
 #include <ranges>
 
 #include "concepts.h"
-#include "tensor_operator.h"
 
 namespace grid {
-
-//
-// Device-specific operator
-//
 
 template <typename> class MatmulOperator;
 template <typename, size_t, typename> class Tensor;
 
-namespace details {
-template <AnyTensor TTensor1, AnyTensor TTensor2>
-struct matmul_rank
+namespace
 {
-  using tensor1_type = std::remove_reference_t<TTensor1>;
-  using tensor2_type = std::remove_reference_t<TTensor2>;
-  constexpr static size_t rank =
-   tensor1_type::rank != 1 || tensor2_type::rank != 1 ? std::min(tensor1_type::rank, tensor2_type::rank) : 0;
-};
-
+  template <typename TTensor1, typename TTensor2>
+  struct MatmulRank
+  {
+    using tensor1_type = std::remove_reference_t<TTensor1>;
+    using tensor2_type = std::remove_reference_t<TTensor2>;
+    constexpr static size_t rank =
+      tensor1_type::rank != 1 || tensor2_type::rank != 1 ? std::min(tensor1_type::rank, tensor2_type::rank) : 0;
+  };
 }
 
-template <AnyTensor TTensor1, AnyTensor TTensor2>
-class MatmulFunction : public TensorOperator<
-               std::common_type_t<typename std::remove_cvref_t<TTensor1>::value_type,
-                                  typename std::remove_cvref_t<TTensor2>::value_type>,
-               details::matmul_rank<TTensor1, TTensor2>::rank,
-               MatmulFunction<TTensor1, TTensor2>>
+// @brief MatMul is a wrapper for a device-specific matmul operator implementation
+//
+// Matmul provides a lazy-implementation that only stores the tensors and evaluates
+// the operation with operator().
+//
+// Matmul only supports matrix multiplications of rank-2 matrices, matrix and vector, and
+// vector dot.
+//
+// TODO: add support for higher-rank tensors?
+template <TensorConvertible TTensor1, TensorConvertible TTensor2>
+class Matmul : TensorOperator<std::common_type_t<typename std::remove_cvref_t<TTensor1>::value_type,
+                                                 typename std::remove_cvref_t<TTensor2>::value_type>,
+                              MatmulRank<TTensor1, TTensor2>::rank,
+                              Matmul<TTensor1, TTensor2>>
 {
   using device = tensor_device_t<TTensor1>;
 
  public:
+  using Matmul::TensorOperator::rank;
   using tensor1_type = std::remove_reference_t<TTensor1>;
   using tensor2_type = std::remove_reference_t<TTensor2>;
   using value_type = std::common_type_t<typename tensor1_type::value_type, typename tensor2_type::value_type>;
@@ -54,14 +58,11 @@ class MatmulFunction : public TensorOperator<
   using const_pointer = const value_type*;
   constexpr static size_t tensor1_rank = tensor1_type::rank;
   constexpr static size_t tensor2_rank = tensor2_type::rank;
-  // TODO: OK for combination of rank-2 and rank-1 but maybe not rank-3 and higher?
-  constexpr static size_t rank =
-   tensor1_type::rank != 1 || tensor2_type::rank != 1 ? std::min(tensor1_type::rank, tensor2_type::rank) : 0;
 
   template <typename T1, typename T2>
   requires (tensor1_rank > 0 && tensor2_rank > 0)
-  MatmulFunction(T1&& tensor1, T2&& tensor2)
-   : TensorOperator<value_type, rank, MatmulFunction<TTensor1, TTensor2>>(*this),
+  Matmul(T1&& tensor1, T2&& tensor2)
+   : TensorOperator<value_type, rank, Matmul<TTensor1, TTensor2>>(*this),
      tensor1_(std::forward<T1>(tensor1)),
      tensor2_(std::forward<T2>(tensor2))
   {
@@ -77,9 +78,9 @@ class MatmulFunction : public TensorOperator<
   }
 
   // delete assignment and copy/move constructors
-  MatmulFunction() = delete;
-  MatmulFunction(const MatmulFunction& other) = delete;
-  MatmulFunction& operator=(const MatmulFunction& other) = delete;
+  Matmul() = delete;
+  Matmul(const Matmul& other) = delete;
+  Matmul& operator=(const Matmul& other) = delete;
 
   /// operator()() executes and returns a (scalar) tensor with the 'vector dot' multiplication.
   auto operator()() const requires (tensor1_rank == 1 && tensor2_rank == 1)
@@ -88,7 +89,7 @@ class MatmulFunction : public TensorOperator<
       throw std::runtime_error("mismatching dimensions in vector product");
 
     auto result = Tensor<value_type, 0, DeviceMemory<device>>{value_type{0}};
-    operator_(result, tensor1_, tensor2_);
+    operator_(tensor1_, tensor2_, result);
     return result;
   }
 
@@ -101,7 +102,7 @@ class MatmulFunction : public TensorOperator<
       throw std::runtime_error("mismatching dimensions in matrix multiplication");
 
     auto result = Tensor<value_type, 2, DeviceMemory<device>>({dims1[0], dims2[1]}, Uninitialized<value_type>{});
-    operator_(result, tensor1_, tensor2_);
+    operator_(tensor1_, tensor2_, result);
     return result;
   }
 
@@ -114,7 +115,7 @@ class MatmulFunction : public TensorOperator<
       throw std::runtime_error("mismatching dimensions in matrix multiplication");
 
     auto result = Tensor<value_type, 1, DeviceMemory<device>>(dims1[0], Uninitialized<value_type>{});
-    operator_(result, tensor1_, tensor2_);
+    operator_(tensor1_, tensor2_, result);
     return result;
   }
 
@@ -127,7 +128,7 @@ class MatmulFunction : public TensorOperator<
       throw std::runtime_error("mismatching dimensions in matrix multiplication");
 
     auto result = Tensor<value_type, 1, DeviceMemory<device>>(dims2[1], Uninitialized<value_type>{});
-    operator_(result, tensor1_, tensor2_);
+    operator_(tensor1_, tensor2_, result);
     return result;
   }
 
@@ -137,17 +138,9 @@ class MatmulFunction : public TensorOperator<
   TTensor2 tensor2_;
 };
 
-template <typename T1, typename T2> MatmulFunction(T1&&, T2&&)
-  -> MatmulFunction<typename to_tensor<T1>::type, typename to_tensor<T2>::type>;
-
-template <TensorConvertible TTensor1, TensorConvertible TTensor2>
-requires (std::remove_cvref_t<TTensor1>::rank > 0 && std::remove_cvref_t<TTensor2>::rank > 0)
-auto Matmul(TTensor1&& tensor1, TTensor2&& tensor2)
-{
-  return MatmulFunction(std::forward<TTensor1>(tensor1), std::forward<TTensor2>(tensor2));
-}
+template <typename T1, typename T2> Matmul(T1&&, T2&&)
+  -> Matmul<typename to_tensor<T1>::type, typename to_tensor<T2>::type>;
 
 } // end of namespace grd
 
 #endif  // GRID_TENSOR_MATMUL_H
-
