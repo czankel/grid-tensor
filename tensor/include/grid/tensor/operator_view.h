@@ -67,7 +67,7 @@ class TensorView
       dimensions_(dimensions),
       strides_(strides),
       size_(size),
-      offset_(offset) // FIXME: offset is bytes or 'sizeof(T)'?
+      offset_(offset)
   {
     if (size + offset > tensor.Size())
       throw std::runtime_error("reshape exceeds tensor size");
@@ -94,8 +94,6 @@ class TensorView
   auto operator=(const TFromTensor& rhs)
   {
     // FIXME: really realloc for view?? More to reduce or generic?
-    // FIXME: also actually wrong? strides can be different...
-    // FIXME: define in dev-guide where to check, if to use _unchecked or _unsafe, etc.
 #if 0
     if (tensor_.Size() != rhs.Size())
       array_type::Realloc(rhs.Size());
@@ -115,7 +113,6 @@ class TensorView
   inline TensorView<TTensor, rank>&
   Reshape(const std::array<size_t, rank>& dimensions, size_t offset = 0)
   {
-    // FIXME
     return *this;
   }
 

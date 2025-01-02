@@ -17,6 +17,12 @@ namespace grid {
 
 namespace details {
 
+// FIXME: add border check? Pass bytes
+// FIXME: rank0: if sizeof(T) < size throw
+// FIXME: rank1: if sizeof(T) < size throw ...
+// FIXME: or pass src_end and dst_end and check??
+// FIXME: at least rename to "unchecked"?
+
 // copy copies the data between buffers accordig to dimensions and strides.
 template <typename T>
 inline void

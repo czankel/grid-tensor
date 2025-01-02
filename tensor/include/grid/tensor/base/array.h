@@ -70,6 +70,7 @@ class Array<T, DeviceMemory<device::Base>>
     : size_(other.size_),
       data_(static_cast<pointer>(operator new[](size_, std::align_val_t(16))))
   {
+    // FIXME: check size??
     memcpy(data_, other.data_, other.size);
   }
 
@@ -77,30 +78,30 @@ class Array<T, DeviceMemory<device::Base>>
   template <size_t N>
   Array(const Array& other,
         const std::array<size_t, N>& dimensions,
-        const std::array<ssize_t, N>& strides1,
-        const std::array<ssize_t, N>& strides2)
-    : size_(get_buffer_size<value_type>(dimensions, strides1)),
+        const std::array<ssize_t, N>& strides_dst,
+        const std::array<ssize_t, N>& strides_src)
+    : size_(get_buffer_size<value_type>(dimensions, strides_dst)),
       data_(static_cast<pointer>(operator new[](size_, std::align_val_t(16))))
   {
-    details::copy(data_, other.Data(),
+   details::copy(data_, other.Data(),
                   std::span<const size_t, N>(dimensions.begin(), N),
-                  std::span<const ssize_t, N>(strides1.begin(), N),
-                  std::span<const ssize_t, N>(strides2.begin(), N));
+                  std::span<const ssize_t, N>(strides_dst.begin(), N),
+                  std::span<const ssize_t, N>(strides_src.begin(), N));
   }
 
   // @brief Copy constructor from different array type with dimensions and strides
   template <size_t N>
   Array(const_pointer data,
         const std::array<size_t, N>& dimensions,
-        const std::array<ssize_t, N>& strides1,
-        const std::array<ssize_t, N>& strides2)
-    : size_(get_buffer_size<value_type>(dimensions, strides1)),
+        const std::array<ssize_t, N>& strides_dst,
+        const std::array<ssize_t, N>& strides_src)
+    : size_(get_buffer_size<value_type>(dimensions, strides_dst)),
       data_(static_cast<pointer>(operator new[](size_, std::align_val_t(16))))
   {
     details::copy(data_, data,
                   std::span<const size_t, N>(dimensions.begin(), N),
-                  std::span<const ssize_t, N>(strides1.begin(), N),
-                  std::span<const ssize_t, N>(strides2.begin(), N));
+                  std::span<const ssize_t, N>(strides_dst.begin(), N),
+                  std::span<const ssize_t, N>(strides_src.begin(), N));
   }
 
 
@@ -140,19 +141,23 @@ class Array<T, DeviceMemory<device::Base>>
     return *this;
   }
 
+  // FIXME: same as constructor?? use operator=?? but what about args?
+  // FIXME: should use Array+offset, not data..
   template <size_t N>
-  void Copy(const_pointer data,
+  void Copy(const_pointer data_src,
             const std::array<size_t, N>& dimensions,
-            const std::array<ssize_t, N>& strides1,
-            const std::array<ssize_t, N>& strides2)
+            const std::array<ssize_t, N>& strides_dst,
+            const std::array<ssize_t, N>& strides_src,
+            size_t offset = 0)
   {
-    if (get_buffer_size<value_type>(dimensions, strides1) > size_)
-      throw std::runtime_error("invalid size");
+    if (get_block_size<value_type>(dimensions, strides_dst) + offset > size_)
+      throw std::runtime_error("invalid size in base array");
 
-    details::copy(data_, data,
+    details::copy(reinterpret_cast<pointer>(pointer_cast<char*>(data_) + offset),
+                  data_src,
                   std::span<const size_t, N>(dimensions.begin(), N),
-                  std::span<const ssize_t, N>(strides1.begin(), N),
-                  std::span<const ssize_t, N>(strides2.begin(), N));
+                  std::span<const ssize_t, N>(strides_dst.begin(), N),
+                  std::span<const ssize_t, N>(strides_src.begin(), N));
   }
 
 

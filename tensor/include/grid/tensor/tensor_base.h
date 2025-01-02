@@ -21,6 +21,7 @@
 #include "base/generator.h"
 #include "base/matmul.h"
 #include "base/rms_norm.h"
+#include "base/rope.h"
 #include "base/softmax.h"
 #include "base/silu.h"
 #include "base/unary.h"

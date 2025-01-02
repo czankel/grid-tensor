@@ -30,6 +30,7 @@ namespace grid {
 /// Example:
 ///
 ///   Transform(tensor1, tensor2, result.begin(), BinaryOperator<AddOperator>{});
+///
 class TransformFunction
 {
  public:

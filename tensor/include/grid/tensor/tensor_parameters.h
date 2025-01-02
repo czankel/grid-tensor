@@ -157,6 +157,19 @@ size_t get_buffer_size(U&& dimensions, V&& strides)
   return size * sizeof(T);
 }
 
+
+template <typename T, typename U, typename V>
+size_t get_block_size(U&& dimensions, V&& strides)
+{
+  size_t size = 1;  // default is rank-0, which has size 1
+  auto di = std::forward<U>(dimensions).begin();
+  auto si = std::forward<V>(strides).begin();
+  for (; di != dimensions.end() && si != strides.end(); ++di, ++si)
+    size += std::max(*di - 1, 0UL) * *si;
+  return size * sizeof(T);
+}
+
+
 // Broadcast expands dimensions ("broadcasting") of the left tensor to match the right tensor
 template <typename TTensor1, typename TTensor2>
 inline auto BroadcastDimensions(const TTensor1& tensor1, const TTensor2& tensor2)

@@ -18,6 +18,7 @@
 #include "binary.h"
 #include "concepts.h"
 #include "device.h"
+#include "function.h"
 #include "iterator.h"
 #include "generator.h"
 #include "matmul.h"
@@ -343,6 +344,18 @@ class Tensor : public Array<T, TMemory>
     return view::Reshape(*this, std::move(dimensions), std::move(strides));
   }
 
+  template <size_t TViewRank>
+  auto Reshape(const std::array<size_t, TViewRank>& dimensions)
+  {
+    return view::Reshape(*this, std::move(dimensions));
+  }
+
+  template <size_t TViewRank>
+  auto Reshape(const std::array<size_t, TViewRank>& dimensions) const
+  {
+    return view::Reshape(*this, std::move(dimensions));
+  }
+
 
   /// begin returns an iterator for the begin of the Tensor array
   auto begin()                        { return details::Iterator(*this); }
@@ -367,6 +380,9 @@ class Tensor : public Array<T, TMemory>
   /// Strides returns the strides for the axis.
   const std::array<ssize_t, TRank>& Strides() const       { return strides_; }
 
+  /// Offset returns the offset in the buffer.
+  size_t Offset() const                                   { return 0UL; }
+
  private:
   std::array<size_t, TRank>         dimensions_;
   std::array<ssize_t, TRank>        strides_;
@@ -379,11 +395,13 @@ class Tensor<T, TRank, MemoryMapped>
 {
  public:
   using value_type = T;
+  using memory_type = MemoryMapped;
   using allocator_type = MemoryMapped;
   using pointer = const value_type*;
   using reference = const value_type&;
   using const_pointer = const value_type*;
   using const_reference = const value_type&;
+  using array_type = Array<value_type, memory_type>;
   constexpr static size_t rank = TRank;
 
   explicit Tensor() {}
@@ -501,6 +519,9 @@ class Tensor<T, TRank, MemoryMapped>
 
   /// Data returns a pointer to the data buffer.
   const_pointer Data() const                              { return data_; }
+
+  /// Offset returns the offset in the buffer.
+  size_t Offset() const                                   { return 0UL; }
 
  private:
   std::array<size_t, TRank>   dimensions_;

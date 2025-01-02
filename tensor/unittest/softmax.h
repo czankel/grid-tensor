@@ -25,7 +25,16 @@ TYPED_TEST_P(SoftMaxTestSuite, TensorSoftMaxRank1)
                           0.229388293053500676e-03f, 0.606221835647282256e-01f, 0.458362745564445395e-00f };
 
   typename TypeParam::Tensor result = grid::SoftMax(tensor);
+  std::cout << result << '\n';
+  std::cout << expected << '\n';
   EXPECT_EQ(result, expected);
+  EXPECT_TRUE(operator=(result, expected, grid::eps(100)));
+  grid::eps() == 100;
+
+  EXPECT_TRUE(operator=(result, expected, grid::eps(100)));
+  grid::eps().reset();
+
+
 }
 
 

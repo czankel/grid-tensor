@@ -245,6 +245,8 @@ TYPED_TEST_P(TensorTestSuite, TensorViewAllocInitializationTensor)
 
   EXPECT_THAT(tensor.Dimensions(), ElementsAre(4, 5));
   EXPECT_THAT(tensor.Strides(), ElementsAre(5 * 1, 1));
+  std::cout << tensor << '\n';
+  std::cout << expected << '\n';
   EXPECT_EQ(tensor, expected);
 
   // tensor[2]-> (5)
@@ -260,6 +262,15 @@ TYPED_TEST_P(TensorTestSuite, TensorViewAllocInitializationTensor)
   EXPECT_THAT(view_span.Dimensions(), ElementsAre(2UL, 5UL));
   EXPECT_THAT(view_span.Strides(), ElementsAre(5, 1));
   EXPECT_EQ(view_span.Data(), data + 2 * 5);
+}
+
+TYPED_TEST_P(TensorTestSuite, TensorReshape)
+{
+  typename TypeParam::Tensor tensor({6, 5}, 1.1f);
+  auto shape = tensor.Reshape(std::array{2UL, 5UL, 3UL}); // FIXME: Reshape({2, 5, 3})
+  EXPECT_EQ(shape.Rank(), 3);
+  EXPECT_THAT(shape.Dimensions(), ElementsAre(2, 5, 3));
+  EXPECT_THAT(shape.Strides(), ElementsAre(15, 3, 1));
 }
 
 TYPED_TEST_P(TensorTestSuite, TensorBroadcast)
@@ -307,4 +318,5 @@ REGISTER_TYPED_TEST_SUITE_P(TensorTestSuite,
     TensorMMap,
     TensorViewBraceInitializationTensor,
     TensorViewAllocInitializationTensor,
+    TensorReshape,
     TensorBroadcast);

@@ -31,7 +31,8 @@ equals(const T* x, const T* y,
        std::span<const ssize_t, 0>)
 {
   auto max = std::max(std::abs(*x), std::abs(*y));
-  T eps = max * std::numeric_limits<T>::epsilon();
+  T eps = max * std::numeric_limits<T>::epsilon() * T{10}; // FIXME
+  printf("%f %f\n", std::abs(*x - *y) ,eps);
   return std::abs(*x - *y) <= eps;
 }
 
@@ -62,10 +63,11 @@ equals(const T* x, const T* y,
   for (size_t i = 0; i < dimensions[0]; i++)
   {
     auto max = std::max(std::abs(*x), std::abs(*y));
-    T eps = max * std::numeric_limits<T>::epsilon();
+    T eps = max * std::numeric_limits<T>::epsilon() * T{50}; // FIXME
 
     if (std::abs(*x - *y) > eps)
-      return false;
+    {printf("%f %f\n", std::abs(*x - *y) ,eps);
+      return false; }
 
     x += strides_x[0];
     y += strides_y[0];

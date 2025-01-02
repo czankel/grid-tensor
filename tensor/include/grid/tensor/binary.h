@@ -94,6 +94,18 @@ class Binary : public TensorOperator<std::common_type_t<typename std::remove_cvr
     return result;
   }
 
+  /// Rank returns the rank of the tensor.
+  size_t Rank() const                                     { return rank; }
+
+  /// Dimensions returns the dimensions for the axis.
+  const std::array<size_t, rank>& Dimensions() const      { return tensor1_.dimensions_; }
+
+  /// Strides returns the strides for the axis.
+  const std::array<ssize_t, rank>& Strides() const        { return tensor1_.strides_; }
+
+  /// Size returns the data buffer size.
+  size_t Size() const                                     { return tensor1_.size_; }
+
  private:
   static TOperator operator_;
   TTensor1 tensor1_;

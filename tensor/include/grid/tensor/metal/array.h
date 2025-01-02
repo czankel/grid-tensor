@@ -143,17 +143,24 @@ class Array<T, DeviceMemory<device::Metal>>
     return *this;
   }
 
-  // TODO: Implement copy. Is Copy actually needed?
-#if 0
+  // FIXME: implement metal copy, distinguish between metal->metal and cpu->metal
   template <size_t N>
-  Array& Copy(const Array& other,
-              const std::array<size_t, N>& dimensions,
-              const std::array<ssize_t, N>& strides1,
-              const std::array<ssize_t, N>& strides2)
+  void Copy(const_pointer data_src,
+            const std::array<size_t, N>& dimensions,
+            const std::array<ssize_t, N>& strides_dst,
+            const std::array<ssize_t, N>& strides_src,
+            size_t offset = 0)
   {
-    Realloc(size_);
+    if (get_block_size<value_type>(dimensions, strides_dst) + offset > size_)
+      throw std::runtime_error("invalid size metal/array");
+
+    printf("OFFS %lu\n", offset);
+    details::copy(reinterpret_cast<pointer>(static_cast<char*>(buffer_->contents()) + offset),
+                  data_src,
+                  std::span<const size_t, N>(dimensions.begin(), N),
+                  std::span<const ssize_t, N>(strides_dst.begin(), N),
+                  std::span<const ssize_t, N>(strides_src.begin(), N));
   }
-#endif
 
   /// Size returns the size of the entire buffer.
   size_t Size() const                                     { return size_; }
@@ -165,10 +172,10 @@ class Array<T, DeviceMemory<device::Metal>>
   const_pointer Data() const                              { return static_cast<const_pointer>(buffer_->contents()); }
 
   // Buffer returns the MTL buffer - internal use only
-  MTL::Buffer* Buffer()                                    { return buffer_; }
+  auto Buffer()                                           { return buffer_; }
 
   // Buffer returns the MTL buffer - internal use only
-  const MTL::Buffer* Buffer() const                        { return buffer_; }
+  auto Buffer() const                                     { return buffer_; }
 
  protected:
   size_t  size_;

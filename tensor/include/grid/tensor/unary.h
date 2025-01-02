@@ -74,9 +74,7 @@ class Unary : public TensorOperator<typename std::remove_cvref_t<TTensor>::value
 };
 
 template <typename TOp, typename T> Unary(TOp, T&&) -> Unary<TOp, typename to_tensor<T>::type>;
-
-template <typename TOperator, AnyTensor TTensor>
-TOperator Unary<TOperator, TTensor>::operator_;
+template <typename TOperator, AnyTensor TTensor> TOperator Unary<TOperator, TTensor>::operator_;
 
 //
 // Elementary Unary Operators
@@ -104,6 +102,7 @@ auto Neg(TTensor&& tensor)
   return Unary(UnaryOperator<NegOperator, tensor_device_t<TTensor>>(), std::forward<TTensor>(tensor));
 }
 
+// FIXME: move to 'operators'; could use additional parameters, not really a unary??
 /// @brief RmsNorm returns a tensor of the RMS normalized tensor.
 template <TensorConvertible TTensor>
 requires (std::remove_cvref_t<TTensor>::rank <= 2)
@@ -126,6 +125,6 @@ auto Silu(TTensor&& tensor)
   return Unary(SiluOperator<tensor_device_t<TTensor>>(), std::forward<TTensor>(tensor));
 }
 
-} // end of namespace grd
+} // end of namespace grid
 
 #endif  // GRID_TENSOR_UNARY_H

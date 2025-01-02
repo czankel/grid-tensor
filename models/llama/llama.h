@@ -292,11 +292,22 @@ void LLaMAModelT<T, Dev>::Forward(LLaMAVocab::token token, size_t pos)
     l.value_cache_.View(pos) = Matmul(l.wv_, xb_);        // (kv_dim, dim) @ (dim) -> (kv_dim)
     l.q_ = Matmul(l.wq_, xb_);                            // (dim, dim) @ (dim)    -> (dim)
 
+#if 1
+    // FIXME: q_ (dim), v_ (kv_dim)
+    //l.q_ = Rope(l.q_.Reshape(std::array{n_heads, head_size}), pos).Reshape(std::array{head_size});
+    l.q_.Reshape(std::array{n_heads, head_size}) =
+      Rope(l.q_.Reshape(std::array{n_heads, head_size}), pos);
+    l.key_cache_.View(pos) = Rope(l.key_cache_.View(pos, Extent(kv_dim)), pos);
+
+#else
     // RoPE, rotate for each 'head'
     auto q = l.q_.Data();
     auto k = l.key_cache_.View(pos).Data();
+    // FIXME: dim is fixed by model
     for (size_t i = 0; i < dim; i+=2)
     {
+      // FIXME pos goes from 1 to token-index
+      // h%head_size/head_size loops from 0 to dim,  1/powf could be cached --> 4096??
       float rot = (float) pos / powf(10000.0f, (float)(i % head_size) / (float)head_size);
       float fcr = cosf(rot);
       float fci = sinf(rot);
@@ -306,6 +317,7 @@ void LLaMAModelT<T, Dev>::Forward(LLaMAVocab::token token, size_t pos)
       q[i]   = v0 * fcr - v1 * fci;
       q[i+1] = v0 * fci + v1 * fcr;
 
+      // FIXME overwrites k???
       if (i < kv_dim)
       {
         float v0 = k[i];
@@ -314,6 +326,7 @@ void LLaMAModelT<T, Dev>::Forward(LLaMAVocab::token token, size_t pos)
         k[i+1] = v0 * fci + v1 * fcr;
       }
     }
+#endif
 
     // MultiHead(Q,K,V) = concat(head_1, ..., head_h) W_0, with head = Attention(Q_head,K_head,V_head)
     for (size_t head = 0; head < n_heads; head++)
@@ -327,7 +340,7 @@ void LLaMAModelT<T, Dev>::Forward(LLaMAVocab::token token, size_t pos)
       // reduces to:
       // scores [head_offset:head_offset + head_size] =
       //   softmax(K [:pos+1, head:head+head_size] @ q [head:head+head_size] @ V [:pos+1, head:head+head_size]
-      scores_.View(Extent(head_offset, head_size)) =
+      scores_.View(Extent(head_offset, head_size)) =  // FIXME: does Extent mean somthing like:  FromAndLength StartLen(s, len) === Extent(s, len)
         Matmul(
           SoftMax(
             Matmul(

@@ -103,6 +103,9 @@ concept PrimitiveTensor = AnyTensor<TTensor> && tensor_is_primitive<TTensor>::va
 template <typename TOperator>
 concept AnyOperator = is_operator_v<TOperator>;
 
+// FIXME: "convertible" is used in a specific way, and adding 'convertible' rules would be an
+// FIXME: ODR violation. This is not the case here??? so, use "assignable"?? or something else?
+
 /// TensorConvertible requires that the tensor is a tensor or functor that returns a tensor
 template <typename TTensor>
 concept TensorConvertible = is_tensor_v<TTensor> || is_operator_v<TTensor>;
