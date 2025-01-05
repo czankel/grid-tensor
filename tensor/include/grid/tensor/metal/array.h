@@ -82,11 +82,11 @@ class Array<T, DeviceMemory<device::Metal>>
 
 
   // @brief Copy constructor of contiguous arrays.
+  // TODO use GPU for copy
   Array(const Array& other)
     : size_(other.size_),
       buffer_(Allocate(size_))
   {
-    // TODO use GPU? Handle mmap, etc.
     memcpy(Data(), other.Data(), other.size);
   }
 
@@ -143,17 +143,19 @@ class Array<T, DeviceMemory<device::Metal>>
     return *this;
   }
 
-  // TODO: Implement copy. Is Copy actually needed?
-#if 0
+  // TODO use GPU for copy
   template <size_t N>
-  Array& Copy(const Array& other,
-              const std::array<size_t, N>& dimensions,
-              const std::array<ssize_t, N>& strides1,
-              const std::array<ssize_t, N>& strides2)
+  void Copy(const_pointer data_src,
+            const std::array<size_t, N>& dimensions,
+            const std::array<ssize_t, N>& strides1,
+            const std::array<ssize_t, N>& strides2)
   {
-    Realloc(size_);
+    details::copy(reinterpret_cast<pointer>(buffer_->contents()),  // FIXME
+                  data_src,
+                  std::span<const size_t, N>(dimensions.begin(), N),
+                  std::span<const ssize_t, N>(strides1.begin(), N),
+                  std::span<const ssize_t, N>(strides2.begin(), N));
   }
-#endif
 
   /// Size returns the size of the entire buffer.
   size_t Size() const                                     { return size_; }
