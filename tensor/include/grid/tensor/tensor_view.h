@@ -63,7 +63,7 @@ class TensorView
       dimensions_(dimensions),
       strides_(strides),
       size_(size),
-      data_(reinterpret_cast<pointer>(pointer_cast<char*>(tensor.Data()) + offset))
+      offset_(offset)
   {}
 
 
@@ -71,17 +71,14 @@ class TensorView
   template <AnyTensor TFromTensor> requires (TFromTensor::rank == TViewRank)
   auto operator=(const TFromTensor& rhs)
   {
-    // TODO: make this device agnostic
-    details::copy_unsafe(data_, rhs.Data(),
-                         std::span<const size_t, TViewRank>(dimensions_.begin(), TViewRank),
-                         std::span<const ssize_t, TViewRank>(strides_.begin(), TViewRank),
-                         std::span<const ssize_t, TViewRank>(rhs.Strides().begin(), TViewRank));
+    tensor_.array_type::Copy(rhs.Data(), dimensions_, strides_, rhs.Strides(), offset_);
+    return *this;
   }
 
   template <AnyOperator TOperator> // FIXME requires PrimitiveTensor<to_tensor(TOperator)>
   auto operator=(const TOperator& oper)
   {
-    return this->operator=(oper());
+    return operator=(oper());
   }
 
 
@@ -110,9 +107,16 @@ class TensorView
   /// Size returns the data buffer size.
   size_t Size() const                                     { return size_; }
 
-  /// Data returns a pointer to the data buffer.
-  pointer Data()                                          { return data_; }
-  const_pointer Data() const                              { return data_; }
+  /// Data returns a pointer to the data buffer of the view.
+  pointer Data()
+  {
+    return reinterpret_cast<pointer>(pointer_cast<char*>(tensor_.Data()) + offset_);
+  }
+
+  const_pointer Data() const
+  {
+    return reinterpret_cast<pointer>(pointer_cast<char*>(tensor_.Data()) + offset_);
+  }
 
   template <typename = void> requires requires (TTensor&& t) {t.Buffer();}
   auto Buffer()                                           { return tensor_.Buffer(); }
@@ -120,12 +124,15 @@ class TensorView
   template <typename = void> requires requires (TTensor&& t) {t.Buffer();}
   auto Buffer() const                                     { return tensor_.Buffer(); }
 
+  /// Offset returns the offset in the buffer.
+  size_t Offset() const                                   { return offset_; }
+
  private:
   TTensor&                        tensor_;
   std::array<size_t, TViewRank>   dimensions_;
   std::array<ssize_t, TViewRank>  strides_;
   size_t                          size_;
-  pointer                         data_;
+  size_t                          offset_;
 };
 
 

@@ -148,9 +148,10 @@ class Array<T, DeviceMemory<device::Metal>>
   void Copy(const_pointer data_src,
             const std::array<size_t, N>& dimensions,
             const std::array<ssize_t, N>& strides1,
-            const std::array<ssize_t, N>& strides2)
+            const std::array<ssize_t, N>& strides2,
+            size_t offset = 0)
   {
-    details::copy_unsafe(reinterpret_cast<pointer>(buffer_->contents()),  // FIXME
+    details::copy_unsafe(reinterpret_cast<pointer>(static_cast<char*>(buffer_->contents()) + offset),
                          data_src,
                          std::span<const size_t, N>(dimensions.begin(), N),
                          std::span<const ssize_t, N>(strides1.begin(), N),

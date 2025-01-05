@@ -131,6 +131,8 @@ class Iterator
   const std::array<ssize_t, rank>&  Strides() const     { return tensor_->Strides(); }
   const std::array<size_t, rank>&   Coordinates() const { return coordinates_; }
   auto                              Buffer()            { return tensor_->Buffer(); }
+  size_t                            Offset() const      { return tensor_->Offset(); }
+
  private:
   std::array<size_t, rank>  coordinates_;
   TTensor*                  tensor_;
@@ -248,6 +250,7 @@ class ConstIterator
   const std::array<ssize_t, rank>&  Strides() const     { return tensor_->Strides(); }
   const std::array<size_t, rank>&   Coordinates() const { return coordinates_; }
   auto                              Buffer()            { return tensor_->Buffer(); }
+  size_t                            Offset() const      { return tensor_->Offset(); }
 
  private:
   std::array<size_t, rank>  coordinates_;

@@ -144,15 +144,17 @@ class Array<T, DeviceMemory<device::Base>>
   void Copy(const_pointer data,
             const std::array<size_t, N>& dimensions,
             const std::array<ssize_t, N>& strides1,
-            const std::array<ssize_t, N>& strides2)
+            const std::array<ssize_t, N>& strides2,
+            size_t offset = 0)
   {
-    if (get_buffer_size<value_type>(dimensions, strides1) > size_)
+    if (get_block_size<value_type>(dimensions, strides1) > size_)
       throw std::runtime_error("invalid size");
 
-    details::copy_unsafe(data_, data,
-                  std::span<const size_t, N>(dimensions.begin(), N),
-                  std::span<const ssize_t, N>(strides1.begin(), N),
-                  std::span<const ssize_t, N>(strides2.begin(), N));
+    details::copy_unsafe(reinterpret_cast<pointer>(pointer_cast<char*>(data_) + offset),
+                         data,
+                         std::span<const size_t, N>(dimensions.begin(), N),
+                         std::span<const ssize_t, N>(strides1.begin(), N),
+                         std::span<const ssize_t, N>(strides2.begin(), N));
   }
 
 

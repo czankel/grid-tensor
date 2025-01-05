@@ -367,6 +367,9 @@ class Tensor : public Array<T, TMemory>
   /// Strides returns the strides for the axis.
   const std::array<ssize_t, TRank>& Strides() const       { return strides_; }
 
+  /// Offset returns the offset in the buffer.
+  size_t Offset() const                                   { return 0UL; }
+
  private:
   std::array<size_t, TRank>         dimensions_;
   std::array<ssize_t, TRank>        strides_;
@@ -501,6 +504,9 @@ class Tensor<T, TRank, MemoryMapped>
 
   /// Data returns a pointer to the data buffer.
   const_pointer Data() const                              { return data_; }
+
+  /// Offset returns the offset in the buffer.
+  size_t Offset() const                                   { return 0UL; }
 
  private:
   std::array<size_t, TRank>   dimensions_;
