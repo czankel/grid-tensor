@@ -43,7 +43,7 @@ class Array<T, DeviceMemory<device::Base>>
       data_(static_cast<pointer>(operator new[](size_, std::align_val_t(16))))
   {
     // FIXME
-    details::initialize(data_, size_ / sizeof(value_type), init);
+    details::initialize_unsafe(data_, size_ / sizeof(value_type), init);
   }
 
   // @brief Constructor for a non-contiguous array with the provided dimensions and strides.
@@ -59,7 +59,7 @@ class Array<T, DeviceMemory<device::Base>>
     : size_(get_buffer_size<value_type>(dimensions, strides)),
       data_(static_cast<pointer>(operator new[](size_, std::align_val_t(16))))
   {
-    details::initialize(data_, dimensions, strides, init);
+    details::initialize_unsafe(data_, dimensions, strides, init);
   }
 
   // @brief Move constructor.
@@ -82,10 +82,10 @@ class Array<T, DeviceMemory<device::Base>>
     : size_(get_buffer_size<value_type>(dimensions, strides1)),
       data_(static_cast<pointer>(operator new[](size_, std::align_val_t(16))))
   {
-    details::copy(data_, other.Data(),
-                  std::span<const size_t, N>(dimensions.begin(), N),
-                  std::span<const ssize_t, N>(strides1.begin(), N),
-                  std::span<const ssize_t, N>(strides2.begin(), N));
+    details::copy_unsafe(data_, other.Data(),
+                         std::span<const size_t, N>(dimensions.begin(), N),
+                         std::span<const ssize_t, N>(strides1.begin(), N),
+                         std::span<const ssize_t, N>(strides2.begin(), N));
   }
 
   // @brief Copy constructor from different array type with dimensions and strides
@@ -97,10 +97,10 @@ class Array<T, DeviceMemory<device::Base>>
     : size_(get_buffer_size<value_type>(dimensions, strides1)),
       data_(static_cast<pointer>(operator new[](size_, std::align_val_t(16))))
   {
-    details::copy(data_, data,
-                  std::span<const size_t, N>(dimensions.begin(), N),
-                  std::span<const ssize_t, N>(strides1.begin(), N),
-                  std::span<const ssize_t, N>(strides2.begin(), N));
+    details::copy_unsafe(data_, data,
+                         std::span<const size_t, N>(dimensions.begin(), N),
+                         std::span<const ssize_t, N>(strides1.begin(), N),
+                         std::span<const ssize_t, N>(strides2.begin(), N));
   }
 
 
@@ -149,7 +149,7 @@ class Array<T, DeviceMemory<device::Base>>
     if (get_buffer_size<value_type>(dimensions, strides1) > size_)
       throw std::runtime_error("invalid size");
 
-    details::copy(data_, data,
+    details::copy_unsafe(data_, data,
                   std::span<const size_t, N>(dimensions.begin(), N),
                   std::span<const ssize_t, N>(strides1.begin(), N),
                   std::span<const ssize_t, N>(strides2.begin(), N));

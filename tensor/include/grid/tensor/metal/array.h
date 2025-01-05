@@ -61,7 +61,7 @@ class Array<T, DeviceMemory<device::Metal>>
   // @brief Constructor for a contiguous array with the provided size with initialization.
   Array(size_t size, value_type init) : size_(size), buffer_(Allocate(size))
   {
-    details::initialize(Data(), size_ / sizeof(value_type), init);
+    details::initialize_unsafe(Data(), size_ / sizeof(value_type), init);
   }
 
   // @brief Constructor for a non-contiguous array with the provided dimensions and strides.
@@ -77,7 +77,7 @@ class Array<T, DeviceMemory<device::Metal>>
     : size_(get_buffer_size<value_type>(dimensions, strides)),
       buffer_(Allocate(size_))
   {
-    details::initialize(Data(), dimensions, strides, init);
+    details::initialize_unsafe(Data(), dimensions, strides, init);
   }
 
 
@@ -99,10 +99,10 @@ class Array<T, DeviceMemory<device::Metal>>
     : size_(get_buffer_size<value_type>(dimensions, strides1)),
       buffer_(Allocate(size_))
   {
-    details::copy(Data(), data,
-                  std::span<const size_t, N>(dimensions.begin(), N),
-                  std::span<const ssize_t, N>(strides1.begin(), N),
-                  std::span<const ssize_t, N>(strides2.begin(), N));
+    details::copy_unsafe(Data(), data,
+                         std::span<const size_t, N>(dimensions.begin(), N),
+                         std::span<const ssize_t, N>(strides1.begin(), N),
+                         std::span<const ssize_t, N>(strides2.begin(), N));
   }
 
   // @brief Move constructor.
@@ -150,11 +150,11 @@ class Array<T, DeviceMemory<device::Metal>>
             const std::array<ssize_t, N>& strides1,
             const std::array<ssize_t, N>& strides2)
   {
-    details::copy(reinterpret_cast<pointer>(buffer_->contents()),  // FIXME
-                  data_src,
-                  std::span<const size_t, N>(dimensions.begin(), N),
-                  std::span<const ssize_t, N>(strides1.begin(), N),
-                  std::span<const ssize_t, N>(strides2.begin(), N));
+    details::copy_unsafe(reinterpret_cast<pointer>(buffer_->contents()),  // FIXME
+                         data_src,
+                         std::span<const size_t, N>(dimensions.begin(), N),
+                         std::span<const ssize_t, N>(strides1.begin(), N),
+                         std::span<const ssize_t, N>(strides2.begin(), N));
   }
 
   /// Size returns the size of the entire buffer.

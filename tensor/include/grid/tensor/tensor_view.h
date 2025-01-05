@@ -72,10 +72,10 @@ class TensorView
   auto operator=(const TFromTensor& rhs)
   {
     // TODO: make this device agnostic
-    details::copy(data_, rhs.Data(),
-                  std::span<const size_t, TViewRank>(dimensions_.begin(), TViewRank),
-                  std::span<const ssize_t, TViewRank>(strides_.begin(), TViewRank),
-                  std::span<const ssize_t, TViewRank>(rhs.Strides().begin(), TViewRank));
+    details::copy_unsafe(data_, rhs.Data(),
+                         std::span<const size_t, TViewRank>(dimensions_.begin(), TViewRank),
+                         std::span<const ssize_t, TViewRank>(strides_.begin(), TViewRank),
+                         std::span<const ssize_t, TViewRank>(rhs.Strides().begin(), TViewRank));
   }
 
   template <AnyOperator TOperator> // FIXME requires PrimitiveTensor<to_tensor(TOperator)>
