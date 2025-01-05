@@ -145,6 +145,7 @@ std::array<ssize_t, TRank> make_strides(const std::array<size_t, TRank>& dimensi
   return strides;
 }
 
+
 // get_buffer_size returns the required size for the given dimensions and strides.
 template <typename T, typename U, typename V>
 size_t get_buffer_size(U&& dimensions, V&& strides)
@@ -156,6 +157,20 @@ size_t get_buffer_size(U&& dimensions, V&& strides)
     size = std::max(size, *di * *si);
   return size * sizeof(T);
 }
+
+
+// @brief Calculate the size of an (sub-)area with the given dimensions within a larger tensor.
+template <typename T, typename U, typename V>
+size_t get_block_size(U&& dimensions, V&& strides)
+{
+  size_t size = 1;  // default is rank-0, which has size 1
+  auto di = std::forward<U>(dimensions).begin();
+  auto si = std::forward<V>(strides).begin();
+  for (; di != dimensions.end() && si != strides.end(); ++di, ++si)
+    size += std::max(*di - 1, 0UL) * *si;
+  return size * sizeof(T);
+}
+
 
 // Broadcast expands dimensions ("broadcasting") of the left tensor to match the right tensor
 template <typename TTensor1, typename TTensor2>
