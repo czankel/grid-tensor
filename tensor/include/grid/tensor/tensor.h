@@ -343,6 +343,18 @@ class Tensor : public Array<T, TMemory>
     return view::Reshape(*this, std::move(dimensions), std::move(strides));
   }
 
+  template <size_t TViewRank>
+  auto Reshape(const std::array<size_t, TViewRank>& dimensions)
+  {
+    return view::Reshape(*this, std::move(dimensions));
+  }
+
+  template <size_t TViewRank>
+  auto Reshape(const std::array<size_t, TViewRank>& dimensions) const
+  {
+    return view::Reshape(*this, std::move(dimensions));
+  }
+
 
   /// begin returns an iterator for the begin of the Tensor array
   auto begin()                        { return details::Iterator(*this); }

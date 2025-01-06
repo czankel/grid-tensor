@@ -271,9 +271,9 @@ inline auto View(TTensor& tensor, Ts&&... ts)
 
 
 /// Reshape returns a view of the provide tensor with a new shape.
-template <typename TTensor>
-inline auto Reshape(const TTensor& tensor,
-                    const std::array<size_t, TTensor::rank>& dimensions,
+template <typename TTensor, size_t Rank>
+inline auto Reshape(TTensor& tensor,
+                    const std::array<size_t, Rank>& dimensions,
                     size_t offset = 0)
 {
   using value_type = typename TTensor::value_type;
@@ -283,10 +283,10 @@ inline auto Reshape(const TTensor& tensor,
   return TensorView(tensor, dimensions, strides, size, offset);
 }
 
-template <typename TTensor>
-inline auto Reshape(const TTensor& tensor,
-                    const std::array<size_t, TTensor::rank>& dimensions,
-                    const std::array<ssize_t, TTensor::rank>& strides,
+template <typename TTensor, size_t Rank>
+inline auto Reshape(TTensor& tensor,
+                    const std::array<size_t, Rank>& dimensions,
+                    const std::array<ssize_t, Rank>& strides,
                     size_t offset = 0)
 {
   using value_type = typename TTensor::value_type;
