@@ -24,15 +24,17 @@ template <template <typename> typename TOperator>
 class UnaryOperator<TOperator, device::Metal>
 {
   template <typename T>
-  void eval(MTL::Buffer* d, const MTL::Buffer* x, auto dimensions, auto strides_d, auto strides_x) const
+  void Eval(MTL::Buffer* d_buf, const MTL::Buffer* x_buf,
+            size_t d_ofs, size_t x_ofs,
+            auto dimensions, auto strides_d, auto strides_x) const
   {
     constexpr size_t rank = dimensions.size();
 
     auto& device = device::Metal::GetDevice();
     auto& encoder = device.Encoder();
 
-    encoder->setBuffer(d, 0, 0);
-    encoder->setBuffer(x, 0, 1);
+    encoder->setBuffer(d_buf, d_ofs, 0);
+    encoder->setBuffer(x_buf, x_ofs, 1);
 
     size_t s1 = strides_x.size();
 
@@ -91,12 +93,16 @@ class UnaryOperator<TOperator, device::Metal>
     std::span strides_x(first_x.Strides());
 
     details::Fold([&](auto dimensions, bool contiguous) {
-        if (contiguous)
-          eval<value_type>(first_d.Buffer(), first_x.Buffer(), dimensions,
-               strides_d.template first<(dimensions.size() > 0) ? dimensions.size() - 1 : 0>(),
-               strides_x);
-        else
-          eval<value_type>(first_d.Buffer(), first_x.Buffer(), dimensions, strides_d, strides_x);
+      if (contiguous)
+        Eval<value_type>(first_d.Buffer(), first_x.Buffer(),
+                         first_d.Offset(), first_x.Offset(),
+                         dimensions,
+                         strides_d.template first<(dimensions.size() > 0) ? dimensions.size() - 1 : 0>(),
+                         strides_x);
+      else
+        Eval<value_type>(first_d.Buffer(), first_x.Buffer(),
+                         first_d.Offset(), first_x.Offset(),
+                         dimensions, strides_d, strides_x);
     }, std::span(first_d.Extents()), strides_d, strides_x);
   }
 };

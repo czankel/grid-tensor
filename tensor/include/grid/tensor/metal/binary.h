@@ -23,7 +23,8 @@ template <template <typename> typename TOperator>
 class BinaryOperator<TOperator, device::Metal>
 {
   template <typename T>
-  void eval(MTL::Buffer* d, const MTL::Buffer* x, const MTL::Buffer* y,
+  void Eval(MTL::Buffer* d_buf, const MTL::Buffer* x_buf, const MTL::Buffer* y_buf,
+            size_t d_ofs, size_t x_ofs, size_t y_ofs,
             auto dimensions, auto strides_d, auto strides_x, auto strides_y) const
   {
     constexpr size_t rank = dimensions.size();
@@ -31,9 +32,9 @@ class BinaryOperator<TOperator, device::Metal>
     auto& device = device::Metal::GetDevice();
     auto& encoder = device.Encoder();
 
-    encoder->setBuffer(d, 0, 0);
-    encoder->setBuffer(x, 0, 1);
-    encoder->setBuffer(y, 0, 2);
+    encoder->setBuffer(d_buf, d_ofs, 0);
+    encoder->setBuffer(x_buf, x_ofs, 1);
+    encoder->setBuffer(y_buf, y_ofs, 2);
 
     size_t s_x = strides_x.size();
     size_t s_y = strides_y.size();
@@ -105,12 +106,17 @@ class BinaryOperator<TOperator, device::Metal>
 
     details::Fold([&](auto dimensions, bool contiguous) {
         if (contiguous)
-          eval<value_type>(
-              first_d.Buffer(), first_x.Buffer(), first_y.Buffer(), dimensions,
+          Eval<value_type>(
+              first_d.Buffer(), first_x.Buffer(), first_y.Buffer(),
+              first_d.Offset(), first_x.Offset(), first_y.Offset(),
+              dimensions,
               strides_d.template first<(dimensions.size() > 0) ? dimensions.size() - 1 : 0>(),
               strides_x, strides_y);
         else
-          eval<value_type>(first_d.Buffer(), first_x.Buffer(), first_y.Buffer(), dimensions, strides_d, strides_x, strides_y);
+          Eval<value_type>(
+              first_d.Buffer(), first_x.Buffer(), first_y.Buffer(),
+              first_d.Offset(), first_x.Offset(), first_y.Offset(),
+              dimensions, strides_d, strides_x, strides_y);
     }, std::span(first_d.Extents()), strides_d, strides_x, strides_y);
   }
 };
