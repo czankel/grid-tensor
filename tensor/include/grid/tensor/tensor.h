@@ -394,11 +394,12 @@ class Tensor<T, TRank, MemoryMapped>
 {
  public:
   using value_type = T;
-  using allocator_type = MemoryMapped;
+  using memory_type = MemoryMapped;
   using pointer = const value_type*;
   using reference = const value_type&;
   using const_pointer = const value_type*;
   using const_reference = const value_type&;
+  using array_type = Array<value_type, memory_type>;
   constexpr static size_t rank = TRank;
 
   explicit Tensor() {}

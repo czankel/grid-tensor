@@ -44,10 +44,12 @@ class TensorView
 {
  public:
   using value_type = typename TTensor::value_type;
+  using memory_type = typename TTensor::memory_type;
   using pointer = decltype(std::declval<TTensor>().Data());
   using reference = decltype(*std::declval<TTensor>().Data());
   using const_pointer = typename TTensor::const_pointer;
   using const_reference = typename TTensor::const_reference;
+  using array_type = typename TTensor::array_type;
   constexpr static size_t rank = TViewRank;
 
   /// Default constructor
@@ -71,7 +73,7 @@ class TensorView
   template <AnyTensor TFromTensor> requires (TFromTensor::rank == TViewRank)
   auto operator=(const TFromTensor& rhs)
   {
-    tensor_.array_type::Copy(rhs.Data(), dimensions_, strides_, rhs.Strides(), offset_);
+    tensor_.Copy(rhs.Data(), dimensions_, strides_, rhs.Strides(), offset_);
     return *this;
   }
 
