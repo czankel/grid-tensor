@@ -76,7 +76,7 @@ template <template <typename, size_t, typename...> typename TTensor, typename T,
 struct is_same_tensor_as<TTensor<T, TRank, TAllocator...>, TTensor> : std::true_type {};
 
 
-// tensor_is_primitive checks if a tensor includes a Data() member function thatJ returns an
+// tensor_is_primitive checks if a tensor includes a Data() member function that returns an
 // artihmetic pointer type.
 template <typename TTensor> using tensor_data_return_type = decltype(std::declval<TTensor>().Data());
 
@@ -86,6 +86,11 @@ template<class TTensor> struct tensor_is_primitive_helper :
 
 template<class TTensor>
 struct tensor_is_primitive : tensor_is_primitive_helper<std::remove_reference_t<TTensor>> {};
+
+// has_memory_type_v checks if a tensor has the provided memory type
+template <typename TTensor, typename TMemory>
+inline constexpr bool has_memory_type_v =
+  std::is_same<typename std::remove_cvref_t<TTensor>::memory_type, TMemory>::value;
 
 //
 // Concepts
