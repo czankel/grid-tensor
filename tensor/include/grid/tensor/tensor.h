@@ -285,9 +285,11 @@ class Tensor : public Array<T, TMemory>
   {
     dimensions_ = other.Dimensions();
     strides_ = other.Strides();
+
     if (array_type::Size() != other.Size())
       array_type::Realloc(other.Size());
-    array_type::Copy(other.Data(), dimensions_, strides_, strides_);
+
+    Copy(*this, other);
     return *this;
   }
 
@@ -394,7 +396,7 @@ class Tensor<T, TRank, MemoryMapped>
 {
  public:
   using value_type = T;
-  using allocator_type = MemoryMapped;
+  using memory_type = MemoryMapped;
   using pointer = const value_type*;
   using reference = const value_type&;
   using const_pointer = const value_type*;

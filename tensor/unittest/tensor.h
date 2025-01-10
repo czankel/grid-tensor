@@ -236,7 +236,7 @@ TYPED_TEST_P(TensorTestSuite, TensorViewAllocInitializationTensor)
   auto data = tensor.Data();
 
   // tensor[:,1]
-  typename TypeParam::Tensor col = grid::Tensor{2.1f, 3.2f, 4.3f, 5.4f, 6.5f};
+  typename TypeParam::Tensor col = grid::Tensor{2.1f, 3.2f, 4.3f, 5.4f};
   tensor.View(Slice(), 1) = col;
   grid::Tensor expected = { { 1.1f, 2.1f, 1.1f, 1.1f, 1.1f},
                             { 1.1f, 3.2f, 1.1f, 1.1f, 1.1f},
