@@ -73,7 +73,7 @@ class TensorView
   template <AnyTensor TFromTensor> requires (TFromTensor::rank == TViewRank)
   auto operator=(const TFromTensor& rhs)
   {
-    tensor_.Copy(rhs.Data(), dimensions_, strides_, rhs.Strides(), offset_);
+    Copy(*this, rhs);
     return *this;
   }
 

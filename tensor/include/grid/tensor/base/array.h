@@ -140,23 +140,6 @@ class Array<T, DeviceMemory<device::Base>>
     return *this;
   }
 
-  template <size_t N>
-  void Copy(const_pointer data,
-            const std::array<size_t, N>& dimensions,
-            const std::array<ssize_t, N>& strides1,
-            const std::array<ssize_t, N>& strides2,
-            size_t offset = 0)
-  {
-    if (get_block_size<value_type>(dimensions, strides1) > size_)
-      throw std::runtime_error("invalid size");
-
-    details::copy_unsafe(reinterpret_cast<pointer>(pointer_cast<char*>(data_) + offset),
-                         data,
-                         std::span<const size_t, N>(dimensions.begin(), N),
-                         std::span<const ssize_t, N>(strides1.begin(), N),
-                         std::span<const ssize_t, N>(strides2.begin(), N));
-  }
-
 
   /// Size returns the size of the entire buffer.
   size_t Size() const                                     { return size_; }

@@ -287,7 +287,7 @@ class Tensor : public Array<T, TMemory>
     strides_ = other.Strides();
     if (array_type::Size() != other.Size())
       array_type::Realloc(other.Size());
-    array_type::Copy(other.Data(), dimensions_, strides_, strides_);
+    Copy(*this, other);
     return *this;
   }
 
