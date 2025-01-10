@@ -6,6 +6,8 @@
 // The contents of this file are confidential and proprietary to Chris Zankel.
 //
 
+#include <grid/tensor/precision.h>
+
 using testing::ElementsAre;
 
 namespace {
@@ -24,6 +26,7 @@ TYPED_TEST_P(SoftMaxTestSuite, TensorSoftMaxRank1)
                           0.407345162648720671e-00f, 0.381141786703997885e-06f, 0.687341376275671639e-02f,
                           0.229388293053500676e-03f, 0.606221835647282256e-01f, 0.458362745564445395e-00f };
 
+  grid::Precision p(100.f);
   typename TypeParam::Tensor result = grid::SoftMax(tensor);
   EXPECT_EQ(result, expected);
 }
