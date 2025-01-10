@@ -68,6 +68,20 @@ class TensorView
       offset_(offset)
   {}
 
+#if 0 // FIXME needed?
+  template <size_t R>
+  TensorView(TensorView<TTensor, R>&& view,
+             const std::array<size_t,  TViewRank>& dimensions,
+             const std::array<ssize_t, TViewRank>& strides,
+             size_t size)
+    : tensor_(std::move(view.tensor_)),
+      dimensions_(dimensions),
+      strides_(strides),
+      size_(size)
+  {
+  }
+#endif
+
 
   /// operator=(Tensor) copies data from the rhs tensor (or view) into the view of the dependent tensor.
   template <AnyTensor TFromTensor> requires (TFromTensor::rank == TViewRank)

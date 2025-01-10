@@ -7,6 +7,10 @@ grid_add_sources(gridtensor_test
   unary_base.cc
 )
 
+grid_add_sources(gridtensor_test
+  rope.cc
+)
+
 if (BUILD_METAL)
 grid_add_sources(gridtensor_test
   tensor_metal.cc

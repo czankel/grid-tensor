@@ -292,28 +292,9 @@ void LLaMAModelT<T, Dev>::Forward(LLaMAVocab::token token, size_t pos)
     l.value_cache_.View(pos) = Matmul(l.wv_, xb_);        // (kv_dim, dim) @ (dim) -> (kv_dim)
     l.q_ = Matmul(l.wq_, xb_);                            // (dim, dim) @ (dim)    -> (dim)
 
-    // RoPE, rotate for each 'head'
-    auto q = l.q_.Data();
-    auto k = l.key_cache_.View(pos).Data();
-    for (size_t i = 0; i < dim; i+=2)
-    {
-      float rot = (float) pos / powf(10000.0f, (float)(i % head_size) / (float)head_size);
-      float fcr = cosf(rot);
-      float fci = sinf(rot);
-
-      float v0 = q[i];
-      float v1 = q[i+1];
-      q[i]   = v0 * fcr - v1 * fci;
-      q[i+1] = v0 * fci + v1 * fcr;
-
-      if (i < kv_dim)
-      {
-        float v0 = k[i];
-        float v1 = k[i+1];
-        k[i]   = v0 * fcr - v1 * fci;
-        k[i+1] = v0 * fci + v1 * fcr;
-      }
-    }
+    l.q_.Reshape(std::array{n_heads, head_size}) =
+      Rope(l.q_.Reshape(std::array{n_heads, head_size}), pos);
+    l.key_cache_.View(pos) = Rope(l.key_cache_.View(pos, Extent(kv_dim)), pos);
 
     // MultiHead(Q,K,V) = concat(head_1, ..., head_h) W_0, with head = Attention(Q_head,K_head,V_head)
     for (size_t head = 0; head < n_heads; head++)
