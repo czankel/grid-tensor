@@ -93,6 +93,35 @@ template <typename TOp, typename T, typename... Args> Function(TOp, T&&, Args&&.
 template <typename TOperator, AnyTensor TTensor, typename... Args>
 TOperator Function<TOperator, TTensor, Args...>::operator_;
 
+
+template <typename> class RmsNormOperator;
+template <typename> class SoftMaxOperator;
+template <typename> class SiluOperator;
+
+
+/// @brief RmsNorm returns a tensor of the RMS normalized tensor.
+template <TensorConvertible TTensor>
+requires (std::remove_cvref_t<TTensor>::rank <= 2)
+auto RmsNorm(TTensor&& tensor)
+{
+  return Function(RmsNormOperator<tensor_device_t<TTensor>>(), std::forward<TTensor>(tensor));
+}
+
+/// @brief SoftMax returns a tensor with the SoftMax applied to the provided tensor.
+template <TensorConvertible TTensor>
+auto SoftMax(TTensor&& tensor)
+{
+  return Function(SoftMaxOperator<tensor_device_t<TTensor>>(), std::forward<TTensor>(tensor));
+}
+
+/// @brief Silu returns a tensor with SiLU activation applied to the provided tensor.
+template <TensorConvertible TTensor>
+auto Silu(TTensor&& tensor)
+{
+  return Function(SiluOperator<tensor_device_t<TTensor>>(), std::forward<TTensor>(tensor));
+}
+
+
 } // end of namespace grid
 
 #endif  // GRID_TENSOR_FUNCTION_H

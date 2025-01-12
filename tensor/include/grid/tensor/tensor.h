@@ -18,6 +18,7 @@
 #include "binary.h"
 #include "concepts.h"
 #include "device.h"
+#include "function.h"
 #include "iterator.h"
 #include "generator.h"
 #include "matmul.h"
