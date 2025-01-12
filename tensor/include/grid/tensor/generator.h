@@ -14,7 +14,7 @@ namespace grid {
 template <typename> class GeneratorOperator;
 
 template <typename> struct FillOperator;
-template <typename> struct FunctionOperator;
+template <typename> struct FunctorOperator;
 
 /// @brief Generator applies the given generator operator to a provided tensor.
 template <AnyTensor TTensor, typename TFunction>

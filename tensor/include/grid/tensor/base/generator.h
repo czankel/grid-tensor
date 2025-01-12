@@ -64,7 +64,7 @@ template <> struct FillOperator<device::Base>
   template <typename T> inline void operator()(T* d, const T val) const { *d = val; }
 };
 
-template <> struct FunctionOperator<device::Base>
+template <> struct FunctorOperator<device::Base>
 {
   // FIXME requires std::invocable<F&> && std::indirectly_writable<O, std::invoke_result_t<F&>>
   template <typename T, typename F> inline void operator()(T* d, F&& gen) const { *d = std::invoke(gen); }
