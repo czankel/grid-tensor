@@ -171,10 +171,10 @@ template <typename T, int N_READS = 4>	 // 4 per simd thread?
 }
 
 
-#define SOFT_MAZ_OPS Line, Loop
-#define SOFT_MAZ_TYPES uint8_t, uint16_t, uint32_t, /*uint64_t,*/ int8_t, int16_t, int32_t, /*int64_t,*/ half, float // FIXME , bfloat
+#define SOFT_MAX_OPS Line, Loop
+#define SOFT_MAX_TYPES uint8_t, uint16_t, uint32_t, /*uint64_t,*/ int8_t, int16_t, int32_t, /*int64_t,*/ half, float // FIXME , bfloat
 
-#define SOFT_MAZ_FUNCTION(O, T) \
+#define SOFT_MAX_FUNCTION(O, T) \
   template [[host_name(stringify(SoftMax ## O ## T))]]  \
   [[kernel]] void SoftMax ## O<T>( \
     device T*, \
@@ -185,4 +185,4 @@ template <typename T, int N_READS = 4>	 // 4 per simd thread?
     threadgroup float*, \
     uint, uint, uint, uint, uint);
 
-INSTANTIATE2(SOFT_MAZ_FUNCTION, (SOFT_MAZ_OPS), (SOFT_MAZ_TYPES))
+INSTANTIATE2(SOFT_MAX_FUNCTION, (SOFT_MAX_OPS), (SOFT_MAX_TYPES))
