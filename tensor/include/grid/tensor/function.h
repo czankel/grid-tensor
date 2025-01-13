@@ -39,7 +39,7 @@ namespace grid {
 template <typename TOperator, AnyTensor TTensor, typename... Args>
 class Function : public TensorOperator<typename std::remove_cvref_t<TTensor>::value_type,
                                        std::remove_cvref_t<TTensor>::rank,
-                                       Function<TOperator, TTensor>>
+                                       Function<TOperator, TTensor, Args...>>
 {
  public:
   using typename Function::TensorOperator::value_type;
@@ -47,7 +47,7 @@ class Function : public TensorOperator<typename std::remove_cvref_t<TTensor>::va
 
   template <typename T>
   Function(TOperator, T&& tensor, Args&&... args)
-    : TensorOperator<value_type, rank, Function<TOperator, TTensor>>(*this),
+    : TensorOperator<value_type, rank, Function<TOperator, TTensor, Args...>>(*this),
       tensor_(std::forward<T>(tensor)),
       args_(std::forward<Args>(args)...)
   { }
@@ -95,6 +95,7 @@ TOperator Function<TOperator, TTensor, Args...>::operator_;
 
 
 template <typename> class RmsNormOperator;
+template <typename> class RopeOperator;
 template <typename> class SoftMaxOperator;
 template <typename> class SiluOperator;
 
@@ -105,6 +106,13 @@ requires (std::remove_cvref_t<TTensor>::rank <= 2)
 auto RmsNorm(TTensor&& tensor)
 {
   return Function(RmsNormOperator<tensor_device_t<TTensor>>(), std::forward<TTensor>(tensor));
+}
+
+/// @brief Rope returns a tensor with RoPE calculations for position Pos, applied to the provided tensor.
+template <TensorConvertible TTensor>
+auto Rope(TTensor&& tensor, int pos)
+{
+  return Function(RopeOperator<tensor_device_t<TTensor>>(), std::forward<TTensor>(tensor), pos);
 }
 
 /// @brief SoftMax returns a tensor with the SoftMax applied to the provided tensor.
