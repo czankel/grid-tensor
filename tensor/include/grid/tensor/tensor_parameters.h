@@ -11,6 +11,8 @@
 
 #include <algorithm>
 
+#include "concepts.h"
+
 namespace grid {
 
 // get_array(iniitlizer_list)
