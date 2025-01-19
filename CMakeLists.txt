@@ -18,7 +18,7 @@ cmake_policy(SET CMP0025 NEW)
 ## Project
 ##
 
-project(gridtensor CXX C)
+project(gridtensor CXX)
 
 ##
 ## Project Options and configurations
@@ -37,6 +37,8 @@ if (LINUX)
 endif()
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 option(BUILD_STATIC_LIBS "Build static libraries" OFF)
+
+option(BUILD_CUDA "Build CUDA support" OFF)
 
 option(USE_COLORIZE_OUTPUT "Colorize output during compilation" ON)
 option(USE_CPP_CODE_COVERAGE "Compile C/C++ with code coverage flags" OFF)
@@ -264,7 +266,8 @@ if (BUILD_METAL)
   find_library(FOUNDATION_LIB Foundation)
   find_library(QUARTZ_LIB QuartzCore)
 
-endif ()
+endif()
+
 
 ##
 ## Add CMakeLists from sub-directories
@@ -297,6 +300,20 @@ if (UNIX AND NOT APPLE)
 endif()
 
 target_include_directories(gridtensor PUBLIC ${gridtensor_HEADER_DIRS})
+
+##
+## Enable CUDA
+##
+
+if (BUILD_CUDA)
+	set_target_properties(gridtensor PROPERTIES CUDA_ARCHITECTURES "75")
+  set_target_properties(gridtensor PROPERTIES CUDA_STANDARD 20)
+  enable_language(CUDA)
+endif()
+
+##
+## Build Metal sources
+##
 
 if (BUILD_METAL)
 

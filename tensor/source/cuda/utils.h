@@ -1,0 +1,54 @@
+//
+// Copyright (C) Chris Zankel. All rights reserved.
+// This code is subject to U.S. and other copyright laws and
+// intellectual property protections.
+//
+// The contents of this file are confidential and proprietary to Chris Zankel.
+//
+
+#ifndef TENSOR_SOURCE_CUDA_KERNELS_UTILS_H
+#define TENSOR_SOURCE_CUDA_KERNELS_UTILS_H
+
+namespace grid {
+namespace cuda {
+
+// The number of threads implemented in GPUs is currently fixed to 1024
+static constexpr size_t MaxThreadCount = 1024;
+static constexpr size_t WarpSize = 32;
+
+// MakeDim3 is a helper function to create a dim3 value out of a span of n elements (n <=3)
+template <typename T, size_t R>
+inline dim3 MakeDim3(std::span<T, R> s)
+{
+  return [=] <std::size_t... I> (std::index_sequence<I...>) {
+     return dim3{(static_cast<unsigned int>(s[I]))...};
+  }(std::make_index_sequence<R>());
+}
+
+// GetSizes returns a tuple of the grid and block sizes for the provided dimension.
+// Grid size is the number of thread blocks in the grid
+// Block size is the number of threads in each thread block
+inline auto GetSizes(size_t size)
+{
+  int block_size = std::min(size, MaxThreadCount);
+  int grid_size = (int)ceil((float)size/block_size);
+  return std::make_tuple(grid_size, block_size);
+}
+
+// GetSizes returns a tuple of the 3-dimensional grid and block sizes for the provided n dimensions.
+// Grid size is the number of thread blocks in grid
+// Block size is the number of threads in each thread block
+template <size_t R, typename... S>
+inline auto GetSizes(std::span<const size_t, R> dims, S... sizes)
+{
+  return [=] <std::size_t... I> (std::index_sequence<I...>, auto sz) {
+     return std::make_tuple(
+         dim3{((unsigned int)ceil((float)(dims[I])/std::min(static_cast<size_t>(std::get<I>(sz)), MaxThreadCount)))...},
+         dim3{((unsigned int)std::min(static_cast<size_t>(std::get<I>(sz)), MaxThreadCount))...});
+  }(std::make_index_sequence<R>(), std::make_tuple(sizes...));
+}
+
+} // end of namespace cuda
+} // end of namespace grid
+
+#endif  // TENSOR_SOURCE_CUDA_KERNELS_UTILS_H

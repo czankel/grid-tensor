@@ -21,3 +21,9 @@ grid_add_sources(gridtensor_test
   unary_metal.cc
 )
 endif()
+
+if (BUILD_CUDA)
+grid_add_sources(gridtensor_test
+  tensor_cuda.cc
+)
+endif()
