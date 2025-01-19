@@ -14,7 +14,7 @@
 #include <ranges>
 
 #include "concepts.h"
-#include "tensor_operator.h"
+#include "tensor_operation.h"
 
 namespace grid {
 
@@ -56,19 +56,19 @@ template <typename> struct DivOperator;
 ///   shape: 3, 4, 4 <op> shape: 3, 5, 1    -> Error
 ///
 template <typename TOperator, AnyTensor TTensor1, AnyTensor TTensor2>
-class Binary : public TensorOperator<std::common_type_t<typename std::remove_cvref_t<TTensor1>::value_type,
-                                                        typename std::remove_cvref_t<TTensor2>::value_type>,
+class Binary : public TensorOperation<std::common_type_t<typename std::remove_cvref_t<TTensor1>::value_type,
+                                                         typename std::remove_cvref_t<TTensor2>::value_type>,
                                      std::max(std::remove_cvref_t<TTensor1>::rank, std::remove_cvref_t<TTensor2>::rank),
                                      Binary<TOperator, TTensor1, TTensor2>>
 
 {
  public:
-  using typename Binary::TensorOperator::value_type;
-  using Binary::TensorOperator::rank;
+  using typename Binary::TensorOperation::value_type;
+  using Binary::TensorOperation::rank;
 
   template <typename T1, typename T2>
   Binary(TOperator, T1&& tensor1, T2&& tensor2)
-   : TensorOperator<value_type, rank, Binary<TOperator, TTensor1, TTensor2>>(*this),
+   : TensorOperation<value_type, rank, Binary<TOperator, TTensor1, TTensor2>>(*this),
      tensor1_(std::forward<T1>(tensor1)),
      tensor2_(std::forward<T2>(tensor2))
   {}

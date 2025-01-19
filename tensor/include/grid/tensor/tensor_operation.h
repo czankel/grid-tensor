@@ -6,8 +6,8 @@
 // The contents of this file are confidential and proprietary to Chris Zankel.
 //
 
-#ifndef GRID_TENSOR_TENSOR_OPERATOR_H
-#define GRID_TENSOR_TENSOR_OPERATOR_H
+#ifndef GRID_TENSOR_TENSOR_OPERATION_H
+#define GRID_TENSOR_TENSOR_OPERATION_H
 
 namespace grid {
 
@@ -64,7 +64,7 @@ void Fold(TOp&& op, std::span<const size_t, TRank> dimensions, auto... strides)
 } // end of namespace details
 
 
-/// TensorOperator is a base class and wrapper for tensor operators.
+/// TensorOperation is a base class and wrapper for tensor operations.
 ///
 /// Aliasing with partial specialization requires any CTAD rule to have a template-parameter-list
 /// on the rhs that matches the aliasing definition This prohibites the use of more "fancy" rules,
@@ -75,15 +75,15 @@ void Fold(TOp&& op, std::span<const size_t, TRank> dimensions, auto... strides)
 ///
 ///   SomeClass(_args_) -> SomeClass<FancyType<_args_>>;
 ///
-/// The TensorOperator exposes the necessary template parameters (value type and rank) to deduce
+/// The TensorOperation exposes the necessary template parameters (value type and rank) to deduce
 /// the same parameters in the Tensor class. This allowes derived operator classes to be used as
 /// arguments in the Tensor constructor or assign operator.
 ///
-/// @tparam T         value type
-/// @tparam TRank     rank
-/// @tparam TOperator wrapped operator type
-template <typename T, size_t TRank, typename TOperator>
-class TensorOperator
+/// @tparam T          value type
+/// @tparam TRank      rank
+/// @tparam TOperation wrapped operation
+template <typename T, size_t TRank, typename TOperation>
+class TensorOperation
 {
  public:
   using value_type = T;
@@ -91,15 +91,15 @@ class TensorOperator
 
   /// Constructo
   /// @param op   Tensor operator object
-  TensorOperator(TOperator& op) : op_(op) {}
+  TensorOperation(TOperation& op) : op_(op) {}
 
   /// operator() executes the operation.
   auto operator()() const                             { return op_(); }
 
  private:
-  TOperator& op_;
+  TOperation& op_;
 };
 
 } // end of namespace grid
 
-#endif	// GRID_TENSOR_TENSOR_OPERATOR_H
+#endif	// GRID_TENSOR_TENSOR_OPERATION_H

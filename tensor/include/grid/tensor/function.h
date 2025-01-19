@@ -15,7 +15,7 @@
 #include <tuple>
 
 #include "concepts.h"
-#include "tensor_operator.h"
+#include "tensor_operation.h"
 
 namespace grid {
 
@@ -37,17 +37,17 @@ namespace grid {
 ///  @tparm TTensor  tensor type
 ///
 template <typename TOperator, AnyTensor TTensor, typename... Args>
-class Function : public TensorOperator<typename std::remove_cvref_t<TTensor>::value_type,
-                                       std::remove_cvref_t<TTensor>::rank,
-                                       Function<TOperator, TTensor, Args...>>
+class Function : public TensorOperation<typename std::remove_cvref_t<TTensor>::value_type,
+                                        std::remove_cvref_t<TTensor>::rank,
+                                        Function<TOperator, TTensor, Args...>>
 {
  public:
-  using typename Function::TensorOperator::value_type;
-  using Function::TensorOperator::rank;
+  using typename Function::TensorOperation::value_type;
+  using Function::TensorOperation::rank;
 
   template <typename T>
   Function(TOperator, T&& tensor, Args&&... args)
-    : TensorOperator<value_type, rank, Function<TOperator, TTensor, Args...>>(*this),
+    : TensorOperation<value_type, rank, Function<TOperator, TTensor, Args...>>(*this),
       tensor_(std::forward<T>(tensor)),
       args_(std::forward<Args>(args)...)
   { }

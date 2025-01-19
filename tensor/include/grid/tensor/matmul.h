@@ -42,15 +42,15 @@ namespace
 //
 // TODO: add support for higher-rank tensors?
 template <TensorConvertible TTensor1, TensorConvertible TTensor2>
-class Matmul : TensorOperator<std::common_type_t<typename std::remove_cvref_t<TTensor1>::value_type,
-                                                 typename std::remove_cvref_t<TTensor2>::value_type>,
+class Matmul : TensorOperation<std::common_type_t<typename std::remove_cvref_t<TTensor1>::value_type,
+                                                  typename std::remove_cvref_t<TTensor2>::value_type>,
                               MatmulRank<TTensor1, TTensor2>::rank,
                               Matmul<TTensor1, TTensor2>>
 {
   using device = tensor_device_t<TTensor1>;
 
  public:
-  using Matmul::TensorOperator::rank;
+  using Matmul::TensorOperation::rank;
   using tensor1_type = std::remove_reference_t<TTensor1>;
   using tensor2_type = std::remove_reference_t<TTensor2>;
   using value_type = std::common_type_t<typename tensor1_type::value_type, typename tensor2_type::value_type>;
@@ -62,7 +62,7 @@ class Matmul : TensorOperator<std::common_type_t<typename std::remove_cvref_t<TT
   template <typename T1, typename T2>
   requires (tensor1_rank > 0 && tensor2_rank > 0)
   Matmul(T1&& tensor1, T2&& tensor2)
-   : TensorOperator<value_type, rank, Matmul<TTensor1, TTensor2>>(*this),
+   : TensorOperation<value_type, rank, Matmul<TTensor1, TTensor2>>(*this),
      tensor1_(std::forward<T1>(tensor1)),
      tensor2_(std::forward<T2>(tensor2))
   {

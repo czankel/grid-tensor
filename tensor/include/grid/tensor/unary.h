@@ -14,7 +14,7 @@
 #include <span>
 
 #include "concepts.h"
-#include "tensor_operator.h"
+#include "tensor_operation.h"
 
 namespace grid {
 
@@ -37,17 +37,17 @@ template <template <typename> typename, typename> class UnaryOperator;
 ///  @tparm TTensor  tensor type
 ///
 template <typename TOperator, AnyTensor TTensor>
-class Unary : public TensorOperator<typename std::remove_cvref_t<TTensor>::value_type,
-                                    std::remove_cvref_t<TTensor>::rank,
-                                    Unary<TOperator, TTensor>>
+class Unary : public TensorOperation<typename std::remove_cvref_t<TTensor>::value_type,
+                                     std::remove_cvref_t<TTensor>::rank,
+                                     Unary<TOperator, TTensor>>
 {
  public:
-  using typename Unary::TensorOperator::value_type;
-  using Unary::TensorOperator::rank;
+  using typename Unary::TensorOperation::value_type;
+  using Unary::TensorOperation::rank;
 
   template <typename T>
   Unary(TOperator, T&& tensor)
-    : TensorOperator<value_type, rank, Unary<TOperator, TTensor>>(*this),
+    : TensorOperation<value_type, rank, Unary<TOperator, TTensor>>(*this),
       tensor_(std::forward<T>(tensor))
   {}
 

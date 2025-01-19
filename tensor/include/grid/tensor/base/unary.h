@@ -17,7 +17,7 @@
 
 #include "../concepts.h"
 #include "../unary.h"
-#include "../tensor_operator.h"
+#include "../tensor_operation.h"
 
 namespace grid {
 

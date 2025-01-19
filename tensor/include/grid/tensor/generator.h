@@ -18,17 +18,17 @@ template <typename> struct FunctorOperator;
 
 /// @brief Generator applies the given generator operator to a provided tensor.
 template <AnyTensor TTensor, typename TFunction>
-class Generator : public TensorOperator<typename std::remove_cvref_t<TTensor>::value_type,
-                                        std::remove_cvref_t<TTensor>::rank,
-                                        Generator<TTensor, TFunction>>
+class Generator : public TensorOperation<typename std::remove_cvref_t<TTensor>::value_type,
+                                         std::remove_cvref_t<TTensor>::rank,
+                                         Generator<TTensor, TFunction>>
 {
  public:
-  using typename Generator::TensorOperator::value_type;
-  using Generator::TensorOperator::rank;
+  using typename Generator::TensorOperation::value_type;
+  using Generator::TensorOperation::rank;
 
   template <typename T, typename F>
   Generator(T&& tensor, F&& f)
-    : TensorOperator<value_type, rank, Generator<TTensor, TFunction>>(*this),
+    : TensorOperation<value_type, rank, Generator<TTensor, TFunction>>(*this),
       function_(std::forward<F>(f)),
       tensor_(std::forward<T>(tensor))
   {}
