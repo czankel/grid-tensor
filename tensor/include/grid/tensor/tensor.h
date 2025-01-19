@@ -644,6 +644,10 @@ explicit Tensor(std::array<size_t, N>, Uninitialized<T>) -> Tensor<T, N, DeviceM
 template <Arithmetic T, size_t N, typename Dev = device::Base>
 explicit Tensor(std::array<size_t, N>, std::array<ssize_t, N>, Uninitialized<T>) -> Tensor<T, N, DeviceMemory<Dev>>;
 
+// Tensor copy constructor
+template <AnyTensor TTensor, typename Dev = device::Base>
+Tensor(const TTensor& other) -> Tensor<typename TTensor::value_type, TTensor::rank, DeviceMemory<Dev>>;
+
 // Tensor rules for tensor view argument
 
 template <typename TTensor, size_t TRank, typename Dev = device::Base>
