@@ -188,7 +188,9 @@ TYPED_TEST_P(TensorTestSuite, TensorMMap)
   auto strides1 = view.Read<std::array<ssize_t, 2>>();
   auto size1 = grid::get_buffer_size<double>(dimensions1, strides1);
   double* addr1 = reinterpret_cast<double*>(view.Address());
-  typename TypeParam::Tensor tensor1(dimensions1, std::make_tuple(addr1, size1));
+
+  // Note: MemoryMapped Tensor
+  grid::Tensor tensor1(dimensions1, std::make_tuple(addr1, size1));
 
   typename TypeParam::Tensor result1 = grid::Tensor{ {1.2, 2.3, 3.4, 4.5}, {1.2, 2.3, 3.4, 4.5} };
   EXPECT_EQ(tensor1, result1);
@@ -198,7 +200,9 @@ TYPED_TEST_P(TensorTestSuite, TensorMMap)
   auto strides2 = view.Read<std::array<ssize_t, 2>>();
   auto size2 = grid::get_buffer_size<double>(dimensions2, strides2);
   double* addr2 = reinterpret_cast<double*>(view.Address());
-  typename TypeParam::Tensor tensor2(dimensions2, std::make_tuple(addr2, size2));
+
+  // Note: MemoryMapped Tensor
+  grid::Tensor tensor2(dimensions2, std::make_tuple(addr2, size2));
 
   typename TypeParam::Tensor result2 = grid::Tensor{ {4.3, 3.2, 2.1}, {4.3, 3.2, 2.1} };
   EXPECT_EQ(tensor2, result2);
