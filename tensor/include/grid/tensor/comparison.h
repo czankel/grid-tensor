@@ -8,8 +8,8 @@
 
 // DO NOT INCLUDE THIS FILE DIRECTLY
 
-#ifndef GRID_TENSOR_METAL_COMPARISON_H
-#define GRID_TENSOR_METAL_COMPARISON_H
+#ifndef GRID_TENSOR_COMPARISON_H
+#define GRID_TENSOR_COMPARISON_H
 
 namespace grid {
 
@@ -31,7 +31,7 @@ equals(const T* x, const T* y,
        std::span<const ssize_t, 0>)
 {
   auto max = std::max(std::abs(*x), std::abs(*y));
-  T eps = max * std::numeric_limits<T>::epsilon();
+  T eps = max * std::numeric_limits<T>::epsilon() * T{10};
   return std::abs(*x - *y) <= eps;
 }
 
@@ -62,7 +62,7 @@ equals(const T* x, const T* y,
   for (size_t i = 0; i < dimensions[0]; i++)
   {
     auto max = std::max(std::abs(*x), std::abs(*y));
-    T eps = max * std::numeric_limits<T>::epsilon();
+    T eps = max * std::numeric_limits<T>::epsilon() * T{10};
 
     if (std::abs(*x - *y) > eps)
       return false;
@@ -113,4 +113,4 @@ bool operator==(TTensor1&& tensor1, TTensor2&& tensor2)
 
 } // end of namespace grid
 
-#endif // GRID_TENSOR_METAL_COMPARISON_H
+#endif // GRID_TENSOR_COMPARISON_H

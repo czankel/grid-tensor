@@ -9,7 +9,6 @@
 #include <grid/tensor/tensor.h>
 #include <grid/tensor/metal/tensor.h>
 
-#include <grid/tensor/metal/comparison.h>
 #include <grid/tensor/metal/rms_norm.h>
 
 #include "gtest/gtest.h"

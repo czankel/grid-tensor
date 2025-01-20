@@ -11,7 +11,6 @@
 
 #include <grid/tensor/unary.h>
 
-#include <grid/tensor/base/comparison.h>
 #include <grid/tensor/base/unary.h>
 
 #include "gtest/gtest.h"

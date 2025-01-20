@@ -11,7 +11,6 @@
 
 // FIXME IFDEF??
 /// Base
-#include <grid/tensor/base/comparison.h>
 #include <grid/tensor/base/rope.h>
 #include <grid/tensor/base/tensor.h>
 #include "tensor_base.h"

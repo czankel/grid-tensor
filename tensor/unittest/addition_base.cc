@@ -12,7 +12,6 @@
 #include <grid/tensor/binary.h>
 
 #include <grid/tensor/base/binary.h>
-#include <grid/tensor/base/comparison.h>
 #include <grid/tensor/base/generator.h>
 #include <grid/tensor/base/unary.h>
 

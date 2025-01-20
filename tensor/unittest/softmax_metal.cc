@@ -9,7 +9,6 @@
 #include <grid/tensor/tensor.h>
 #include <grid/tensor/metal/tensor.h>
 
-#include <grid/tensor/metal/comparison.h>
 #include <grid/tensor/metal/softmax.h>
 #include <grid/tensor/metal/unary.h>
 
