@@ -12,7 +12,6 @@
 #include <grid/tensor/binary.h>
 
 #include <grid/tensor/metal/binary.h>
-#include <grid/tensor/metal/comparison.h>
 
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"

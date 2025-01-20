@@ -16,7 +16,6 @@
 #include "base/tensor.h"
 
 #include "base/binary.h"
-#include "base/comparison.h"
 #include "base/device.h"
 #include "base/generator.h"
 #include "base/matmul.h"

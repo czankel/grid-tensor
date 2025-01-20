@@ -16,6 +16,7 @@
 
 #include "array.h"
 #include "binary.h"
+#include "comparison.h"
 #include "concepts.h"
 #include "device.h"
 #include "function.h"
