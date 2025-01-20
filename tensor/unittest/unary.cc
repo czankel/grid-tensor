@@ -6,6 +6,21 @@
 // The contents of this file are confidential and proprietary to Chris Zankel.
 //
 
+#include <grid/tensor/tensor.h>
+
+#include "gtest/gtest.h"
+#include "gmock/gmock.h"
+
+#include <grid/tensor/base/tensor.h>
+#include <grid/tensor/base/unary.h>
+#include "tensor_base.h"
+
+#ifdef BUILD_METAL
+#include <grid/tensor/metal/tensor.h>
+#include <grid/tensor/metal/unary.h>
+#include "tensor_metal.h"
+#endif
+
 using testing::ElementsAre;
 
 template <typename T> class UnaryTestSuite : public testing::Test {};
@@ -61,3 +76,9 @@ REGISTER_TYPED_TEST_SUITE_P(UnaryTestSuite,
     TensorUnaryElementaryRank1,
     TensorUnaryElementaryRank2,
     TensorUnaryElementaryRank3);
+
+
+INSTANTIATE_TYPED_TEST_SUITE_P(UnaryTestBase, UnaryTestSuite, TensorBaseType);
+#ifdef BUILD_METAL
+INSTANTIATE_TYPED_TEST_SUITE_P(UnaryTestMetal, UnaryTestSuite, TensorMetalType);
+#endif
