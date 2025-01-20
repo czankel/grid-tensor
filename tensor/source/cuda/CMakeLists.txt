@@ -6,5 +6,6 @@
 
 grid_add_sources(gridtensor
 	binary.cu
+	unary.cu
 	wrapper.cu
 )
