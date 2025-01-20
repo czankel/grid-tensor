@@ -6,6 +6,22 @@
 // The contents of this file are confidential and proprietary to Chris Zankel.
 //
 
+#include <grid/tensor/tensor.h>
+
+#include "gtest/gtest.h"
+#include "gmock/gmock.h"
+
+#include <grid/tensor/base/binary.h>
+#include <grid/tensor/base/tensor.h>
+#include "tensor_base.h"
+
+#ifdef BUILD_METAL
+#include <grid/tensor/metal/binary.h>
+#include <grid/tensor/metal/tensor.h>
+#include "tensor_metal.h"
+#endif
+
+
 using testing::ElementsAre;
 
 template <typename T> class AdditionTestSuite : public testing::Test {};
@@ -87,3 +103,9 @@ REGISTER_TYPED_TEST_SUITE_P(AdditionTestSuite,
     TensorAddAdd,
     TensorAddMatVecBroadcast,
     TensorAddBroadcast);
+
+
+INSTANTIATE_TYPED_TEST_SUITE_P(AdditionTestBase, AdditionTestSuite, TensorBaseType);
+#ifdef BUILD_METAL
+INSTANTIATE_TYPED_TEST_SUITE_P(AdditionTestMetal, AdditionTestSuite, TensorMetalType);
+#endif
