@@ -23,6 +23,14 @@
 #include "tensor_metal.h"
 #endif
 
+#ifdef BUILD_CUDA
+#include <grid/tensor/cuda/binary.h>
+#include <grid/tensor/cuda/matmul.h>
+#include <grid/tensor/cuda/tensor.h>
+#include "tensor_cuda.h"
+#endif
+
+
 using testing::ElementsAre;
 
 namespace {
@@ -349,4 +357,7 @@ REGISTER_TYPED_TEST_SUITE_P(MultiplicationTestSuite,
 INSTANTIATE_TYPED_TEST_SUITE_P(MultiplicationTestBase, MultiplicationTestSuite, TensorBaseType);
 #ifdef BUILD_METAL
 INSTANTIATE_TYPED_TEST_SUITE_P(MultiplicationTestMetal, MultiplicationTestSuite, TensorMetalType);
+#endif
+#ifdef BUILD_CUDA
+INSTANTIATE_TYPED_TEST_SUITE_P(MultiplicationTestCuda, MultiplicationTestSuite, TensorCudaType);
 #endif
