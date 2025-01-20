@@ -21,6 +21,13 @@
 #include "tensor_metal.h"
 #endif
 
+#ifdef BUILD_CUDA
+#include <grid/tensor/cuda/tensor.h>
+#include <grid/tensor/cuda/unary.h>
+#include "tensor_cuda.h"
+#endif
+
+
 using testing::ElementsAre;
 
 template <typename T> class UnaryTestSuite : public testing::Test {};
@@ -81,4 +88,7 @@ REGISTER_TYPED_TEST_SUITE_P(UnaryTestSuite,
 INSTANTIATE_TYPED_TEST_SUITE_P(UnaryTestBase, UnaryTestSuite, TensorBaseType);
 #ifdef BUILD_METAL
 INSTANTIATE_TYPED_TEST_SUITE_P(UnaryTestMetal, UnaryTestSuite, TensorMetalType);
+#endif
+#ifdef BUILD_CUDA
+INSTANTIATE_TYPED_TEST_SUITE_P(UnaryTestCuda, UnaryTestSuite, TensorCudaType);
 #endif
