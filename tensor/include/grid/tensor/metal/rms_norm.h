@@ -15,14 +15,9 @@
 #include <tuple>
 
 #include "binary.h"
+#include "../precision.h"
 
 namespace grid {
-
-namespace {
-  template <typename> struct Eps {};
-  template <> struct Eps<float>  { constexpr static float  default_value = 1e-5f; float  value; };
-  template <> struct Eps<double> { constexpr static double default_value = 1e-5f; double value; };
-}
 
 template <> class RmsNormOperator<device::Metal>
 {
