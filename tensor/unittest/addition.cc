@@ -21,6 +21,12 @@
 #include "tensor_metal.h"
 #endif
 
+#ifdef BUILD_CUDA
+#include <grid/tensor/cuda/binary.h>
+#include <grid/tensor/cuda/tensor.h>
+#include "tensor_cuda.h"
+#endif
+
 
 using testing::ElementsAre;
 
@@ -108,4 +114,7 @@ REGISTER_TYPED_TEST_SUITE_P(AdditionTestSuite,
 INSTANTIATE_TYPED_TEST_SUITE_P(AdditionTestBase, AdditionTestSuite, TensorBaseType);
 #ifdef BUILD_METAL
 INSTANTIATE_TYPED_TEST_SUITE_P(AdditionTestMetal, AdditionTestSuite, TensorMetalType);
+#endif
+#ifdef BUILD_CUDA
+INSTANTIATE_TYPED_TEST_SUITE_P(AdditionTestCuda, AdditionTestSuite, TensorCudaType);
 #endif
