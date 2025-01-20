@@ -18,36 +18,36 @@
 
 namespace grid {
 
-template <template <typename> typename, typename> class UnaryOperator;
+template <template <typename> typename, typename> class UnaryOperation;
 
-/// @brief Unary is a wrapper for a device-specific unary operator implementation.
+/// @brief Unary is a wrapper for a device-specific unary operations.
 ///
 /// Unary provides a lazy-implementation that only stores the tensor and evaluates
 /// the operation with operator().
 ///
 /// Unary is typically not used directly, instead, use the actual functions, such as Neg(Tensor).
 ///
-/// The actual operator implementations need to provide an operator() with an input and output
-/// range. This differs from, e.g. std::ranges::transform that requires an output iterator instead
+/// The actual implementation needs to provide an operator() with an input and output range.
+/// This differs from, e.g. std::ranges::transform that requires an output iterator instead
 /// of a range.
 ///
 ///  template<std::ranges::input_range, std::ranges::output_range> operator();
 ///
-///  @tparm TOperator unary operator type
+///  @tparm TOperation unary operator type
 ///  @tparm TTensor  tensor type
 ///
-template <typename TOperator, AnyTensor TTensor>
+template <typename TOperation, AnyTensor TTensor>
 class Unary : public TensorOperation<typename std::remove_cvref_t<TTensor>::value_type,
                                      std::remove_cvref_t<TTensor>::rank,
-                                     Unary<TOperator, TTensor>>
+                                     Unary<TOperation, TTensor>>
 {
  public:
   using typename Unary::TensorOperation::value_type;
   using Unary::TensorOperation::rank;
 
   template <typename T>
-  Unary(TOperator, T&& tensor)
-    : TensorOperation<value_type, rank, Unary<TOperator, TTensor>>(*this),
+  Unary(TOperation, T&& tensor)
+    : TensorOperation<value_type, rank, Unary<TOperation, TTensor>>(*this),
       tensor_(std::forward<T>(tensor))
   {}
 
@@ -69,14 +69,13 @@ class Unary : public TensorOperation<typename std::remove_cvref_t<TTensor>::valu
   }
 
  private:
-  static TOperator operator_;
+  static TOperation operator_;
   TTensor tensor_;
 };
 
 template <typename TOp, typename T> Unary(TOp, T&&) -> Unary<TOp, typename to_tensor<T>::type>;
 
-template <typename TOperator, AnyTensor TTensor>
-TOperator Unary<TOperator, TTensor>::operator_;
+template <typename TOperation, AnyTensor TTensor> TOperation Unary<TOperation, TTensor>::operator_;
 
 //
 // Elementary Unary Operators
@@ -89,15 +88,29 @@ template <typename> struct NegOperator;
 template <TensorConvertible TTensor>
 auto Copy(TTensor&& tensor)
 {
-  return Unary(UnaryOperator<CopyOperator, tensor_device_t<TTensor>>(), std::forward<TTensor>(tensor));
+  return Unary(UnaryOperation<CopyOperator, tensor_device_t<TTensor>>(), std::forward<TTensor>(tensor));
 }
 
 /// @brief Neg returns a copy of the negated tensor.
 template <TensorConvertible TTensor>
 auto Neg(TTensor&& tensor)
 {
-  return Unary(UnaryOperator<NegOperator, tensor_device_t<TTensor>>(), std::forward<TTensor>(tensor));
+  return Unary(UnaryOperation<NegOperator, tensor_device_t<TTensor>>(), std::forward<TTensor>(tensor));
 }
+
+//
+// Unary Operations
+//
+
+template <typename> struct SiluFunction;
+
+/// @brief Silu returns a tensor with SiLU activation applied to the provided tensor.
+template <TensorConvertible TTensor>
+auto Silu(TTensor&& tensor)
+{
+  return Unary(UnaryOperation<SiluFunction, tensor_device_t<TTensor>>(), std::forward<TTensor>(tensor));
+}
+
 
 } // end of namespace grd
 
