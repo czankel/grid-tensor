@@ -21,11 +21,11 @@
 
 namespace grid {
 
-/// UnaryOperator<Operator> implements element-wise unary operation on a tensors.
+/// UnaryOperation<Operator> implements element-wise unary operation on a tensors.
 ///
 ///  @tparm TOperator unary operator
 template <template <typename> typename TOperator>
-class UnaryOperator<TOperator, device::Base>
+class UnaryOperation<TOperator, device::Base>
 {
   template <typename T>
   inline void eval(T* d, const T* x, auto dimensions, auto strides_d, auto strides_x) const
@@ -75,7 +75,7 @@ class UnaryOperator<TOperator, device::Base>
 };
 
 //
-// Operators
+// Elementary Unary Operators
 //
 
 template <> struct CopyOperator<device::Base>

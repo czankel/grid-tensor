@@ -18,17 +18,17 @@
 
 namespace grid {
 
-template <template <typename> typename, typename> class UnaryOperator;
+template <template <typename> typename, typename> class UnaryOperation;
 
-/// @brief Unary is a wrapper for a device-specific unary operator implementation.
+/// @brief Unary is a wrapper for a device-specific unary operations.
 ///
 /// Unary provides a lazy-implementation that only stores the tensor and evaluates
 /// the operation with operator().
 ///
 /// Unary is typically not used directly, instead, use the actual functions, such as Neg(Tensor).
 ///
-/// The actual operator implementations need to provide an operator() with an input and output
-/// range. This differs from, e.g. std::ranges::transform that requires an output iterator instead
+/// The actual implementation needs to provide an operator() with an input and output range.
+/// This differs from, e.g. std::ranges::transform that requires an output iterator instead
 /// of a range.
 ///
 ///  template<std::ranges::input_range, std::ranges::output_range> operator();
@@ -75,8 +75,7 @@ class Unary : public TensorOperation<typename std::remove_cvref_t<TTensor>::valu
 
 template <typename TOp, typename T> Unary(TOp, T&&) -> Unary<TOp, typename to_tensor<T>::type>;
 
-template <typename TOperator, AnyTensor TTensor>
-TOperator Unary<TOperator, TTensor>::operator_;
+template <typename TOperator, AnyTensor TTensor> TOperator Unary<TOperator, TTensor>::operator_;
 
 //
 // Elementary Unary Operators
@@ -89,14 +88,14 @@ template <typename> struct NegOperator;
 template <TensorConvertible TTensor>
 auto Copy(TTensor&& tensor)
 {
-  return Unary(UnaryOperator<CopyOperator, tensor_device_t<TTensor>>(), std::forward<TTensor>(tensor));
+  return Unary(UnaryOperation<CopyOperator, tensor_device_t<TTensor>>(), std::forward<TTensor>(tensor));
 }
 
 /// @brief Neg returns a copy of the negated tensor.
 template <TensorConvertible TTensor>
 auto Neg(TTensor&& tensor)
 {
-  return Unary(UnaryOperator<NegOperator, tensor_device_t<TTensor>>(), std::forward<TTensor>(tensor));
+  return Unary(UnaryOperation<NegOperator, tensor_device_t<TTensor>>(), std::forward<TTensor>(tensor));
 }
 
 } // end of namespace grd

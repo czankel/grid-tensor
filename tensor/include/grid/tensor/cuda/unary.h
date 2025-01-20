@@ -23,11 +23,11 @@ namespace grid {
 
 void CudaDeviceSynchronize(); // FIXME move to some header?
 
-/// UnaryOperator<Operator> implements element-wise unary operation on a tensors.
+/// UnaryOperation<Operator> implements element-wise unary operation on a tensors.
 ///
 ///  @tparm TOperator binary operator
 template <template <typename> typename TOperator>
-class UnaryOperator<TOperator, device::Cuda>
+class UnaryOperation<TOperator, device::Cuda>
 {
   template <typename T, size_t R>
   void EvalContiguous(T*, const T*,

@@ -19,9 +19,9 @@
 
 namespace grid {
 
-// UnaryOperator<Operator> implements element-wise unary operation on a tensors for metal devices.
+// UnaryOperation<Operator> implements element-wise unary operation on a tensors for metal devices.
 template <template <typename> typename TOperator>
-class UnaryOperator<TOperator, device::Metal>
+class UnaryOperation<TOperator, device::Metal>
 {
   template <typename T>
   void Eval(MTL::Buffer* d_buf, const MTL::Buffer* x_buf,
@@ -42,7 +42,7 @@ class UnaryOperator<TOperator, device::Metal>
     if (rank == 0 || (rank == 1 && (s1 == 0 || strides_x[s1 - 1] == 1)))
     {
       std::string quantity = s1 == 0 ? "S" : "V";
-      static metal::Kernel<T> kernel("UnaryOperator" + quantity + std::string(TOperator<device::Metal>::kernel_name));
+      static metal::Kernel<T> kernel("UnaryOperation" + quantity + std::string(TOperator<device::Metal>::kernel_name));
 
       pipeline = kernel.ComputePipelineState();
       encoder->setComputePipelineState(pipeline);
@@ -66,7 +66,7 @@ class UnaryOperator<TOperator, device::Metal>
     else
     {
       static metal::Kernel<T>
-        kernel("UnaryOperatorRank" + std::to_string(rank) + std::string(TOperator<device::Metal>::kernel_name));
+        kernel("UnaryOperationRank" + std::to_string(rank) + std::string(TOperator<device::Metal>::kernel_name));
 
       encoder->setBytes(strides_x.data(), strides_x.size() * sizeof(size_t), 3);
 

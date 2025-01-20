@@ -137,7 +137,7 @@ __global__ void CudaUnaryDiscontiguousRank3(
 // note that lower ranks are contiguous
 template <template <typename> typename O>
 template <typename T, size_t R>
-void UnaryOperator<O, device::Cuda>::EvalContiguous(
+void UnaryOperation<O, device::Cuda>::EvalContiguous(
     T* d, const T* a,
     std::span<const size_t, R> dimensions,
     std::span<const ssize_t, R> strides_d,
@@ -169,7 +169,7 @@ void UnaryOperator<O, device::Cuda>::EvalContiguous(
 
 template <template <typename> typename O>
 template <typename T, size_t R>
-void UnaryOperator<O, device::Cuda>::EvalDiscontiguous(
+void UnaryOperation<O, device::Cuda>::EvalDiscontiguous(
     T* d, const T* a,
     std::span<const size_t, R> dimensions,
     std::span<const ssize_t, R> strides_d,
@@ -196,16 +196,16 @@ void UnaryOperator<O, device::Cuda>::EvalDiscontiguous(
 }
 
 #define FUNCTION_CONTIGUOUS(R, O, T) \
-  template void UnaryOperator<O ##Operator, device::Cuda>::EvalContiguous<T, R>( \
+  template void UnaryOperation<O, device::Cuda>::EvalContiguous<T, R>( \
       T*, const T*, std::span<const size_t, R>, \
       std::span<const ssize_t, R>, std::span<const ssize_t, R>) const;
 
 #define FUNCTION_DISCONTIGUOUS(R, O, T) \
-  template void UnaryOperator<O ##Operator, device::Cuda>::EvalDiscontiguous<T, R>( \
+  template void UnaryOperation<O, device::Cuda>::EvalDiscontiguous<T, R>( \
       T*, const T*,  std::span<const size_t, R>, \
       std::span<const ssize_t, R>, std::span<const ssize_t, R>) const;
 
-#define OPS    Copy, Neg
+#define OPS    CopyOperator, NegOperator
 #define TYPES  float,int
 #define RANKS_CONTIGUOUS 0, 1, 2, 3
 #define RANKS_DISCONTIGUOUS 1, 2, 3
