@@ -21,6 +21,12 @@
 #include "tensor_metal.h"
 #endif
 
+#ifdef BUILD_CUDA
+#include <grid/tensor/cuda/tensor.h>
+#include <grid/tensor/cuda/rms_norm.h>
+#include "tensor_cuda.h"
+#endif
+
 
 using testing::ElementsAre;
 
@@ -64,4 +70,7 @@ REGISTER_TYPED_TEST_SUITE_P(RmsNormTestSuite,
 INSTANTIATE_TYPED_TEST_SUITE_P(RmsNormTestBase, RmsNormTestSuite, TensorBaseType);
 #ifdef BUILD_METAL
 INSTANTIATE_TYPED_TEST_SUITE_P(RmsNormTestMetal, RmsNormTestSuite, TensorMetalType);
+#endif
+#ifdef BUILD_CUDA
+INSTANTIATE_TYPED_TEST_SUITE_P(RmsNormTestCuda, RmsNormTestSuite, TensorCudaType);
 #endif
