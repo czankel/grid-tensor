@@ -17,7 +17,7 @@
 
 #ifdef BUILD_METAL
 #include <grid/tensor/metal/tensor.h>
-#include <grid/tensor/metal/unary.h>
+#include <grid/tensor/metal/softmax.h>
 #include "tensor_metal.h"
 #endif
 

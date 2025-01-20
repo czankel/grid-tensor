@@ -8,23 +8,17 @@
 
 // DO NOT INCLUDE THIS FILE DIRECTLY
 
-#ifndef GRID_TENSOR_BASE_SOFTMAX_H
-#define GRID_TENSOR_BASE_SOFTMAX_H
+#ifndef GRID_TENSOR_METAL_SOFTMAX_H
+#define GRID_TENSOR_METAL_SOFTMAX_H
 
 #include <limits>
 #include <math.h>
 #include <tuple>
 
 #include "binary.h"
+#include "../precision.h"
 
 namespace grid {
-
-// FIXME: combine with rms_norm?
-namespace {
-  template <typename> struct Eps {};
-  template <> struct Eps<float>  { constexpr static float  default_value = 1e-5f; float  value; };
-  template <> struct Eps<double> { constexpr static double default_value = 1e-5f; double value; };
-}
 
 // FIXME: re-use unary and just have a different softmax kernel?
 
@@ -100,4 +94,4 @@ template <> class SoftMaxOperator<device::Metal>
 
 } // end of namespace grid
 
-#endif // GRID_TENSOR_BASE_SOFTMAX_H
+#endif // GRID_TENSOR_METAL_SOFTMAX_H
