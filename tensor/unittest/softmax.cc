@@ -6,6 +6,22 @@
 // The contents of this file are confidential and proprietary to Chris Zankel.
 //
 
+#include <grid/tensor/tensor.h>
+
+#include "gtest/gtest.h"
+#include "gmock/gmock.h"
+
+#include <grid/tensor/base/tensor.h>
+#include <grid/tensor/base/softmax.h>
+#include "tensor_base.h"
+
+#ifdef BUILD_METAL
+#include <grid/tensor/metal/tensor.h>
+#include <grid/tensor/metal/unary.h>
+#include "tensor_metal.h"
+#endif
+
+
 using testing::ElementsAre;
 
 namespace {
@@ -31,3 +47,9 @@ TYPED_TEST_P(SoftMaxTestSuite, TensorSoftMaxRank1)
 
 REGISTER_TYPED_TEST_SUITE_P(SoftMaxTestSuite,
     TensorSoftMaxRank1);
+
+
+INSTANTIATE_TYPED_TEST_SUITE_P(SoftMaxTestBase, SoftMaxTestSuite, TensorBaseType);
+#ifdef BUILD_METAL
+INSTANTIATE_TYPED_TEST_SUITE_P(SoftMaxTestMetal, SoftMaxTestSuite, TensorMetalType);
+#endif
