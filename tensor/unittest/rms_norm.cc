@@ -6,6 +6,22 @@
 // The contents of this file are confidential and proprietary to Chris Zankel.
 //
 
+#include <grid/tensor/tensor.h>
+
+#include "gtest/gtest.h"
+#include "gmock/gmock.h"
+
+#include <grid/tensor/base/tensor.h>
+#include <grid/tensor/base/rms_norm.h>
+#include "tensor_base.h"
+
+#ifdef BUILD_METAL
+#include <grid/tensor/metal/tensor.h>
+#include <grid/tensor/metal/rms_norm.h>
+#include "tensor_metal.h"
+#endif
+
+
 using testing::ElementsAre;
 
 namespace {
@@ -44,3 +60,8 @@ TYPED_TEST_P(RmsNormTestSuite, TensorNormRmsRank2)
 REGISTER_TYPED_TEST_SUITE_P(RmsNormTestSuite,
     TensorNormRmsRank1,
     TensorNormRmsRank2);
+
+INSTANTIATE_TYPED_TEST_SUITE_P(RmsNormTestBase, RmsNormTestSuite, TensorBaseType);
+#ifdef BUILD_METAL
+INSTANTIATE_TYPED_TEST_SUITE_P(RmsNormTestMetal, RmsNormTestSuite, TensorMetalType);
+#endif
