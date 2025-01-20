@@ -306,9 +306,10 @@ target_include_directories(gridtensor PUBLIC ${gridtensor_HEADER_DIRS})
 ##
 
 if (BUILD_CUDA)
-	set_target_properties(gridtensor PROPERTIES CUDA_ARCHITECTURES "75")
+  set_target_properties(gridtensor PROPERTIES CUDA_ARCHITECTURES "75")
   set_target_properties(gridtensor PROPERTIES CUDA_STANDARD 20)
   enable_language(CUDA)
+  target_compile_definitions(gridtensor PUBLIC BUILD_CUDA=1)
 endif()
 
 ##
@@ -327,7 +328,7 @@ if (BUILD_METAL)
 
   get_property(gridtensor_metal_PATH GLOBAL PROPERTY gridtensor_metal_PATH)
   target_compile_definitions(
-    gridtensor PUBLIC METAL_PATH="${gridtensor_metal_PATH}/gridtensor.metallib"
+    gridtensor PUBLIC METAL_PATH="${gridtensor_metal_PATH}/gridtensor.metallib" BUILD_METAL=1
   )
 
   add_dependencies(
