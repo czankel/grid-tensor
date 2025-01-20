@@ -6,6 +6,26 @@
 // The contents of this file are confidential and proprietary to Chris Zankel.
 //
 
+#include <grid/tensor/tensor.h>
+#include <grid/tensor/mmap.h>
+
+#include "gtest/gtest.h"
+#include "gmock/gmock.h"
+
+#include <grid/tensor/base/tensor.h>
+#include "tensor_base.h"
+
+#ifdef BUILD_METAL
+#include <grid/tensor/metal/tensor.h>
+#include "tensor_metal.h"
+#endif
+
+#ifdef BUILD_CUDA
+#include <grid/tensor/cuda/tensor.h>
+#include "tensor_cuda.h"
+#endif
+
+
 using testing::ElementsAre;
 
 using grid::view::Slice;
@@ -312,3 +332,12 @@ REGISTER_TYPED_TEST_SUITE_P(TensorTestSuite,
     TensorViewBraceInitializationTensor,
     TensorViewAllocInitializationTensor,
     TensorBroadcast);
+
+
+INSTANTIATE_TYPED_TEST_SUITE_P(TensorTestBase, TensorTestSuite, TensorBaseType);
+#ifdef BUILD_METAL
+INSTANTIATE_TYPED_TEST_SUITE_P(TensorTestMetal, TensorTestSuite, TensorMetalType);
+#endif
+#ifdef BUILD_CUDA
+INSTANTIATE_TYPED_TEST_SUITE_P(TensorTestCuda, TensorTestSuite, TensorCudaType);
+#endif
