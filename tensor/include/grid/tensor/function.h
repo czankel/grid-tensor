@@ -122,14 +122,6 @@ auto SoftMax(TTensor&& tensor)
   return Function(SoftMaxOperator<tensor_device_t<TTensor>>(), std::forward<TTensor>(tensor));
 }
 
-/// @brief Silu returns a tensor with SiLU activation applied to the provided tensor.
-template <TensorConvertible TTensor>
-auto Silu(TTensor&& tensor)
-{
-  return Function(SiluOperator<tensor_device_t<TTensor>>(), std::forward<TTensor>(tensor));
-}
-
-
 } // end of namespace grid
 
 #endif  // GRID_TENSOR_FUNCTION_H
