@@ -91,7 +91,8 @@ template <> class SoftMaxOperator<device::Base>
   }
 
  public:
-  template<std::ranges::input_range I, std::ranges::output_range<std::iter_value_t<std::ranges::iterator_t<I>>> O>
+  template<std::ranges::input_range I,
+           std::ranges::output_range<std::iter_value_t<std::ranges::iterator_t<I>>> O>
   requires std::indirectly_copyable<std::ranges::iterator_t<I>, std::ranges::iterator_t<O>>
   void operator()(I&& in, O&& out) const
   {
