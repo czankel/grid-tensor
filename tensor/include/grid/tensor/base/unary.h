@@ -88,6 +88,15 @@ template <> struct NegOperator<device::Base>
   template<typename T> inline T operator()(const T x) const { return -x; }
 };
 
+//
+// Unary Operations
+//
+
+template <> struct SiluFunction<device::Base>
+{
+  template<typename T> inline T operator()(const T x) const { return x * (T{1} + exp(-x)); }
+};
+
 
 } // end of namespace grid
 

@@ -22,7 +22,6 @@
 #include "base/rms_norm.h"
 #include "base/rope.h"
 #include "base/softmax.h"
-#include "base/silu.h"
 #include "base/unary.h"
 
 #endif  // GRID_TENSOR_TENSOR_BASE_H
