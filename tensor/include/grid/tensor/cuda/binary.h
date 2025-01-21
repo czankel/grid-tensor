@@ -21,13 +21,13 @@ namespace grid {
 
 void CudaDeviceSynchronize(); // FIXME move to some header?
 
-/// BinaryOperator<Operator> implements element-wise binary operations of two tensors.
+/// BinaryOperation<Operator> implements element-wise binary operations of two tensors.
 /// The dimensions of the tensors must match following broadcasting rules.
 /// The resulting rank is the maximum of the tensor ranks.
 ///
 ///  @tparm TOperator binary operator
 template <template <typename> typename TOperator>
-class BinaryOperator<TOperator, device::Cuda>
+class BinaryOperation<TOperator, device::Cuda>
 {
   // contiguous scalar|vector x scalar|vector operations
   template <typename T> void EvalSS(T*, const T*, const T*, size_t) const;

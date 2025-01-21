@@ -20,7 +20,7 @@
 namespace grid {
 
 template <template <typename> typename TOperator>
-class BinaryOperator<TOperator, device::Metal>
+class BinaryOperation<TOperator, device::Metal>
 {
   template <typename T>
   void Eval(MTL::Buffer* d_buf, const MTL::Buffer* x_buf, const MTL::Buffer* y_buf,
@@ -46,7 +46,7 @@ class BinaryOperator<TOperator, device::Metal>
       // TODO find a way to use constexpr with strings
       std::string quantities = s_x == 0 && s_y == 0? "SS" : s_x == 0? "SV" : s_y == 0? "VS" : "VV";
       static metal::Kernel<T>
-        kernel("BinaryOperator" + quantities + std::string(TOperator<device::Metal>::kernel_name));
+        kernel("BinaryOperation" + quantities + std::string(TOperator<device::Metal>::kernel_name));
 
       pipeline = kernel.ComputePipelineState();
       encoder->setComputePipelineState(pipeline);
@@ -70,7 +70,7 @@ class BinaryOperator<TOperator, device::Metal>
     else
     {
       static metal::Kernel<T>
-        kernel("BinaryOperatorRank" + std::to_string(rank) + std::string(TOperator<device::Metal>::kernel_name));
+        kernel("BinaryOperationRank" + std::to_string(rank) + std::string(TOperator<device::Metal>::kernel_name));
 
       pipeline = kernel.ComputePipelineState();
       encoder->setComputePipelineState(pipeline);

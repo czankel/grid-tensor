@@ -174,14 +174,14 @@ __global__ void CudaBinaryDiscontiguousRank3(
 
 template <template <typename> typename O>
 template <typename T>
-void BinaryOperator<O, device::Cuda>::EvalSS(T* d, const T* a, const T* b, size_t) const
+void BinaryOperation<O, device::Cuda>::EvalSS(T* d, const T* a, const T* b, size_t) const
 {
   CudaBinarySS<O, T><<<1, 1>>>(d, a, b);
 }
 
 template <template <typename> typename O>
 template <typename T>
-void BinaryOperator<O, device::Cuda>::EvalSV(T* d, const T* a, const T* b, size_t size) const
+void BinaryOperation<O, device::Cuda>::EvalSV(T* d, const T* a, const T* b, size_t size) const
 {
   auto [grid_size, block_size] = cuda::GetSizes(size);
   CudaBinarySV<O, T><<<grid_size, block_size>>>(d, a, b, size);
@@ -189,7 +189,7 @@ void BinaryOperator<O, device::Cuda>::EvalSV(T* d, const T* a, const T* b, size_
 
 template <template <typename> typename O>
 template <typename T>
-void BinaryOperator<O, device::Cuda>::EvalVS(T* d, const T* a, const T* b, size_t size) const
+void BinaryOperation<O, device::Cuda>::EvalVS(T* d, const T* a, const T* b, size_t size) const
 {
   auto [grid_size, block_size] = cuda::GetSizes(size);
   CudaBinaryVS<O, T><<<grid_size, block_size>>>(d, a, b, size);
@@ -197,7 +197,7 @@ void BinaryOperator<O, device::Cuda>::EvalVS(T* d, const T* a, const T* b, size_
 
 template <template <typename> typename O>
 template <typename T>
-void BinaryOperator<O, device::Cuda>::EvalVV(T* d, const T* a, const T* b, size_t size) const
+void BinaryOperation<O, device::Cuda>::EvalVV(T* d, const T* a, const T* b, size_t size) const
 {
   auto [grid_size, block_size] = cuda::GetSizes(size);
   CudaBinaryVV<O, T><<<grid_size, block_size>>>(d, a, b, size);
@@ -206,7 +206,7 @@ void BinaryOperator<O, device::Cuda>::EvalVV(T* d, const T* a, const T* b, size_
 // note that lower ranks are contiguous
 template <template <typename> typename O>
 template <typename T, size_t R>
-void BinaryOperator<O, device::Cuda>::EvalContiguous(
+void BinaryOperation<O, device::Cuda>::EvalContiguous(
     T* d, const T* a, const T* b, std::span<const size_t, R> dimensions,
     std::span<const ssize_t, R> strides_d,
     std::span<const ssize_t, R> strides_a,
@@ -230,7 +230,7 @@ void BinaryOperator<O, device::Cuda>::EvalContiguous(
 
 template <template <typename> typename O>
 template <typename T, size_t R>
-void BinaryOperator<O, device::Cuda>::EvalDiscontiguous(
+void BinaryOperation<O, device::Cuda>::EvalDiscontiguous(
     T* d, const T* a, const T* b, std::span<const size_t, R> dimensions,
     std::span<const ssize_t, R> strides_d,
     std::span<const ssize_t, R> strides_a,
@@ -267,7 +267,7 @@ void BinaryOperator<O, device::Cuda>::EvalDiscontiguous(
 #define TYPES  int, float
 
 #define FUNCTIONS_VECSCALAR(R, O, T) \
-  template void BinaryOperator<O ##Operator, device::Cuda>::Eval##R<T>( \
+  template void BinaryOperation<O ##Operator, device::Cuda>::Eval##R<T>( \
       T*, const T*, const T*, size_t) const;
 
 #define QUANTITIES  SS,SV,VS,VV
@@ -276,12 +276,12 @@ INSTANTIATE3(FUNCTIONS_VECSCALAR, (QUANTITIES), (OPS), (TYPES))
 
   // FIXME: why span if contiguous??
 #define FUNCTION_CONTIGUOUS(R, O, T) \
-  template void BinaryOperator<O ##Operator, device::Cuda>::EvalContiguous<T, R>( \
+  template void BinaryOperation<O ##Operator, device::Cuda>::EvalContiguous<T, R>( \
       T*, const T*, const T*, std::span<const size_t, R>, \
       std::span<const ssize_t, R>, std::span<const ssize_t, R>, std::span<const ssize_t, R>) const; 
 
 #define FUNCTION_DISCONTIGUOUS(R, O, T) \
-  template void BinaryOperator<O ##Operator, device::Cuda>::EvalDiscontiguous<T, R>( \
+  template void BinaryOperation<O ##Operator, device::Cuda>::EvalDiscontiguous<T, R>( \
       T*, const T*, const T*, std::span<const size_t, R>, \
       std::span<const ssize_t, R>, std::span<const ssize_t, R>, std::span<const ssize_t, R>) const;
 

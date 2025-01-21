@@ -21,13 +21,13 @@
 
 namespace grid {
 
-/// BinaryOperator<Operator> implements element-wise binary operations of two tensors.
+/// BinaryOperation<Operator> implements element-wise binary operations of two tensors.
 /// The dimensions of the tensors must match following broadcasting rules.
 /// The resulting rank is the maximum of the tensor ranks.
 ///
 ///  @tparm TOperator binary operator
 template <template <typename> typename TOperator>
-class BinaryOperator<TOperator, device::Base>
+class BinaryOperation<TOperator, device::Base>
 {
   // TODO: gcc doesn't like this constexpr, which would be use later as just Operator(args).
   // Should it? See P0386R2 change: 9.2.3.2p3
@@ -88,7 +88,7 @@ class BinaryOperator<TOperator, device::Base>
 };
 
 //
-// Operators
+// Elementary Binary Operators
 //
 
 template<> struct AddOperator<device::Base>

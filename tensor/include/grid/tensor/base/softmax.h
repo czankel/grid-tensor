@@ -91,7 +91,8 @@ template <> class SoftMaxOperator<device::Base>
   }
 
  public:
-  template<std::ranges::input_range I, std::ranges::output_range<std::iter_value_t<std::ranges::iterator_t<I>>> O>
+  template<std::ranges::input_range I,
+           std::ranges::output_range<std::iter_value_t<std::ranges::iterator_t<I>>> O>
   requires std::indirectly_copyable<std::ranges::iterator_t<I>, std::ranges::iterator_t<O>>
   void operator()(I&& in, O&& out) const
   {
@@ -106,7 +107,7 @@ template <> class SoftMaxOperator<device::Base>
     auto sum = SumExp(&*first_d, &*first_x, max, std::span(extents), std::span(first_x.Strides()));
 
     value_type scale = static_cast<value_type>(1)/(sum + eps);
-    BinaryOperator<MulOperator, device::Base>()(out, Tensor(scale), out);
+    BinaryOperation<MulOperator, device::Base>()(out, Tensor(scale), out);
   }
 };
 
