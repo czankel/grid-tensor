@@ -106,7 +106,7 @@ template <> class SoftMaxOperator<device::Base>
     auto sum = SumExp(&*first_d, &*first_x, max, std::span(extents), std::span(first_x.Strides()));
 
     value_type scale = static_cast<value_type>(1)/(sum + eps);
-    BinaryOperator<MulOperator, device::Base>()(out, Tensor(scale), out);
+    BinaryOperation<MulOperator, device::Base>()(out, Tensor(scale), out);
   }
 };
 

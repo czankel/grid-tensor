@@ -56,7 +56,7 @@ template <> class RmsNormOperator<device::Base>
     {
       auto sum = SumSquare(&*first_x, row_size, stride_x);
       value_type scale = sqrtf(sum / row_size + eps);
-      BinaryOperator<DivOperator, device::Base>()(in, Tensor(scale), out);
+      BinaryOperation<DivOperator, device::Base>()(in, Tensor(scale), out);
     }
     else
     {
@@ -69,7 +69,7 @@ template <> class RmsNormOperator<device::Base>
         scale.Data()[row] = sqrtf(sum / row_size + eps);
         x += first_x.Strides()[rank - 2];
       }
-      BinaryOperator<DivOperator, device::Base>()(in, Tensor(scale), out);
+      BinaryOperation<DivOperator, device::Base>()(in, Tensor(scale), out);
     }
   }
 };
