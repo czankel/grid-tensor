@@ -102,7 +102,7 @@ __global__ void CudaBinaryContiguousRank3(
     size_t idx_y = blockIdx.y * blockDim.y + threadIdx.y;
     if (idx_y < dims.y)
     {
-      size_t idx_z = blockIdx.z * blockDim.z;
+      size_t idx_z = blockIdx.z * blockDim.z + threadIdx.z;
       if (idx_z < dims.z)
       {
         size_t idx_a = idx_z * strides_a.z + idx_y * strides_a.y + idx_x;
@@ -224,7 +224,11 @@ void BinaryOperation<O, device::Cuda>::EvalContiguous(
   {
     auto [block_size, grid_size] = cuda::GetSizes(dimensions, 8, 8, 8);   // FIXME 512 threads?
     CudaBinaryContiguousRank3<O, T><<<block_size, grid_size>>>(
-        d, a, b, cuda::MakeDim3(dimensions), cuda::MakeDim3(strides_d), cuda::MakeDim3(strides_a), cuda::MakeDim3(strides_b));
+        d, a, b,
+        cuda::MakeDim3(dimensions),
+        cuda::MakeDim3(strides_d),
+        cuda::MakeDim3(strides_a),
+        cuda::MakeDim3(strides_b));
   }
 }
 

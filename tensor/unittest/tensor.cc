@@ -334,7 +334,38 @@ REGISTER_TYPED_TEST_SUITE_P(TensorTestSuite,
     TensorBroadcast);
 
 
+template <typename T> class TensorAuxiliaryTestSuite : public testing::Test {};
+TYPED_TEST_SUITE_P(TensorAuxiliaryTestSuite);
+
+TYPED_TEST_P(TensorAuxiliaryTestSuite, TensorFoldRank1Dim1)
+{
+  grid::Tensor tensor1({1},.22f);
+  grid::Tensor tensor2({1},.11f);
+
+  grid::Fold([&](auto dimensions, bool contiguous) {
+      EXPECT_TRUE(contiguous);
+  }, std::span(tensor1.Dimensions()), std::span(tensor1.Strides()), std::span(tensor2.Strides()));
+}
+
+TYPED_TEST_P(TensorAuxiliaryTestSuite, TensorFoldRank2Dim1)
+{
+  grid::Tensor tensor1({1, 1},.22f);
+  grid::Tensor tensor2({1, 1},.11f);
+
+  grid::Fold([&](auto dimensions, bool contiguous) {
+      EXPECT_TRUE(contiguous);
+  }, std::span(tensor1.Dimensions()), std::span(tensor1.Strides()), std::span(tensor2.Strides()));
+}
+
+
+
+REGISTER_TYPED_TEST_SUITE_P(TensorAuxiliaryTestSuite,
+    TensorFoldRank1Dim1,
+    TensorFoldRank2Dim1);
+
+
 INSTANTIATE_TYPED_TEST_SUITE_P(TensorTestBase, TensorTestSuite, TensorBaseType);
+INSTANTIATE_TYPED_TEST_SUITE_P(TensorTestBase, TensorAuxiliaryTestSuite, TensorBaseType);
 #ifdef BUILD_METAL
 INSTANTIATE_TYPED_TEST_SUITE_P(TensorTestMetal, TensorTestSuite, TensorMetalType);
 #endif

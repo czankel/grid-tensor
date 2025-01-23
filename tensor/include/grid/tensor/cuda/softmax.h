@@ -8,26 +8,36 @@
 
 // DO NOT INCLUDE THIS FILE DIRECTLY
 
-#ifndef GRID_TENSOR_CUDA_UNARY_H
-#define GRID_TENSOR_CUDA_UNARY_H
+#ifndef GRID_TENSOR_CUDA_SOFTMAX_H
+#define GRID_TENSOR_CUDA_SOFTMAX_H
 
 #include <span>
 #include <algorithm>
 #include <ranges>
 
-#include "device.h"
-#include "../concepts.h"
-#include "../unary.h"
+#include "../precision.h"
+#if 0
+namespace {
+template <typename t>
+void printer(t* data)
+{
+  for (int i = 0; i < 10; i++)
+    printf("%f, ", (float)data[i]);
+  printf("\n");
+}
+}
+#endif
 
 namespace grid {
 
 void CudaDeviceSynchronize(); // FIXME move to some header?
 
-/// UnaryOperation<Operator> implements element-wise unary operation on a tensors.
+// FIXME: this is just boilerplate code??
+
+/// SoftMaxOperator implements the softmax operation
 ///
 ///  @tparm TOperator binary operator
-template <template <typename> typename TOperator>
-class UnaryOperation<TOperator, device::Cuda>
+template <> class SoftMaxOperator<device::Cuda>
 {
   template <typename T, size_t R>
   void EvalContiguous(T*, const T*,
@@ -52,9 +62,12 @@ class UnaryOperation<TOperator, device::Cuda>
   {
     auto first_d = std::ranges::begin(out);
     auto first_x = std::ranges::cbegin(in);
-
+printf("rankd %lu %lu\n", in.rank, out.rank);
     std::span strides_d(first_d.Strides());
     std::span strides_x(first_x.Strides());
+        printf("dim %lu %lu\n", first_d.Extents()[0], first_d.Extents()[1]);
+        printf("stridesd %lu %lu %lu\n", strides_d[0], strides_d[1], strides_d.size());
+        printf("stridesx %lu %lu %lu\n", strides_x[0], strides_x[1], strides_x.size());
 
     Fold([&](auto folded_dims, const bool contiguous) {
 
@@ -64,25 +77,23 @@ class UnaryOperation<TOperator, device::Cuda>
         if constexpr (folded_rank > 3)
           throw std::runtime_error("non-coontiguous tensors of rank > 3 not supported");
 
-        // contiguous is not constexpr, use folded_rank < rank
-        if constexpr (folded_rank < rank || folded_rank == 0)
+        if (contiguous)
           EvalContiguous(&*first_d, &*first_x,
                          folded_dims,
                          strides_d.template first<folded_rank>(),
                          strides_x.template first<folded_rank>());
-        else
+        else if constexpr (rank > 0)  // rank == 0 is always contiguous
           EvalDiscontiguous(&*first_d, &*first_x, folded_dims, strides_d, strides_x);
 
         CudaDeviceSynchronize(); // FIXME
+    printf("SoftMax Cuda\n");
+    printer(out.Data());
     }, std::span(first_d.Extents()), strides_d, strides_x);
   }
 
 #endif  // !__CUDACC__
 };
 
-// TODO: example for overriding specific implementations, e.g.
-// template <> struct UnaryOperation<grid::SiluFunction, device::Cuda> { ...  }
-
 } // end of namespace grid
 
-#endif // GRID_TENSOR_CUDA_UNARY_H
+#endif // GRID_TENSOR_CUDA_SOFTMAX_H

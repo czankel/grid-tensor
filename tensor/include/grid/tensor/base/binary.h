@@ -39,12 +39,17 @@ class BinaryOperation<TOperator, device::Base>
   {
     static_assert(dimensions.size() != std::dynamic_extent, "dynamic_extent not allowed");
 
+    printf("EVAL dimension %lu %lu\n", dimensions.size(), dimensions.size() > 0 ? dimensions[0] : 0);
+    printf("EVAL strides %lu %lu\n", strides_d.size(), strides_d.size() > 0 ? strides_d[0] : 0);
+
     if constexpr (dimensions.size() == 0)
       d[0] = TOperator<device::Base>()(x[0], y[0]);
 
-    else if constexpr (dimensions.size() == 1  && strides_d.size() == 0)
+    // FIXME: don't all strides need to be "1"
+    else if constexpr (dimensions.size() == 1 && strides_d.size() == 0)
       for (size_t i = 0; i < dimensions[0]; i++)
-        d[i] = TOperator<device::Base>()(x[i], y[i]);
+      { printf("i %lu %p %p %p\n", i, d, x, y);
+        d[i] = TOperator<device::Base>()(x[i], y[i]); }
 
     else
       for (size_t i = 0; i < dimensions[0]; i++)
@@ -55,6 +60,8 @@ class BinaryOperation<TOperator, device::Base>
              strides_x.template last<(strides_x.size() > 0) ? strides_x.size() - 1 : 0>(),
              strides_y.template last<(strides_y.size() > 0) ? strides_y.size() - 1 : 0>());
         d += strides_d[0];
+        printf("strides_x %lu %lu\n", strides_x.size(), strides_x.size() > 0 ? strides_x[0] : 0);
+        printf("strides_y %lu %lu\n", strides_y.size(), strides_y.size() > 0 ? strides_y[0] : 0);
         x += strides_x.size() > 0 ? strides_x[0] : 0;
         y += strides_y.size() > 0 ? strides_y[0] : 0;
       }
@@ -73,14 +80,22 @@ class BinaryOperation<TOperator, device::Base>
     auto first_y = std::ranges::cbegin(in2);
 
     std::span strides_d(first_d.Strides());
-    std::span strides_x(first_x.Strides());
-    std::span strides_y(first_y.Strides());
+
+    auto [b_strides_x, b_strides_y] = BroadcastStrides(std::span(first_x.Strides()), std::span(first_y.Strides()));
+    auto strides_x = std::span(b_strides_x);
+    auto strides_y = std::span(b_strides_y);
+    printf("EVAL strides %lu %lu\n", strides_d.size(), strides_d.size() > 0 ? strides_d[0] : 0);
+    printf("EVAL strides %lu %lu\n", strides_x.size(), strides_x.size() > 0 ? strides_x[0] : 0);
+    printf("EVAL strides %lu %lu\n", strides_y.size(), strides_y.size() > 0 ? strides_y[0] : 0);
 
     Fold([&](auto dimensions, bool contiguous) {
+        printf("contiguous %d\n", contiguous);
+        printf("dim size %lu\n", dimensions.size());
         if (contiguous)
           eval(&*first_d, &*first_x, &*first_y, dimensions,
                strides_d.template first<(dimensions.size() > 0) ? dimensions.size() - 1 : 0>(),
-               strides_x, strides_y);
+               strides_x.template first<(dimensions.size() > 0) ? dimensions.size() - 1 : 0>(),
+               strides_y.template first<(dimensions.size() > 0) ? dimensions.size() - 1 : 0>());
         else
           eval(&*first_d, &*first_x, &*first_y, dimensions, strides_d, strides_x, strides_y);
     }, std::span(first_d.Extents()), strides_d, strides_x, strides_y);

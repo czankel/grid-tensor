@@ -16,6 +16,16 @@
 #include <tuple>
 
 #include "binary.h"
+namespace {
+template <typename t>
+void printer(t* data)
+{
+  for (int i = 0; i < 10; i++)
+    printf("%f, ", (float)data[i]);
+  printf("\n");
+}
+}
+
 
 namespace grid {
 
@@ -106,8 +116,12 @@ template <> class SoftMaxOperator<device::Base>
     auto max = Max(&*first_x, std::span(extents), std::span(first_d.Strides()));
     auto sum = SumExp(&*first_d, &*first_x, max, std::span(extents), std::span(first_x.Strides()));
 
+    printf("MAX %f SUM %f\n", max, sum);
+
     value_type scale = static_cast<value_type>(1)/(sum + eps);
     BinaryOperation<MulOperator, device::Base>()(out, Tensor(scale), out);
+    printf("SoftMax Base\n");
+    printer(out.Data());
   }
 };
 

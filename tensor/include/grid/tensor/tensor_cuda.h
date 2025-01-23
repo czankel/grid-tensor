@@ -15,4 +15,11 @@
 
 #include "cuda/tensor.h"
 
+#include "cuda/binary.h"
+#include "cuda/matmul.h"
+#include "cuda/rms_norm.h"
+#include "cuda/softmax.h"
+#include "cuda/unary.h"
+
+
 #endif  // GRID_TENSOR_TENSOR_CUDA_H

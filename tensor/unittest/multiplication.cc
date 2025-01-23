@@ -323,7 +323,18 @@ TYPED_TEST_P(MultiplicationTestSuite, TensorElemMulRank2)
   EXPECT_EQ(result, expected);
 }
 
-TYPED_TEST_P(MultiplicationTestSuite, TensorElemMulRank2Broadcast)
+TYPED_TEST_P(MultiplicationTestSuite, TensorElemMulRank2Rank1Broadcast)
+{
+  typename TypeParam::Tensor tensor1 = grid::Tensor{ { 3, 6, 9 }, { 2, 8, 4 }};
+  typename TypeParam::Tensor tensor2 = grid::Tensor{ 1, 8, 5 };
+  grid::Tensor expected{ { 3,48,45 }, { 2,64,20 }};
+
+  typename TypeParam::Tensor result = grid::Mul(tensor1, tensor2);
+  std::cout << result << '\n';
+  EXPECT_EQ(result, expected);
+}
+
+TYPED_TEST_P(MultiplicationTestSuite, TensorElemMulRank2Rank2Broadcast)
 {
   typename TypeParam::Tensor tensor1 = grid::Tensor{ { 3, 6, 9 }, { 2, 8, 4 }};
   typename TypeParam::Tensor tensor2 = grid::Tensor{ { 1, 8, 5 } };
@@ -351,7 +362,8 @@ REGISTER_TYPED_TEST_SUITE_P(MultiplicationTestSuite,
     TensorScalexLeft,
     TensorElemMulRank1,
     TensorElemMulRank2,
-    TensorElemMulRank2Broadcast);
+    TensorElemMulRank2Rank1Broadcast,
+    TensorElemMulRank2Rank2Broadcast);
 
 
 INSTANTIATE_TYPED_TEST_SUITE_P(MultiplicationTestBase, MultiplicationTestSuite, TensorBaseType);

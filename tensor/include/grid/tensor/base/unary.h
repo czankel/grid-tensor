@@ -94,7 +94,7 @@ template <> struct NegOperator<device::Base>
 
 template <> struct SiluFunction<device::Base>
 {
-  template<typename T> inline T operator()(const T x) const { return x * (T{1} + exp(-x)); }
+  template<typename T> inline T operator()(const T x) const { return x / (T{1} + exp(-x)); }
 };
 
 

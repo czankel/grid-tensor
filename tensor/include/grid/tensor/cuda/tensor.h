@@ -24,6 +24,7 @@ inline void Copy(T1& tensor1, const T2& tensor2)
   if (dimensions != tensor2.Dimensions())
     throw std::runtime_error("mismatching dimensions");
 
+  // FIXME: tensor 1 is empty??
   details::copy_unsafe(tensor1.Data(), tensor2.Data(),
                        std::span{tensor1.Dimensions()},
                        std::span{tensor1.Strides()},

@@ -124,7 +124,8 @@ class Array<T, DeviceMemory<device::Cuda>>
     {
       if (data_ != nullptr)
         CudaFree(data_);
-      CudaMallocManaged((void**)&data_, size_);
+      CudaMallocManaged((void**)&data_, size);
+      size_ = size;
     }
 
     return *this;

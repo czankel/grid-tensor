@@ -63,6 +63,9 @@ class Function : public TensorOperation<typename std::remove_cvref_t<TTensor>::v
   /// operator()() evaluates the rope operator and returns a tensor.
   auto operator()() const
   {
+    printf("FUNCTIO OP rank %lu\n", rank);
+    printf("DIMS %lu\n", tensor_.Dimensions()[0]);
+    printf("STRIDE %lu\n", tensor_.Strides()[0]);
     using ResultTensor = Tensor<value_type, rank, DeviceMemory<tensor_device_t<TTensor>>>;
     auto result = ResultTensor(tensor_.Dimensions(), Uninitialized<value_type>{});
     std::apply(operator_, std::tuple_cat(std::forward_as_tuple(tensor_, result), args_));

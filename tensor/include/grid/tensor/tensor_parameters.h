@@ -134,6 +134,8 @@ get_array(T((&&... init)[M])[N])
 
 // make_strides returns a std::array with the strides calculated from the provided dimensions and
 // the template type parameter (make_strides<TYPE>(...))
+// FIXME: Broadcasting rules...
+    // FIXME: required for mul(mat,vec) to apply vector for each col (broadcast)...
 template <size_t TRank, typename Indices = std::make_index_sequence<TRank>>
 std::array<ssize_t, TRank> make_strides(const std::array<size_t, TRank>& dimensions)
 {
@@ -239,31 +241,57 @@ inline auto BroadcastStrides(std::span<const ssize_t, S1> strides1, std::span<co
 /// The operator function is called with a boolean flag to indicate that the "lowest" dimension
 /// is contiguous (strides are all implicit 1), and a new dimension span for the remaining
 /// dimension or non-contiguous dimensions.
+///
+/// Folding rules:
+///
+///  dim x,y strides 0,0  -> fold (scalar applied to y not z) -> dim x*y Note: expected stride must reset to 1
+///  dim x,y strides 1,0  -> no-fold (col-vector applied to each col x)
+///  dim x,y strides y,0  -> no-fold (col-vector applied to each col x)
+///  dim x,y strides 0,1  -> no-fold (row-vector applied to each row y)
+///  dim x,y strides y,1  -> fold (stride is y) -> dim x*y
+///  dim x,y strides _,1  -> no-fold (stride is not y)
+///  dim x,y strides by,b -> fold
+///  dim x,y strides _,b  -> no-fold (stride is not b*y)
+///
+///  dim _,1 strides _,_ -> fold (dim is 1, last stride is never applied) -> dim _,  contiguous depends on next iteration
+///  dim 1,_ strides _,_ -> non-fold, would require to change dimensions and strides
+///
+///  contiguous means that the returning dimensions (may be unchanged) are contiguous or stride-0.
+///
+/// FIXME: if dimension[x] == 1, stride 0 or 1 is the same
+///
 template <size_t TRank, typename TOp>
 void Fold(TOp&& op, std::span<const size_t, TRank> dimensions, auto... strides)
 {
-  if constexpr (TRank < 1)
-    op(std::span<const size_t, 0>(), false);
+  // rank-0: scalars return 'contiguous'
+  if constexpr (TRank == 0)
+    op(std::move(dimensions), true);
 
-  else if constexpr (((strides.size() == 0) || ...))
+  // rank-1: vectors cannot be folded; contiguous if single-element vector or strides are 0 or 1
+  else if constexpr (TRank == 1)
+    op(std::move(dimensions), dimensions[0] == 1 || ((strides.size() > 0 && strides[0] <= 1) && ...));
+
+  // rank > 1: cannot fold if strides are not 0 or 1 (unless scalar: no stride)
+  else if (((strides.size() > 0 && strides[strides.size() - 1] > 1) || ...))
     op(std::move(dimensions), false);
 
-  else if constexpr (TRank == 1 || ((strides.size() == 1) || ...))
-    op(std::move(dimensions), ((strides[0] == 1) && ...));
+  // FIXME: all strides must be 0 to be a scalar, if any is not 0, not a scalar, cannot fold (what about 1)??
 
-  // TRank > 1 from here on
-  else if (((strides [TRank - 1] != 1) || ...))
-    op(std::move(dimensions), false);
-
+  // try to fold
   else
   {
+    // FIXME: does this require aligned strides or explicitly not aligned?
+    // FIXME: isn't contiguous OP 0-strides also contiguous?
+    printf("fold check\n");
     static_assert(sizeof...(strides) > 1);
     constexpr size_t max_folds = std::min({strides.size()...});
     size_t fold_dim = dimensions[TRank - 1];
 
     auto foldfn = [&]<size_t I>() -> bool
     {
-      if (I == max_folds - 1 || ((strides [strides .size() -I - 2] - fold_dim != 0) || ...))
+      // strides.size() > I - 2 &&
+      if (I == max_folds - 1 ||
+          (((strides.size() > I - 1) && (strides[strides.size() - I - 2] - fold_dim != 0)) || ...))
       {
         std::array<size_t, TRank - I> dim;
         std::ranges::copy(dimensions.template first<TRank - I - 1>(), dim.begin());

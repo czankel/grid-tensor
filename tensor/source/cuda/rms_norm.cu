@@ -16,84 +16,87 @@
 #include <grid/tensor/cuda/rms_norm.h>
 
 #include "../instantiate.h"
+#include "reduce.h"
 #include "utils.h"
 
 
 namespace grid {
 namespace cuda {
 
+// only operate on 1 block in x direction and N in y
 template <typename T, unsigned int BlockSize>
-__device__ void CudaWarpReduce(volatile T* sdata, unsigned int tid, unsigned int dim)
-{ // FIXME: tid vs tid_x for < dim??
-  if (BlockSize >= 64 && tid + 32 < dim) sdata[tid] = sdata[tid] + sdata[tid + 32];
-  if (BlockSize >= 32 && tid + 16 < dim) sdata[tid] = sdata[tid] + sdata[tid + 16];
-  if (BlockSize >= 16 && tid +  8 < dim) sdata[tid] = sdata[tid] + sdata[tid +  8];
-  if (BlockSize >=  8 && tid +  4 < dim) sdata[tid] = sdata[tid] + sdata[tid +  4];
-  if (BlockSize >=  4 && tid +  2 < dim) sdata[tid] = sdata[tid] + sdata[tid +  2];
-  if (BlockSize >=  2 && tid +  1 < dim) sdata[tid] = sdata[tid] + sdata[tid +  1];
-}
-
-template <typename T, unsigned int BlockSize>
-__global__ void CudaRmsNorm(T* d, const T* x, const T eps, int dim)
+__global__ void CudaRmsNorm(T* d, const T* x, const T eps, int dim) // FIXME stride?
 {
   __shared__ T sdata[cuda::MaxThreadCount];
 
-  unsigned int tid_x = threadIdx.x;
-  unsigned int lane = threadIdx.y * dim;
-  unsigned int tid = lane + tid_x;
-  unsigned int idx_s = blockIdx.x * BlockSize + tid;
-  unsigned int idx_e = lane + dim;
-  unsigned int grid_size = gridDim.x * BlockSize;
+  int grid_size = gridDim.x * BlockSize;
+  int row = threadIdx.y * dim;
+  int tid = row + threadIdx.x;
+
+  size_t idx_first = (blockIdx.y * blockDim.y + threadIdx.y) * dim;
+  size_t idx_beg = idx_first + tid;
+  size_t idx_end = idx_first + dim;
 
   T sum{0};
-  for (unsigned int i = idx_s; i < idx_e; i += grid_size)
+  for (size_t i = idx_beg; i < idx_end; i += grid_size)
     sum += x[i] * x[i];
-
   sdata[tid] = sum;
 
   __syncthreads();
 
-  if (BlockSize >= 512) { if (tid_x < 256) { sdata[tid] += sdata[tid + 256]; } __syncthreads(); }
-  if (BlockSize >= 256) { if (tid_x < 128) { sdata[tid] += sdata[tid + 128]; } __syncthreads(); }
-  if (BlockSize >= 128) { if (tid_x < 64)  { sdata[tid] += sdata[tid + 64];  } __syncthreads(); }
-  if (tid_x < 32) CudaWarpReduce<T, BlockSize>(sdata, tid, lane + dim);
+  CudaReduce<T, AddOperator, BlockSize>(sdata, tid, row + dim);
 
-  if (tid_x == 0)
-    sdata[lane] = sqrt(sdata[lane] / dim + eps);
+  if (threadIdx.x == 0)
+    sdata[row] = sqrt(sdata[row] / dim + eps);
 
   __syncthreads();
 
-  for (unsigned int i = idx_s; i < idx_e; i += grid_size)
-    d[i] = x[i] / sdata[lane];
+  for (unsigned int i = idx_beg; i < idx_end; i += grid_size)
+    d[i] = x[i] / sdata[row];
 }
 
 } // end of namespace cuda
 
-
+// Notes:
+//  - keep 
 template <typename T>
-void RmsNormOperator<device::Cuda>::Eval(T* d, const T* x, const T eps, size_t rows, size_t cols) const
+void
+RmsNormOperator<device::Cuda>::Eval(T* d, const T* x, const T eps, size_t dim_y, size_t dim_x) const
 {
-  const size_t dims[]{cols, rows};
-  size_t warp_size = static_cast<size_t>(cuda::WarpSize); // FIXME:
+  // make blocks of [1024 / sizeof(T) / 2, 1]:
+  //  - N columns: limit to fit into a single 1024k page
+  //  - 1 row: parallelize operation
 
-  // use as many parallel threads (rows) as we can
-  size_t blk_x = ((rows + warp_size - 1) / warp_size) * warp_size; // FIXME: why align up to warp_size??
-  size_t blk_y = std::min(cuda::MaxThreadCount / blk_x, rows);
-  blk_x = std::min(blk_x, cols);
-
-  auto [grid_size, block_size] = cuda::GetSizes(std::span{dims}, blk_x, blk_y);
+  size_t threads = std::min(dim_x, cuda::MaxThreadCount / sizeof(T) / 2);
+  auto [grid_size, block_size] = cuda::GetSizes({threads, dim_y}, threads, 1);
 
   size_t smem_size = cuda::MaxThreadCount;
-  size_t n_threads = cols > 1024 ? 1024 : cols; // FIXME
+  size_t n_threads = grid_size.x;
   int n_threads_log2 = sizeof(n_threads) * 8 - __builtin_clzll(n_threads - 1);
 
   switch (n_threads_log2)
   {
     #define CUDA_RMS_NORM_CASE(BIT) \
-      case BIT: cuda::CudaRmsNorm<T,1<<BIT><<<grid_size,block_size,smem_size>>>(d,x,eps,cols); break;
-    INSTANTIATE1(CUDA_RMS_NORM_CASE, (9, 8, 7, 6, 5, 4, 3, 2, 1, 0))
+      case BIT: cuda::CudaRmsNorm<T,1<<BIT><<<grid_size,block_size,smem_size>>>(d,x,eps,dim_x); break;
+    INSTANTIATE1(CUDA_RMS_NORM_CASE, (10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0))
     default: throw std::runtime_error("invalid thread count");
   }
+#if 0
+  // FIXME: why align up to warp_size??
+  //size_t threads = std::max(std::min(dim_x, cuda::MaxThreadCount / sizeof(T) / 2), warp_size);
+  // maximize on parallel threads (i.e. rows)
+  size_t blk_x = ((rows + warp_size - 1) / warp_size) * warp_size;
+  size_t blk_y = std::min(cuda::MaxThreadCount / blk_x, rows);
+  blk_x = std::min(blk_x, cols);, min... MaxBlockSize
+  // FIXME size_t warp_size = static_cast<size_t>(cuda::WarpSize); // FIXME:
+
+  constexpr size_t MaxBlockSize = 1024UL;
+  const size_t dims[]{std::min(MaxBlockSize, cols), rows};
+ 
+  // FIXME: optimize, given than dims.x is maxblocksize or cols...
+  auto [grid_size, block_size] = cuda::GetSizes(std::span{dims}, blk_x, blk_y);
+#endif
+
 }
 
 #define FUNCTION(T) \

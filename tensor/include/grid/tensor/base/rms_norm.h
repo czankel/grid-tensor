@@ -69,7 +69,10 @@ template <> class RmsNormOperator<device::Base>
         scale.Data()[row] = sqrtf(sum / row_size + eps);
         x += first_x.Strides()[rank - 2];
       }
-      BinaryOperation<DivOperator, device::Base>()(in, Tensor(scale), out);
+      printf("multiply\n");
+      std::cout << in << '\n';
+      std::cout << scale << '\n';
+      BinaryOperation<DivOperator, device::Base>()(in, scale, out);
     }
   }
 };

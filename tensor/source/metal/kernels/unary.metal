@@ -13,6 +13,7 @@
 
 struct CopyOperator { template<typename T> inline T operator()(T x) { return x; } };
 struct NegOperator  { template<typename T> inline T operator()(T x) { return -x; } };
+struct SiluFunction { template<typename T> inline T operator()(T x) { return x / (T{1} + expf(-x)); } };
 
 //
 // Fast unary opeator supporting scalars but without strides
