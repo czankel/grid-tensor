@@ -1,5 +1,6 @@
 grid_add_sources(gridtensor_test
   tensor.cc
+  tensor_parameters.cc
   unary.cc
   addition.cc
   multiplication.cc

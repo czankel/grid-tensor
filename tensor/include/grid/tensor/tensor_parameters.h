@@ -10,6 +10,7 @@
 #define GRID_TENSOR_TENSOR_PARAMETERS_H
 
 #include <algorithm>
+#include <utility>
 
 #include "concepts.h"
 
@@ -233,6 +234,105 @@ inline auto BroadcastStrides(std::span<const ssize_t, S1> strides1, std::span<co
 
 // TODO: the CUDA nvcc compiler doesn't support trailing return types
 #if !defined(__CUDACC__)
+
+/// @brief Helper function to reduce the rank in case of contiguous data for binary operators.
+///
+/// The Fold function calls the provided function with the folded dimensions and strides.
+/// Any lower-rank provide stride will be "broadcasted" (setting additional dimensions to 0).
+///
+/// Folding rules:
+///
+/// Having a dimensions of 1 can always be folded, strides can be ignored
+///   (1) dim:      _,1  -> fold
+///
+/// Dimensions can be folded if one of the following conditions is true:
+///   (2) stride: [0],0  -> foldable, the sclar is applied to any folded dimensions)
+///   (3) stride: f*x,f  -> foldable, the upper stride must match the "folded" dimension (x)
+///                         multiplied by the lower stride)
+///
+template <size_t R, typename TOp>
+void Fold(TOp&& op, std::span<const size_t, R> dims, auto... strides)
+{
+  // rank-0: scalars return empty dimensions, and are 'contiguous'
+  if constexpr (R == 0)
+    std::apply(op, std::array<std::span<const size_t, 0>, sizeof...(strides) + 1>{});
+
+  // rank-1: scalar if dim is one, otherwise, keep vector and strides, expand stride to 0 if none
+  else if constexpr (R == 1)
+    if (dims[0] == 1)
+      std::apply(op, std::array<std::span<const size_t, 0>, sizeof...(strides) + 1>{});
+    else
+    {
+      const std::array<const ssize_t, 1> def_stride{0};
+      op(dims, [&def_stride](auto s) -> std::span<const ssize_t, 1>{
+          if constexpr (s.size() != 0)
+            return s;
+          else
+            return def_stride;
+        }(strides)...);
+    }
+
+  else
+  {
+    size_t skip = 0;  // track index for the first non-broadcast stride (i.e. dim != 1)
+    size_t last = 0;  // track stride index to skip "broadcast" entries (i.e. where dim == 1)
+    size_t folded_dim = 1;
+
+    auto foldfn = [&]<size_t I>() -> bool
+    {
+      // find first non-broadcast index (dim != 1)
+      size_t dim = dims[R - I - 1];
+      if (skip == 0)
+      {
+        if (dim == 1)
+          return true;
+        skip = I + 1;
+        last = I + 1;
+      }
+
+      folded_dim *= dim;
+      if constexpr (I < R - 1)
+      {
+        bool foldable = dims[R - I - 2] == 1;
+        if (!foldable)
+        {
+          foldable = ((
+            (strides.size() >= I + 2 &&
+             strides[strides.size() - I - 2] - dims[R - last] * strides[strides.size() - last] == 0) ||
+            ((strides.size() < I + 2 || (strides[strides.size() - I - 2] == 0)) &&
+             strides[strides.size() - skip] == 0)
+           ) && ...);
+          last = I + 2;
+        }
+
+        if (foldable)
+          return true;
+      }
+
+      std::array<size_t, R - I> folded_dims;
+      std::ranges::copy(dims.template first<R - I - 1>(), folded_dims.begin());
+      folded_dims[R - I - 1] = folded_dim;
+
+      // FIXME: check if folded_strides is dangling or lifetime extended
+      op(std::span(std::as_const(folded_dims)), std::span<const ssize_t, R - I>([skip](auto s) {
+          std::array<ssize_t, R - I> folded_strides{};
+          if constexpr (s.size() > I)
+            std::ranges::copy(s.template first<s.size() - I>(), folded_strides.begin() + R - s.size());
+          folded_strides[R - I - 1] = s[s.size() - skip];
+          return std::as_const(folded_strides);
+        }(strides))...);
+
+      return false;
+    };
+
+    [&] <std::size_t... I>(std::index_sequence<I...>)
+    {
+      if (((foldfn.template operator()<I>()) && ...))
+        std::apply(op, std::array<std::span<const size_t, 0>, sizeof...(strides) + 1>{});
+    }(std::make_index_sequence<R>{});
+  }
+}
+
 
 /// @brief Helper function to reduce the rank in case of contiguous data for binary operators.
 ///

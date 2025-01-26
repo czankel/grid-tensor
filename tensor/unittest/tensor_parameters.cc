@@ -1,0 +1,305 @@
+//
+// Copyright (C) Chris Zankel. All rights reserved.
+// This code is subject to U.S. and other copyright laws and
+// intellectual property protections.
+//
+// The contents of this file are confidential and proprietary to Chris Zankel.
+//
+
+#include <grid/tensor/tensor.h>
+#include <grid/tensor/mmap.h>
+
+#include "gtest/gtest.h"
+#include "gmock/gmock.h"
+
+#include <grid/tensor/base/tensor.h>
+#include "tensor_base.h"
+
+using testing::ElementsAre;
+
+using grid::view::Slice;
+using grid::view::Null;
+using grid::view::NewAxis;
+
+
+// Use Google's Type-Parameterized Tests so these tests can be re-used for other device implementations.
+
+template <typename T> class TensorParametersTestSuite : public testing::Test {};
+TYPED_TEST_SUITE_P(TensorParametersTestSuite);
+
+
+TYPED_TEST_P(TensorParametersTestSuite, TensorFolds)
+{
+  // Rank 0
+  {
+    bool callback = false;
+    constexpr std::array<size_t, 0>  dims{};
+    constexpr std::array<ssize_t, 0> strides1{};
+    grid::Fold([&callback](auto f_dims, auto f_strides1) {
+        EXPECT_THAT(f_dims, ElementsAre());
+        EXPECT_THAT(f_strides1, ElementsAre());
+        callback = true;
+    }, std::span(dims), std::span(strides1));
+    EXPECT_TRUE(callback);
+  }
+
+  // Rank 1 dimension 1
+  {
+    bool callback = false;
+    constexpr size_t dims[] =     { 1 };
+    constexpr ssize_t strides1[] = { 2 };
+    grid::Fold([&callback](auto f_dims, auto f_strides1) {
+        EXPECT_THAT(f_dims, ElementsAre());
+        EXPECT_THAT(f_strides1, ElementsAre());
+        callback = true;
+    }, std::span(dims), std::span(strides1));
+    EXPECT_TRUE(callback);
+  }
+
+  // Rank 1 dimension > 1
+  {
+    bool callback = false;
+    constexpr size_t dims[] =     { 3 };
+    constexpr ssize_t strides1[] = { 2 };
+    grid::Fold([&callback](auto f_dims, auto f_strides1) {
+        EXPECT_THAT(f_dims, ElementsAre(3));
+        EXPECT_THAT(f_strides1, ElementsAre(2));
+        callback = true;
+    }, std::span(dims), std::span(strides1));
+    EXPECT_TRUE(callback);
+  }
+
+  // Rank 1 dimension > 1, with scalar
+  {
+    bool callback = false;
+    constexpr size_t dims[] =     { 3 };
+    constexpr ssize_t strides1[] = { 2 };
+    std::array<const ssize_t, 0> strides2{};
+    grid::Fold([&callback](auto f_dims, auto f_strides1, auto f_strides2) {
+        EXPECT_THAT(f_dims, ElementsAre(3));
+        EXPECT_THAT(f_strides1, ElementsAre(2));
+        EXPECT_THAT(f_strides2, ElementsAre(0));
+        callback = true;
+    }, std::span(dims), std::span(strides1), std::span(strides2));
+    EXPECT_TRUE(callback);
+  }
+
+
+  // Rank 2, foldable
+  {
+    bool callback = false;
+    constexpr size_t dims[] =     {  3, 5 };
+    constexpr ssize_t strides1[] = { 30, 6 };
+    grid::Fold([&callback](auto f_dims, auto f_strides1) {
+        EXPECT_THAT(f_dims, ElementsAre(15));
+        EXPECT_THAT(f_strides1, ElementsAre(6));
+        callback = true;
+    }, std::span(dims), std::span(strides1));
+    EXPECT_TRUE(callback);
+  }
+
+  // Rank 2, simple "broadcast", foldable
+  {
+    bool callback = false;
+    constexpr size_t dims[] =     { 3, 1 };
+    constexpr ssize_t strides1[] = { 1, 2 };
+    grid::Fold([&callback](auto f_dims, auto f_strides1) {
+        EXPECT_THAT(f_dims, ElementsAre(3));
+        EXPECT_THAT(f_strides1, ElementsAre(1));
+        callback = true;
+    }, std::span(dims), std::span(strides1));
+    EXPECT_TRUE(callback);
+  }
+
+  // Rank 2, top/bottom "broadcast", foldable
+  {
+    bool callback = false;
+    constexpr size_t dims[] =     { 1, 3, 1 };
+    constexpr ssize_t strides1[] = { 6, 1, 2 };
+    grid::Fold([&callback](auto f_dims, auto f_strides1) {
+        EXPECT_THAT(f_dims, ElementsAre(3));
+        EXPECT_THAT(f_strides1, ElementsAre(1));
+        callback = true;
+    }, std::span(dims), std::span(strides1));
+    EXPECT_TRUE(callback);
+  }
+
+  // TODO: top-broadcast only folded if all is foldable, would require finesse with strides...
+#if 0
+  // Rank 5, top/bottom "broadcast", non-fully-foldable
+  {
+    bool callback = false;
+    constexpr size_t dims[] =     { 1, 1, 4, 3, 1 };
+    constexpr ssize_t strides1[] = { 12, 2, 2 };
+    grid::Fold([&callback](auto f_dims, auto f_strides1) {
+        EXPECT_THAT(f_dims, ElementsAre(4, 3));
+        EXPECT_THAT(f_strides1, ElementsAre());
+        callback = true;
+    }, std::span(dims), std::span(strides1));
+    EXPECT_TRUE(callback);
+  }
+#endif
+
+  // Rank 2, bottom "broadcast", non-contiguous
+  {
+    bool callback = false;
+    constexpr size_t dims[] =     { 3, 1 };
+    constexpr ssize_t strides1[] = { 3, 2 };
+    grid::Fold([&callback](auto f_dims, auto f_strides1) {
+        EXPECT_THAT(f_dims, ElementsAre(3));
+        EXPECT_THAT(f_strides1, ElementsAre(3));
+        callback = true;
+    }, std::span(dims), std::span(strides1));
+    EXPECT_TRUE(callback);
+  }
+
+  // Rank 3, middle "broadcast"
+  {
+    bool callback = false;
+    constexpr size_t dims[] =     { 3, 1, 5 };
+    constexpr ssize_t strides1[] = { 5, 2, 1 };
+    grid::Fold([&callback](auto f_dims, auto f_strides1) {
+        EXPECT_THAT(f_dims, ElementsAre(15));
+        EXPECT_THAT(f_strides1, ElementsAre(1));
+        callback = true;
+    }, std::span(dims), std::span(strides1));
+    EXPECT_TRUE(callback);
+  }
+
+  // Same as above, but stride prohibits full fold
+  {
+    bool callback = false;
+    constexpr size_t dims[] =     { 3, 1, 5 };
+    constexpr ssize_t strides1[] = { 6, 2, 1 };
+    grid::Fold([&callback](auto f_dims, auto f_strides1) {
+        EXPECT_THAT(f_dims, ElementsAre(3,5));
+        EXPECT_THAT(f_strides1, ElementsAre(6,1));
+        callback = true;
+    }, std::span(dims), std::span(strides1));
+    EXPECT_TRUE(callback);
+  }
+
+  // Rank 3, scalar
+  {
+    bool callback = false;
+    constexpr size_t dims[] =     { 4, 5, 6 };
+    constexpr ssize_t strides1[] = { 0, 0 };
+    grid::Fold([&callback](auto f_dims, auto f_strides1) {
+        EXPECT_THAT(f_dims, ElementsAre(120));
+        EXPECT_THAT(f_strides1, ElementsAre(0));
+        callback = true;
+    }, std::span(dims), std::span(strides1));
+    EXPECT_TRUE(callback);
+  }
+
+  // Rank 3, non-scalar
+  {
+    bool callback = false;
+    constexpr size_t dims[] =     { 4, 5, 6 };
+    constexpr ssize_t strides1[] = { 2, 0 };
+    grid::Fold([&callback](auto f_dims, auto f_strides1) {
+        EXPECT_THAT(f_dims, ElementsAre(4, 5, 6));
+        EXPECT_THAT(f_strides1, ElementsAre(0, 2, 0));
+        callback = true;
+    }, std::span(dims), std::span(strides1));
+    EXPECT_TRUE(callback);
+  }
+
+  // Rank3, scalar and tensor
+  {
+    bool callback = false;
+    constexpr size_t dims[] =     {  4, 5, 6 };
+    constexpr ssize_t strides1[] = {     0, 0 };
+    constexpr ssize_t strides2[] = { 30, 6, 1 };
+    grid::Fold([&callback](auto f_dims, auto f_strides1, auto f_strides2) {
+        EXPECT_THAT(f_dims, ElementsAre(120));
+        EXPECT_THAT(f_strides1, ElementsAre(0));
+        EXPECT_THAT(f_strides2, ElementsAre(1));
+        callback = true;
+    }, std::span(dims), std::span(strides1), std::span(strides2));
+    EXPECT_TRUE(callback);
+  }
+
+  // Rank3, two tensors, strides1 lower-rank -> discontiguous
+  {
+    bool callback = false;
+    constexpr size_t dims[] =      {  4, 5, 6 };
+    constexpr ssize_t strides1[] = {     6, 1 };
+    constexpr ssize_t strides2[] = { 30, 6, 1 };
+    grid::Fold([&callback](auto f_dims, auto f_strides1, auto f_strides2) {
+        EXPECT_THAT(f_dims, ElementsAre(4,30));
+        EXPECT_THAT(f_strides1, ElementsAre(0,1));
+        EXPECT_THAT(f_strides2, ElementsAre(30,1));
+        callback = true;
+    }, std::span(dims), std::span(strides1), std::span(strides2));
+    EXPECT_TRUE(callback);
+  }
+
+  // Rank3, two tensors
+  // each vector element of tensor{1,0,0} is applied to each matrix tensor{5,6}
+  // the lower two ranks (matrix) are contiguous
+  {
+    bool callback = false;
+    constexpr size_t dims[] =     {  4, 5, 6 };
+    constexpr ssize_t strides1[] = {  1, 0, 0 };
+    constexpr ssize_t strides2[] = { 30, 6, 1 };
+    grid::Fold([&callback](auto f_dims, auto f_strides1, auto f_strides2) {
+        EXPECT_THAT(f_dims, ElementsAre(4,30));
+        EXPECT_THAT(f_strides1, ElementsAre(1,0));
+        EXPECT_THAT(f_strides2, ElementsAre(30,1));
+        callback = true;
+    }, std::span(dims), std::span(strides1), std::span(strides2));
+    EXPECT_TRUE(callback);
+  }
+
+  // Rank3, two tensors as above, the top stride doesn't change it
+  {
+    bool callback = false;
+    constexpr size_t dims[] =     {  4, 5, 6 };
+    constexpr ssize_t strides1[] = {  2, 0, 0 };
+    constexpr ssize_t strides2[] = { 30, 6, 1 };
+    grid::Fold([&callback](auto f_dims, auto f_strides1, auto f_strides2) {
+        EXPECT_THAT(f_dims, ElementsAre(4,30));
+        EXPECT_THAT(f_strides1, ElementsAre(2,0));
+        EXPECT_THAT(f_strides2, ElementsAre(30,1));
+        callback = true;
+    }, std::span(dims), std::span(strides1), std::span(strides2));
+    EXPECT_TRUE(callback);
+  }
+
+  // Rank3, two tensors, second tensor non-contiguous
+  // the stride of the matrix is not contigous
+  {
+    bool callback = false;
+    constexpr size_t dims[] =     {  4, 5, 6 };
+    constexpr ssize_t strides1[] = {  2, 0, 0 };
+    constexpr ssize_t strides2[] = { 30, 6, 2 };
+    grid::Fold([&callback](auto f_dims, auto f_strides1, auto f_strides2) {
+        EXPECT_THAT(f_dims, ElementsAre(4, 5, 6));
+        EXPECT_THAT(f_strides1, ElementsAre(2,0,0));
+        EXPECT_THAT(f_strides2, ElementsAre(30,6,2));
+        callback = true;
+    }, std::span(dims), std::span(strides1), std::span(strides2));
+    EXPECT_TRUE(callback);
+  }
+
+  // Rank3, two tensors with strides as above, but full "broadcast" -> two scalars
+  {
+    bool callback = false;
+    constexpr size_t dims[] =     {  1, 1, 1 };
+    constexpr ssize_t strides1[] = {  2, 0, 0 };
+    constexpr ssize_t strides2[] = { 30, 6, 2 };
+    grid::Fold([&callback](auto f_dims, auto f_strides1, auto f_strides2) {
+        EXPECT_THAT(f_dims, ElementsAre());
+        EXPECT_THAT(f_strides1, ElementsAre());
+        EXPECT_THAT(f_strides2, ElementsAre());
+        callback = true;
+    }, std::span(dims), std::span(strides1), std::span(strides2));
+    EXPECT_TRUE(callback);
+  }
+}
+
+REGISTER_TYPED_TEST_SUITE_P(TensorParametersTestSuite,
+    TensorFolds);
+
+INSTANTIATE_TYPED_TEST_SUITE_P(TensorTestBase, TensorParametersTestSuite, TensorBaseType);
