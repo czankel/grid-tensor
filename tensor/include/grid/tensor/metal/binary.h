@@ -104,7 +104,7 @@ class BinaryOperation<TOperator, device::Metal>
     std::span strides_x(first_x.Strides());
     std::span strides_y(first_y.Strides());
 
-    Fold([&](auto dimensions, bool contiguous) {
+    FoldOld([&](auto dimensions, bool contiguous) {
         if (contiguous)
           Eval<value_type>(
               first_d.Buffer(), first_x.Buffer(), first_y.Buffer(),

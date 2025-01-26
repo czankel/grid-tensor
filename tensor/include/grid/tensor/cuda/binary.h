@@ -72,11 +72,11 @@ class BinaryOperation<TOperator, device::Cuda>
     std::span strides_x(first_x.Strides());
     std::span strides_y(first_y.Strides());
 
-    // Fold calls three options:
+    // FoldOld calls three options:
     //  - fully contiguous, dimensions.size() is 1
     //  - some contiguous, dimensions.size() is less than rank; last entry is folded dimensions
     //  - nont contiguous
-    Fold([&](auto folded_dims, const bool contiguous) {
+    FoldOld([&](auto folded_dims, const bool contiguous) {
 
         const size_t rank = folded_dims.size();
         if constexpr (rank > 3)

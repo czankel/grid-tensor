@@ -76,7 +76,7 @@ class BinaryOperation<TOperator, device::Base>
     std::span strides_x(first_x.Strides());
     std::span strides_y(first_y.Strides());
 
-    Fold([&](auto dimensions, bool contiguous) {
+    FoldOld([&](auto dimensions, bool contiguous) {
         if (contiguous)
           eval(&*first_d, &*first_x, &*first_y, dimensions,
                strides_d.template first<(dimensions.size() > 0) ? dimensions.size() - 1 : 0>(),

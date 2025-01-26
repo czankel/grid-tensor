@@ -92,7 +92,7 @@ class UnaryOperation<TOperator, device::Metal>
     std::span strides_d(first_d.Strides());
     std::span strides_x(first_x.Strides());
 
-    Fold([&](auto dimensions, bool contiguous) {
+    FoldOld([&](auto dimensions, bool contiguous) {
       if (contiguous)
         Eval<value_type>(first_d.Buffer(), first_x.Buffer(),
                          first_d.Offset(), first_x.Offset(),

@@ -63,7 +63,7 @@ class UnaryOperation<TOperator, device::Base>
     std::span strides_d(first_d.Strides());
     std::span strides_x(first_x.Strides());
 
-    Fold([&](auto dimensions, bool contiguous) {
+    FoldOld([&](auto dimensions, bool contiguous) {
         if (contiguous)
           eval(&*first_d, &*first_x, dimensions,
                strides_d.template first<(dimensions.size() > 0) ? dimensions.size() - 1 : 0>(),

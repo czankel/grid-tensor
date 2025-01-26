@@ -240,7 +240,7 @@ inline auto BroadcastStrides(std::span<const ssize_t, S1> strides1, std::span<co
 /// is contiguous (strides are all implicit 1), and a new dimension span for the remaining
 /// dimension or non-contiguous dimensions.
 template <size_t TRank, typename TOp>
-void Fold(TOp&& op, std::span<const size_t, TRank> dimensions, auto... strides)
+void FoldOld(TOp&& op, std::span<const size_t, TRank> dimensions, auto... strides)
 {
   if constexpr (TRank < 1)
     op(std::span<const size_t, 0>(), false);

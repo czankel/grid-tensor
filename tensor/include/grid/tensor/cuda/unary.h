@@ -56,7 +56,7 @@ class UnaryOperation<TOperator, device::Cuda>
     std::span strides_d(first_d.Strides());
     std::span strides_x(first_x.Strides());
 
-    Fold([&](auto folded_dims, const bool contiguous) {
+    FoldOld([&](auto folded_dims, const bool contiguous) {
 
         constexpr size_t folded_rank = folded_dims.size();
         constexpr size_t rank = std::ranges::iterator_t<I>::rank;
