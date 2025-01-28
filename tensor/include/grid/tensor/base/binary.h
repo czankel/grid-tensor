@@ -33,31 +33,72 @@ class BinaryOperation<TOperator, device::Base>
   // Should it? See P0386R2 change: 9.2.3.2p3
   // static constexpr TOperator<device::Base> Operator;
 
+  // scalar operation
   template <typename T>
-  inline void eval(T* d, const T* x, const T* y,
+  inline void Eval(T* d, const T* x, const T* y) const
+  {
+    d[0] = TOperator<device::Base>()(x[0], y[0]);
+  }
+
+  // contiguous vector
+  template <typename T>
+  inline void Eval(T* d, const T* x, const T* y, std::span<const size_t, 1> dimensions) const
+  {
+    for (size_t i = 0; i < dimensions[0]; i++)
+      d[i] = TOperator<device::Base>()(x[i], y[i]);
+  }
+
+  // discontiguous vector or scalar
+  template <typename T>
+  inline void Eval(T* d, const T* x, const T* y,
+                   std::span<const size_t, 1>  dimensions,
+                   std::span<const ssize_t, 1> strides_d,
+                   std::span<const ssize_t, 1> strides_x,
+                   std::span<const ssize_t, 1> strides_y) const
+  {
+    for (size_t i = 0; i < dimensions[0]; i++)
+      d[i * strides_d[0]] = TOperator<device::Base>()(x[i * strides_x[0]], y[i * strides_y[0]]);
+  }
+
+  // rank 2 and greater, discontiguous
+  template <typename T>
+  inline void Eval(T* d, const T* x, const T* y,
                    auto dimensions, auto strides_d, auto strides_x, auto strides_y) const
   {
-    static_assert(dimensions.size() != std::dynamic_extent, "dynamic_extent not allowed");
+    for (size_t i = 0; i < dimensions[0]; i++)
+    {
+      Eval(d, x, y,
+           dimensions.template last<dimensions.size() - 1>(),
+           strides_d.template last<strides_d.size() - 1>(),
+           strides_x.template last<strides_x.size() - 1>(),
+           strides_y.template last<strides_y.size() - 1>());
+      d += strides_d[0];
+      x += strides_x[0];
+      y += strides_y[0];
+    }
+  }
 
-    if constexpr (dimensions.size() == 0)
-      d[0] = TOperator<device::Base>()(x[0], y[0]);
-
-    else if constexpr (dimensions.size() == 1  && strides_d.size() == 0)
-      for (size_t i = 0; i < dimensions[0]; i++)
-        d[i] = TOperator<device::Base>()(x[i], y[i]);
-
-    else
-      for (size_t i = 0; i < dimensions[0]; i++)
+  // rank 2 and greater, contiguous
+  template <typename T>
+  inline void EvalContiguous(T* d, const T* x, const T* y,
+                             auto dimensions, auto strides_d, auto strides_x, auto strides_y) const
+  {
+    for (size_t i = 0; i < dimensions[0]; i++)
+    {
+      if constexpr (dimensions.size() > 2)
       {
-        eval(d, x, y,
+        EvalContiguous(d, x, y,
              dimensions.template last<dimensions.size() - 1>(),
-             strides_d.template last<(strides_d.size() > 0) ? strides_d.size() - 1 : 0>(),
-             strides_x.template last<(strides_x.size() > 0) ? strides_x.size() - 1 : 0>(),
-             strides_y.template last<(strides_y.size() > 0) ? strides_y.size() - 1 : 0>());
+             strides_d.template last<strides_d.size() - 1>(),
+             strides_x.template last<strides_x.size() - 1>(),
+             strides_y.template last<strides_y.size() - 1>());
         d += strides_d[0];
-        x += strides_x.size() > 0 ? strides_x[0] : 0;
-        y += strides_y.size() > 0 ? strides_y[0] : 0;
+        x += strides_x[0];
+        y += strides_y[0];
       }
+      else
+        Eval(d, x, y, dimensions.template last<dimensions.size() - 1>());
+    }
   }
 
  public:
@@ -72,18 +113,23 @@ class BinaryOperation<TOperator, device::Base>
     auto first_x = std::ranges::cbegin(in1);
     auto first_y = std::ranges::cbegin(in2);
 
-    std::span strides_d(first_d.Strides());
-    std::span strides_x(first_x.Strides());
-    std::span strides_y(first_y.Strides());
+    Fold([&](auto dimensions, auto strides_d, auto strides_x, auto strides_y) {
+        static_assert(dimensions.size() != std::dynamic_extent, "dynamic_extent not supported");
+        bool is_cont = IsContiguous(strides_d, strides_x, strides_y);
 
-    FoldOld([&](auto dimensions, bool contiguous) {
-        if (contiguous)
-          eval(&*first_d, &*first_x, &*first_y, dimensions,
-               strides_d.template first<(dimensions.size() > 0) ? dimensions.size() - 1 : 0>(),
-               strides_x, strides_y);
+        if constexpr (dimensions.size() == 0)
+          Eval(&*first_d, &*first_x, &*first_y);
+        else if constexpr (dimensions.size() == 1)
+          if (is_cont)
+            Eval(&*first_d, &*first_x, &*first_y, dimensions);
+          else
+            Eval(&*first_d, &*first_x, &*first_y, dimensions, strides_d, strides_x, strides_y);
+        else if (is_cont)
+          EvalContiguous(&*first_d, &*first_x, &*first_y, dimensions, strides_d, strides_x, strides_y);
         else
-          eval(&*first_d, &*first_x, &*first_y, dimensions, strides_d, strides_x, strides_y);
-    }, std::span(first_d.Extents()), strides_d, strides_x, strides_y);
+          Eval(&*first_d, &*first_x, &*first_y, dimensions, strides_d, strides_x, strides_y);
+    }, std::span(first_d.Extents()), std::span(first_d.Strides()),
+       std::span(first_x.Strides()), std::span(first_y.Strides()));
   }
 };
 
