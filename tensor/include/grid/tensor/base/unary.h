@@ -27,28 +27,68 @@ namespace grid {
 template <template <typename> typename TOperator>
 class UnaryOperation<TOperator, device::Base>
 {
+
+  // scalar operation
   template <typename T>
-  inline void eval(T* d, const T* x, auto dimensions, auto strides_d, auto strides_x) const
+  inline void Eval(T* d, const T* x) const
   {
-    static_assert(dimensions.size() != std::dynamic_extent, "dynamic_extent not allowed");
+    d[0] = TOperator<device::Base>()(x[0]);
+  }
 
-    if constexpr (dimensions.size() == 0)
-      d[0] = TOperator<device::Base>()(x[0]);
+  // contiguous vector
+  template <typename T>
+  inline void Eval(T* d, const T* x, std::span<const size_t, 1> dimensions) const
+  {
+    for (size_t i = 0; i < dimensions[0]; i++) {
+      d[i] = TOperator<device::Base>()(x[i]);
+    }
+  }
 
-    else if constexpr (dimensions.size() == 1  && strides_d.size() == 0)
-      for (size_t i = 0; i < dimensions[0]; i++)
-        d[i] = TOperator<device::Base>()(x[i]);
+  // discontiguous vector or scalar
+  template <typename T>
+  inline void Eval(T* d, const T* x,
+                   std::span<const size_t, 1>  dimensions,
+                   std::span<const ssize_t, 1> strides_d,
+                   std::span<const ssize_t, 1> strides_x) const
+  {
+    for (size_t i = 0; i < dimensions[0]; i++)
+      d[i * strides_d[0]] = TOperator<device::Base>()(x[i * strides_x[0]]);
+  }
 
-    else
-      for (size_t i = 0; i < dimensions[0]; i++)
+  // rank 2 and greater, discontiguous
+  template <typename T>
+  inline void Eval(T* d, const T* x, auto dimensions, auto strides_d, auto strides_x) const
+  {
+    for (size_t i = 0; i < dimensions[0]; i++)
+    {
+      Eval(d, x,
+           dimensions.template last<dimensions.size() - 1>(),
+           strides_d.template last<strides_d.size() - 1>(),
+           strides_x.template last<strides_x.size() - 1>());
+      d += strides_d[0];
+      x += strides_x[0];
+    }
+  }
+
+  // rank 2 and greater, contiguous
+  template <typename T>
+  inline void
+  EvalContiguous(T* d, const T* x, auto dimensions, auto strides_d, auto strides_x) const
+  {
+    for (size_t i = 0; i < dimensions[0]; i++)
+    {
+      if constexpr (dimensions.size() > 2)
       {
-        eval(d, x,
+        EvalContiguous(d, x,
              dimensions.template last<dimensions.size() - 1>(),
-             strides_d.template last<(strides_d.size() > 0) ? strides_d.size() - 1 : 0>(),
-             strides_x.template last<(strides_x.size() > 0) ? strides_x.size() - 1 : 0>());
+             strides_d.template last<strides_d.size() - 1>(),
+             strides_x.template last<strides_x.size() - 1>());
         d += strides_d[0];
-        x += strides_x.size() > 0 ? strides_x[0] : 0;
+        x += strides_x[0];
       }
+      else
+        Eval(d, x, dimensions.template last<dimensions.size() - 1>());
+    }
   }
 
  public:
@@ -60,17 +100,22 @@ class UnaryOperation<TOperator, device::Base>
     auto first_d = std::ranges::begin(out);
     auto first_x = std::ranges::cbegin(in);
 
-    std::span strides_d(first_d.Strides());
-    std::span strides_x(first_x.Strides());
+    Fold([&](auto dimensions, auto strides_d, auto strides_x) {
+        static_assert(dimensions.size() != std::dynamic_extent, "dynamic_extent not supported");
+        bool is_cont = IsContiguous(strides_d, strides_x);
 
-    FoldOld([&](auto dimensions, bool contiguous) {
-        if (contiguous)
-          eval(&*first_d, &*first_x, dimensions,
-               strides_d.template first<(dimensions.size() > 0) ? dimensions.size() - 1 : 0>(),
-               strides_x);
+        if constexpr (dimensions.size() == 0)
+          Eval(&*first_d, &*first_x);
+        else if constexpr (dimensions.size() == 1)
+          if (is_cont)
+            Eval(&*first_d, &*first_x, dimensions);
+          else
+            Eval(&*first_d, &*first_x, dimensions, strides_d, strides_x);
+        else if (is_cont)
+          EvalContiguous(&*first_d, &*first_x, dimensions, strides_d, strides_x);
         else
-          eval(&*first_d, &*first_x, dimensions, strides_d, strides_x);
-    }, std::span(first_d.Extents()), strides_d, strides_x);
+          Eval(&*first_d, &*first_x, dimensions, strides_d, strides_x);
+    }, std::span(first_d.Extents()), std::span(first_d.Strides()), std::span(first_x.Strides()));
   }
 };
 
