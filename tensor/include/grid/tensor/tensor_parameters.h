@@ -235,6 +235,14 @@ inline auto BroadcastStrides(std::span<const ssize_t, S1> strides1, std::span<co
 // TODO: the CUDA nvcc compiler doesn't support trailing return types
 #if !defined(__CUDACC__)
 
+
+/// @brief Helper function to check if all provided strides are contiguous (strides[last] == 1)
+inline bool IsContiguous(auto... strides)
+{
+  return ((strides.size() > 0 && strides[strides.size() - 1] == 1) && ...);
+}
+
+
 /// @brief Helper function to reduce the rank in case of contiguous data for binary operators.
 ///
 /// The Fold function calls the provided function with the folded dimensions and strides.
