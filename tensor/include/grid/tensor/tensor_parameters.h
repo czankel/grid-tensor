@@ -242,6 +242,10 @@ inline bool IsContiguous(auto... strides)
   return ((strides.size() > 0 && strides[strides.size() - 1] == 1) && ...);
 }
 
+// FIXME: provide two functions?
+//  FoldBroadcast to broadcast all strides and inverse row/col strides for rhs-vectors
+//
+//  Fold to keep lower-rank strides.
 
 /// @brief Helper function to reduce the rank in case of contiguous data for binary operators.
 ///
@@ -282,35 +286,43 @@ void Fold(TOp&& op, std::span<const size_t, R> dims, auto... strides)
 
   else
   {
-    size_t skip = 0;  // track index for the first non-broadcast stride (i.e. dim != 1)
-    size_t last = 0;  // track stride index to skip "broadcast" entries (i.e. where dim == 1)
+    size_t skip_idx = 0;  // track index for the first non-broadcast stride (i.e. dim != 1)
+    size_t prev_idx = 0;  // track stride index to skip_idx "broadcast" entries (i.e. where dim == 1)
     size_t folded_dim = 1;
 
     auto foldfn = [&]<size_t I>() -> bool
     {
       // find first non-broadcast index (dim != 1)
       size_t dim = dims[R - I - 1];
-      if (skip == 0)
+      if (skip_idx == 0)
       {
         if (dim == 1)
           return true;
-        skip = I + 1;
-        last = I + 1;
+        skip_idx = I + 1;
+        prev_idx = I + 1;
       }
 
       folded_dim *= dim;
-      if constexpr (I < R - 1)
+      if constexpr (I < R - 1) // R - I > 1
       {
         bool foldable = dims[R - I - 2] == 1;
         if (!foldable)
         {
-          foldable = ((
-            (strides.size() >= I + 2 &&
-             strides[strides.size() - I - 2] - dims[R - last] * strides[strides.size() - last] == 0) ||
-            ((strides.size() < I + 2 || (strides[strides.size() - I - 2] == 0)) &&
-             strides[strides.size() - skip] == 0)
-           ) && ...);
-          last = I + 2;
+          foldable = (... && ([&, count = -1](auto s) mutable {
+              constexpr size_t sz = s.size();
+              ssize_t first_str = strides[sz - skip_idx];
+
+              if constexpr (sz == 1)
+                if (count++ > 0)
+                  return sz > skip_idx && first_str == 0;
+
+              ssize_t curr_str = strides[sz - I - 2];
+              return ((sz >= I + 2 && curr_str - dims[R - prev_idx] * strides[sz - prev_idx] == 0) ||
+                      (sz < I + 2 || curr_str == 0) && (sz > skip_idx && first_str == 0));
+
+          }(strides)));
+
+          prev_idx = I + 2;
         }
 
         if (foldable)
@@ -321,14 +333,27 @@ void Fold(TOp&& op, std::span<const size_t, R> dims, auto... strides)
       std::ranges::copy(dims.template first<R - I - 1>(), folded_dims.begin());
       folded_dims[R - I - 1] = folded_dim;
 
-      // FIXME: check if folded_strides is dangling or lifetime extended
-      op(std::span(std::as_const(folded_dims)), std::span<const ssize_t, R - I>([skip](auto s) {
+      // TODO: check if folded_strides is dangling or lifetime extended
+      // TODO: assumes lambda is called in reverse order of arguments!
+      int count = sizeof...(strides);
+      op(std::span(std::as_const(folded_dims)), std::span<const ssize_t, R - I>([&](auto s) {
+
+          const size_t sz = s.size();
           std::array<ssize_t, R - I> folded_strides{};
-          if constexpr (s.size() > I)
-            std::ranges::copy(s.template first<s.size() - I>(), folded_strides.begin() + R - s.size());
-          folded_strides[R - I - 1] = s[s.size() - skip];
+
+          // special case, ... op vector, make it a col-vector, set strides in col dimension
+          if (--count > 0 && I == 0 && sz == 1)
+            folded_strides[R - 2] = s[sz - 1];
+          else
+          {
+            if constexpr (sz > I)
+              std::ranges::copy(s.template first<sz - I>(), folded_strides.begin() + R - sz);
+            if (sz > skip_idx)
+              folded_strides[R - I - 1] = s[sz - skip_idx];
+          }
+
           return std::as_const(folded_strides);
-        }(strides))...);
+      }(strides))...);
 
       return false;
     };
