@@ -96,6 +96,13 @@ class BinaryOperation<TOperator, device::Base>
         x += strides_x[0];
         y += strides_y[0];
       }
+      else if constexpr (dimensions.size() > 1)
+      {
+        Eval(d, x, y, dimensions.template last<dimensions.size() - 1>());
+        d += strides_d[0];
+        x += strides_x[0];
+        y += strides_y[0];
+      }
       else
         Eval(d, x, y, dimensions.template last<dimensions.size() - 1>());
     }
@@ -124,10 +131,13 @@ class BinaryOperation<TOperator, device::Base>
             Eval(&*first_d, &*first_x, &*first_y, dimensions);
           else
             Eval(&*first_d, &*first_x, &*first_y, dimensions, strides_d, strides_x, strides_y);
-        else if (is_cont)
-          EvalContiguous(&*first_d, &*first_x, &*first_y, dimensions, strides_d, strides_x, strides_y);
-        else
-          Eval(&*first_d, &*first_x, &*first_y, dimensions, strides_d, strides_x, strides_y);
+        else if constexpr (dimensions.size() > 1)
+        {
+          if (is_cont)
+            EvalContiguous(&*first_d, &*first_x, &*first_y, dimensions, strides_d, strides_x, strides_y);
+          else
+            Eval(&*first_d, &*first_x, &*first_y, dimensions, strides_d, strides_x, strides_y);
+        }
     }, std::span(first_d.Extents()), std::span(first_d.Strides()),
        std::span(first_x.Strides()), std::span(first_y.Strides()));
   }

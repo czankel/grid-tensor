@@ -86,6 +86,15 @@ class UnaryOperation<TOperator, device::Base>
         d += strides_d[0];
         x += strides_x[0];
       }
+      else if constexpr (dimensions.size() > 1)
+      {
+        Eval(d, x,
+             dimensions.template last<dimensions.size() - 1>(),
+             strides_d.template last<strides_d.size() - 1>(),
+             strides_x.template last<strides_x.size() - 1>());
+        d += strides_d[0];
+        x += strides_x[0];
+      }
       else
         Eval(d, x, dimensions.template last<dimensions.size() - 1>());
     }
