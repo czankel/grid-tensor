@@ -263,12 +263,14 @@ void Fold(TOp&& op, std::span<const size_t, R> dims, auto... strides)
 {
   // rank-0: scalars return empty dimensions, and are 'contiguous'
   if constexpr (R == 0)
-    std::apply(op, std::array<std::span<const size_t, 0>, sizeof...(strides) + 1>{});
+    std::apply(op, std::tuple_cat(std::tuple(std::span<const size_t, 0>{}),
+                                  std::array<std::span<const ssize_t, 0>, sizeof...(strides)>{}));
 
   // rank-1: scalar if dim is one, otherwise, keep strides
   else if constexpr (R == 1)
     if (dims[0] == 1)
-      std::apply(op, std::array<std::span<const size_t, 0>, sizeof...(strides) + 1>{});
+      std::apply(op, std::tuple_cat(std::tuple(std::span<const size_t, 0>{}),
+                                    std::array<std::span<const ssize_t, 0>, sizeof...(strides)>{}));
     else
       op(dims, strides...);
 
@@ -316,11 +318,12 @@ void Fold(TOp&& op, std::span<const size_t, R> dims, auto... strides)
 
       // TODO: check if folded_strides is dangling or lifetime extended
       // TODO: assumes lambda is called in reverse order of arguments!
-      op(std::span(std::as_const(folded_dims)), ([&](auto s) {
+      op(std::span(std::as_const(folded_dims)),
+         std::span<const ssize_t, strides.size() <= I ? 0 : strides.size() - I>([&](auto s) {
 
           constexpr size_t sz = s.size();
           if constexpr (sz <= I)
-            return std::span<const size_t, 0>();
+            return std::span<const ssize_t, 0>{};
           else
           {
             std::array<ssize_t, sz - I> folded_strides{};
@@ -336,7 +339,8 @@ void Fold(TOp&& op, std::span<const size_t, R> dims, auto... strides)
     [&] <std::size_t... I>(std::index_sequence<I...>)
     {
       if (((foldfn.template operator()<I>()) && ...))
-        std::apply(op, std::array<std::span<const size_t, 0>, sizeof...(strides) + 1>{});
+        std::apply(op, std::tuple_cat(std::tuple(std::span<const size_t, 0>{}),
+                                      std::array<std::span<const ssize_t, 0>, sizeof...(strides)>{}));
     }(std::make_index_sequence<R>{});
   }
 }
@@ -356,12 +360,14 @@ void FoldBroadcast(TOp&& op, std::span<const size_t, R> dims, auto... strides)
 {
   // rank-0: scalars return empty dimensions, and are 'contiguous'
   if constexpr (R == 0)
-    std::apply(op, std::array<std::span<const size_t, 0>, sizeof...(strides) + 1>{});
+    std::apply(op, std::tuple_cat(std::tuple(std::span<const size_t, 0>{}),
+                                  std::array<std::span<const ssize_t, 0>, sizeof...(strides)>{}));
 
   // rank-1: scalar if dim is one, otherwise, keep vector and strides, expand stride to 0 if none
   else if constexpr (R == 1)
     if (dims[0] == 1)
-      std::apply(op, std::array<std::span<const size_t, 0>, sizeof...(strides) + 1>{});
+      std::apply(op, std::tuple_cat(std::tuple(std::span<const size_t, 0>{}),
+                                    std::array<std::span<const ssize_t, 0>, sizeof...(strides)>{}));
     else
     {
       const std::array<const ssize_t, 1> def_stride{0};
@@ -397,17 +403,12 @@ void FoldBroadcast(TOp&& op, std::span<const size_t, R> dims, auto... strides)
         bool foldable = dims[R - I - 2] == 1;
         if (!foldable)
         {
-          foldable = (... && ([&, count = -1](auto s) mutable {
+          foldable = (... && ([&](auto s) mutable {
               constexpr size_t sz = s.size();
               ssize_t first_str = strides[sz - skip_idx];
-
-              if constexpr (sz == 1)
-                if (count++ > 0)
-                  return sz > skip_idx && first_str == 0;
-
               ssize_t curr_str = strides[sz - I - 2];
               return ((sz >= I + 2 && curr_str - dims[R - prev_idx] * strides[sz - prev_idx] == 0) ||
-                      (sz < I + 2 || curr_str == 0) && (sz > skip_idx && first_str == 0));
+                      ((sz < I + 2 || curr_str == 0) && (sz > skip_idx && first_str == 0)));
 
           }(strides)));
 
@@ -423,23 +424,15 @@ void FoldBroadcast(TOp&& op, std::span<const size_t, R> dims, auto... strides)
       folded_dims[R - I - 1] = folded_dim;
 
       // TODO: check if folded_strides is dangling or lifetime extended
-      // TODO: assumes lambda is called in reverse order of arguments!
-      int count = sizeof...(strides);
       op(std::span(std::as_const(folded_dims)), std::span<const ssize_t, R - I>([&](auto s) {
 
           const size_t sz = s.size();
-          std::array<ssize_t, R - I> folded_strides{};
 
-          // special case, ... op vector, make it a col-vector, set strides in col dimension
-          if (--count > 0 && I == 0 && sz == 1)
-            folded_strides[R - 2] = s[sz - 1];
-          else
-          {
-            if constexpr (sz > I)
-              std::ranges::copy(s.template first<sz - I>(), folded_strides.begin() + R - sz);
-            if (sz > skip_idx)
-              folded_strides[R - I - 1] = s[sz - skip_idx];
-          }
+          std::array<ssize_t, R - I> folded_strides{};
+          if constexpr (sz > I)
+            std::ranges::copy(s.template first<sz - I>(), folded_strides.begin() + R - sz);
+          if (sz > skip_idx)
+            folded_strides[R - I - 1] = s[sz - skip_idx];
 
           return std::as_const(folded_strides);
       }(strides))...);
@@ -450,7 +443,8 @@ void FoldBroadcast(TOp&& op, std::span<const size_t, R> dims, auto... strides)
     [&] <std::size_t... I>(std::index_sequence<I...>)
     {
       if (((foldfn.template operator()<I>()) && ...))
-        std::apply(op, std::array<std::span<const size_t, 0>, sizeof...(strides) + 1>{});
+        std::apply(op, std::tuple_cat(std::tuple(std::span<const size_t, 0>{}),
+                                      std::array<std::span<const ssize_t, 0>, sizeof...(strides)>{}));
     }(std::make_index_sequence<R>{});
   }
 }

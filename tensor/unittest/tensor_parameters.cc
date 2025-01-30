@@ -494,7 +494,7 @@ TYPED_TEST_P(TensorParametersTestSuite, TensorFoldBroadcastOperations)
     EXPECT_TRUE(callback);
   }
 
-  // vector op matrix
+  // vector and matrix
   {
     bool callback = false;
     constexpr size_t dims[] =      {  3, 5 };
@@ -509,7 +509,7 @@ TYPED_TEST_P(TensorParametersTestSuite, TensorFoldBroadcastOperations)
     EXPECT_TRUE(callback);
   }
 
-  // matrix op vector
+  // matrix and vector
   {
     bool callback = false;
     constexpr size_t dims[] =      {  3, 5 };
@@ -518,7 +518,7 @@ TYPED_TEST_P(TensorParametersTestSuite, TensorFoldBroadcastOperations)
     grid::FoldBroadcast([&callback](auto f_dims, auto f_strides1, auto f_strides2) {
         EXPECT_THAT(f_dims, ElementsAre(3, 5));
         EXPECT_THAT(f_strides1, ElementsAre(30, 6));
-        EXPECT_THAT(f_strides2, ElementsAre(6, 0));
+        EXPECT_THAT(f_strides2, ElementsAre(0, 6));
         callback = true;
     }, std::span(dims), std::span(strides1), std::span(strides2));
     EXPECT_TRUE(callback);
