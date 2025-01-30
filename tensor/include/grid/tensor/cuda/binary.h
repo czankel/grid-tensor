@@ -66,44 +66,36 @@ class BinaryOperation<TOperator, device::Cuda>
     auto first_x = std::ranges::cbegin(in1);
     auto first_y = std::ranges::cbegin(in2);
 
-    std::span dimensions(first_d.Extents());
+    Fold([&](auto dimensions, auto strides_d, auto strides_x, auto strides_y) {
 
-    std::span strides_d(first_d.Strides());
-    std::span strides_x(first_x.Strides());
-    std::span strides_y(first_y.Strides());
-
-    // FoldOld calls three options:
-    //  - fully contiguous, dimensions.size() is 1
-    //  - some contiguous, dimensions.size() is less than rank; last entry is folded dimensions
-    //  - nont contiguous
-    FoldOld([&](auto folded_dims, const bool contiguous) {
-
-        const size_t rank = folded_dims.size();
-        if constexpr (rank > 3)
+        if constexpr (dimensions.size() > 3)
           throw std::runtime_error("non-coontiguous tensors of rank > 3 not supported");
 
-        constexpr size_t rank_x = std::ranges::iterator_t<I1>::rank;
-        constexpr size_t rank_y = std::ranges::iterator_t<I2>::rank;
+        constexpr size_t rank = dimensions.size();
+        bool is_contiguous = IsContiguous(strides_d, strides_x, strides_y);
+        size_t dim = dimensions[0];
+
+        constexpr size_t rank_x = strides_x.size();
+        constexpr size_t rank_y = strides_y.size();
         if constexpr (rank_x == 0 && rank_y == 0)
         {
-          EvalSS(&*first_d, &*first_x, &*first_y, 1UL);
+          EvalSS(&*first_d, &*first_x, &*first_y, 1UL); // FIXME: what's the 1UL?
         }
         else if constexpr (rank == 1)
         {
-          if (contiguous)
+          if (is_contiguous)
           {
-            size_t folded_size = rank > 0 ? folded_dims[rank - 1] : 1;
             if (rank_x == 0)
-              EvalSV(&*first_d, &*first_x, &*first_y, folded_size);
+              EvalSV(&*first_d, &*first_x, &*first_y, dim);
             else if (rank_y == 0)
-              EvalVS(&*first_d, &*first_x, &*first_y, folded_size);
+              EvalVS(&*first_d, &*first_x, &*first_y, dim);
             else // if (rank_x != 0 && rank_y != 0)
-              EvalVV(&*first_d, &*first_x, &*first_y, folded_size);
+              EvalVV(&*first_d, &*first_x, &*first_y, dim);
           }
           else
           {
             const auto [b_strides_x, b_strides_y] = BroadcastStrides(strides_x, strides_y);
-            EvalDiscontiguous(&*first_d, &*first_x, &*first_y, folded_dims,
+            EvalDiscontiguous(&*first_d, &*first_x, &*first_y, dimensions,
                               strides_d.template first<rank>(),
                               std::span(b_strides_x).template first<rank>(),
                               std::span(b_strides_y).template first<rank>());
@@ -115,18 +107,25 @@ class BinaryOperation<TOperator, device::Cuda>
           constexpr size_t r_y = std::min(strides_y.size(), rank);
           const auto [b_strides_x, b_strides_y] =
             BroadcastStrides(strides_x.template first<r_x>(), strides_y.template first<r_y>());
-          EvalContiguous(&*first_d, &*first_x, &*first_y, folded_dims,
+          EvalContiguous(&*first_d, &*first_x, &*first_y, dimensions,
                          strides_d.template first<rank>(),
                          std::span(b_strides_x), std::span(b_strides_y));
         }
         else
         {
           const auto [b_strides_x, b_strides_y] = BroadcastStrides(strides_x, strides_y);
-          EvalDiscontiguous(&*first_d, &*first_x, &*first_y, folded_dims,
+          EvalDiscontiguous(&*first_d, &*first_x, &*first_y, dimensions,
                             strides_d, std::span(b_strides_x), std::span(b_strides_y));
-         }
+        }
+
          CudaDeviceSynchronize(); // FIXME
-    }, std::span(first_d.Extents()), strides_d, strides_x, strides_y);
+    }, std::span(first_d.Extents()), std::span(first_d.Strides()),
+       std::span(first_x.Strides()), std::span(first_y.Strides()));
+
+    std::span strides_d(first_d.Strides());
+    std::span strides_x(first_x.Strides());
+    std::span strides_y(first_y.Strides());
+
   }
 
 #endif  // !__CUDACC__
