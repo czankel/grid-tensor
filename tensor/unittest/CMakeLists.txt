@@ -6,5 +6,6 @@ grid_add_sources(gridtensor_test
   multiplication.cc
   rms_norm.cc
   rope.cc
+  silu.cc
   softmax.cc
 )
