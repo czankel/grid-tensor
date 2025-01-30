@@ -16,13 +16,22 @@
 namespace grid {
 
 //
-// Unary Operators
+// Elementary Unary Operators
 //
 
 template <> struct grid::CopyOperator<grid::device::Cuda>
-{ template<typename T> inline __device__ T operator()(T x) { return x; } };
+{ template<typename T> inline __device__ T operator()(const T x) const { return x; } };
 template <> struct grid::NegOperator<grid::device::Cuda>
-{ template<typename T> inline __device__ T operator()(T x) { return -x; } };
+{ template<typename T> inline __device__ T operator()(const T x) const { return -x; } };
+
+//
+// Unary Functions
+//
+
+template <> struct grid::SiluFunction<grid::device::Cuda>
+{
+  template<typename T> inline __device__ T operator()(const T x) const { return x / (T{1} + expf(-x)); }
+};
 
 //
 // Kernels
@@ -37,7 +46,7 @@ __global__ void CudaUnaryScalar(T* c, const T* a)
 template <template <typename> typename O, typename T>
 __global__ void CudaUnaryVector(T* c, const T* a, size_t n)
 {
-  int index = blockIdx.x*blockDim.x+threadIdx.x;
+  int index = blockIdx.x * blockDim.x + threadIdx.x;
   if (index < n)
     c[index] = O<grid::device::Cuda>()(a[index]);
 }
@@ -46,7 +55,7 @@ template <template <typename> typename O, typename T>
 __global__ void CudaUnaryContiguousRank2(
     T* d, const T* a, dim3 dims, dim3 strides_d, dim3 strides_a)
 {
-  size_t idx_x = blockIdx.x * blockDim.x + threadIdx.x; // is there a threadIdx.y???
+  size_t idx_x = blockIdx.x * blockDim.x + threadIdx.x;
   if (idx_x < dims.x)
   {
     size_t idx_y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -68,7 +77,7 @@ __global__ void CudaUnaryContiguousRank3(T* d, const T* a, dim3 dims, dim3 strid
     size_t idx_y = blockIdx.y * blockDim.y + threadIdx.y;
     if (idx_y < dims.y)
     {
-      size_t idx_z = blockIdx.z * blockDim.z;
+      size_t idx_z = blockIdx.z * blockDim.z + threadIdx.y;
       if (idx_z < dims.z)
       {
         size_t idx_a = idx_z * strides_a.z + idx_y * strides_a.y + idx_x;
@@ -175,7 +184,11 @@ void UnaryOperation<O, device::Cuda>::EvalDiscontiguous(
     std::span<const ssize_t, R> strides_d,
     std::span<const ssize_t, R> strides_a) const
 {
-  if constexpr (R == 1)
+  if constexpr (R == 0)
+  {
+    CudaUnaryScalar<O, T><<<1, 1>>>(d, a);
+  }
+  else if constexpr (R == 1)
   {
     auto [grid_size, block_size] = cuda::GetSizes(dimensions[0]);
     CudaUnaryDiscontiguousRank1<O, T><<<block_size, grid_size>>>(
@@ -202,13 +215,13 @@ void UnaryOperation<O, device::Cuda>::EvalDiscontiguous(
 
 #define FUNCTION_DISCONTIGUOUS(R, O, T) \
   template void UnaryOperation<O, device::Cuda>::EvalDiscontiguous<T, R>( \
-      T*, const T*,  std::span<const size_t, R>, \
+      T*, const T*, std::span<const size_t, R>, \
       std::span<const ssize_t, R>, std::span<const ssize_t, R>) const;
 
-#define OPS    CopyOperator, NegOperator
+#define OPS    CopyOperator, NegOperator, SiluFunction
 #define TYPES  float,int
-#define RANKS_CONTIGUOUS 0, 1, 2, 3
-#define RANKS_DISCONTIGUOUS 1, 2, 3
+#define RANKS_CONTIGUOUS 1, 2, 3
+#define RANKS_DISCONTIGUOUS 0, 1, 2, 3
 
 INSTANTIATE3(FUNCTION_CONTIGUOUS, (RANKS_CONTIGUOUS), (OPS), (TYPES))
 INSTANTIATE3(FUNCTION_DISCONTIGUOUS, (RANKS_DISCONTIGUOUS), (OPS), (TYPES))

@@ -53,32 +53,23 @@ class UnaryOperation<TOperator, device::Cuda>
     auto first_d = std::ranges::begin(out);
     auto first_x = std::ranges::cbegin(in);
 
-    std::span strides_d(first_d.Strides());
-    std::span strides_x(first_x.Strides());
+    FoldBroadcast([&](auto dimensions, auto strides_d, auto strides_x) {
 
-    FoldOld([&](auto folded_dims, const bool contiguous) {
-
-        constexpr size_t folded_rank = folded_dims.size();
-        constexpr size_t rank = std::ranges::iterator_t<I>::rank;
-
-        if constexpr (folded_rank > 3)
+        if constexpr (dimensions.size() > 3)
           throw std::runtime_error("non-coontiguous tensors of rank > 3 not supported");
 
-        // contiguous is not constexpr, use folded_rank < rank
-        if constexpr (folded_rank < rank || folded_rank == 0)
-          EvalContiguous(&*first_d, &*first_x,
-                         folded_dims,
-                         strides_d.template first<folded_rank>(),
-                         strides_x.template first<folded_rank>());
+        if (IsContiguous(strides_d, strides_x))
+          EvalContiguous(&*first_d, &*first_x, dimensions, strides_d, strides_x);
         else
-          EvalDiscontiguous(&*first_d, &*first_x, folded_dims, strides_d, strides_x);
+          EvalDiscontiguous(&*first_d, &*first_x, dimensions, strides_d, strides_x);
 
         CudaDeviceSynchronize(); // FIXME
-    }, std::span(first_d.Extents()), strides_d, strides_x);
+    }, std::span(first_d.Extents()), std::span(first_d.Strides()), std::span(first_x.Strides()));
   }
 
 #endif  // !__CUDACC__
 };
+
 
 } // end of namespace grid
 
