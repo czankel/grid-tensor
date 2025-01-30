@@ -38,7 +38,7 @@ template <typename T> class RmsNormTestSuite : public testing::Test {};
 TYPED_TEST_SUITE_P(RmsNormTestSuite);
 
 
-TYPED_TEST_P(RmsNormTestSuite, TensorNormRmsRank1)
+TYPED_TEST_P(RmsNormTestSuite, TensorRmsNormRank1)
 {
   typename TypeParam::Tensor tensor = grid::Tensor{ 1.618f, 2.f, 3.14f, 5.382f, -8.5f, 13.f, -21.f, 34.77f, 55.f };
   float scale = 23.47965324677914722429f;
@@ -50,22 +50,23 @@ TYPED_TEST_P(RmsNormTestSuite, TensorNormRmsRank1)
   EXPECT_EQ(result, expected);
 }
 
-TYPED_TEST_P(RmsNormTestSuite, TensorNormRmsRank2)
+TYPED_TEST_P(RmsNormTestSuite, TensorRmsNormRank2)
 {
-  typename TypeParam::Tensor tensor = grid::Tensor{ { 1.618f, 2.f, 3.14f, 5.382f, -8.5f},
-                                                    { 13.f, -21.f, 34.77f, 55.f, 43.5f} };
+  typename TypeParam::Tensor tensor = grid::Tensor{ { 1.618f,   2.f,  3.14f, 5.382f, -8.5f },
+                                                    {   13.f, -21.f, 34.77f,   55.f, 43.5f } };
   float scale1 = 4.851669788360596;
   float scale2 = 36.70477676391602;
-  grid::Tensor expected{ { 1.618f / scale1,    2.f / scale1, 3.14f / scale1, 5.382f / scale1, -8.5f / scale1 },
-                         { 13.f / scale2, -21.f / scale2, 34.77f / scale2,  55.f / scale2, 43.5f / scale2 } };
+  grid::Tensor expected {
+    { 1.618f / scale1,   2.f / scale1,  3.14f / scale1, 5.382f / scale1, -8.5f / scale1 },
+    {   13.f / scale2, -21.f / scale2, 34.77f / scale2,   55.f / scale2, 43.5f / scale2 } };
 
   typename TypeParam::Tensor result = grid::RmsNorm(tensor);
   EXPECT_EQ(result, expected);
 }
 
 REGISTER_TYPED_TEST_SUITE_P(RmsNormTestSuite,
-    TensorNormRmsRank1,
-    TensorNormRmsRank2);
+    TensorRmsNormRank1,
+    TensorRmsNormRank2);
 
 INSTANTIATE_TYPED_TEST_SUITE_P(RmsNormTestBase, RmsNormTestSuite, TensorBaseType);
 #ifdef BUILD_METAL
