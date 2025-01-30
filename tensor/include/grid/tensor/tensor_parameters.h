@@ -242,15 +242,11 @@ inline bool IsContiguous(auto... strides)
   return ((strides.size() > 0 && strides[strides.size() - 1] == 1) && ...);
 }
 
-// FIXME: provide two functions?
-//  FoldBroadcast to broadcast all strides and inverse row/col strides for rhs-vectors
-//
-//  Fold to keep lower-rank strides.
-
-/// @brief Helper function to reduce the rank in case of contiguous data for binary operators.
+/// @brief Helper function to reduce the rank for contiguous data
 ///
 /// The Fold function calls the provided function with the folded dimensions and strides.
-/// Any lower-rank provide stride will be "broadcasted" (setting additional dimensions to 0).
+/// Strides are reduced by the folded dimensions. An empty span is used if the original
+/// rank of the stride was smaller than the residual rank.
 ///
 /// Folding rules:
 ///
@@ -261,6 +257,99 @@ inline bool IsContiguous(auto... strides)
 ///   (2) stride: [0],0  -> foldable, the sclar is applied to any folded dimensions)
 ///   (3) stride: f*x,f  -> foldable, the upper stride must match the "folded" dimension (x)
 ///                         multiplied by the lower stride)
+///
+template <size_t R, typename TOp>
+void Fold(TOp&& op, std::span<const size_t, R> dims, auto... strides)
+{
+  // rank-0: scalars return empty dimensions, and are 'contiguous'
+  if constexpr (R == 0)
+    std::apply(op, std::array<std::span<const size_t, 0>, sizeof...(strides) + 1>{});
+
+  // rank-1: scalar if dim is one, otherwise, keep strides
+  else if constexpr (R == 1)
+    if (dims[0] == 1)
+      std::apply(op, std::array<std::span<const size_t, 0>, sizeof...(strides) + 1>{});
+    else
+      op(dims, strides...);
+
+  else
+  {
+    size_t skip_idx = 0;  // track index for the first non-broadcast stride (i.e. dim != 1)
+    size_t prev_idx = 0;  // track stride index to skip_idx "broadcast" entries (i.e. where dim == 1)
+    size_t folded_dim = 1;
+
+    auto foldfn = [&]<size_t I>() -> bool
+    {
+      // find first non-broadcast index (dim != 1)
+      size_t dim = dims[R - I - 1];
+      if (skip_idx == 0)
+      {
+        if (dim == 1)
+          return true;
+        skip_idx = I + 1;
+        prev_idx = I + 1;
+      }
+
+      folded_dim *= dim;
+      if constexpr (I < R - 1) // R - I > 1
+      {
+        bool foldable = dims[R - I - 2] == 1;
+        if (!foldable)
+        {
+          foldable = (... && ([&](auto s) mutable {
+              constexpr size_t sz = s.size();
+              ssize_t first_str = strides[sz - skip_idx];
+              ssize_t curr_str = strides[sz - I - 2];
+              return ((sz >= I + 2 && curr_str - dims[R - prev_idx] * strides[sz - prev_idx] == 0) ||
+                      ((sz < I + 2 || curr_str == 0) && (sz > skip_idx && first_str == 0)));
+          }(strides)));
+          prev_idx = I + 2;
+        }
+
+        if (foldable)
+          return true;
+      }
+
+      std::array<size_t, R - I> folded_dims;
+      std::ranges::copy(dims.template first<R - I - 1>(), folded_dims.begin());
+      folded_dims[R - I - 1] = folded_dim;
+
+      // TODO: check if folded_strides is dangling or lifetime extended
+      // TODO: assumes lambda is called in reverse order of arguments!
+      op(std::span(std::as_const(folded_dims)), ([&](auto s) {
+
+          constexpr size_t sz = s.size();
+          if constexpr (sz <= I)
+            return std::span<const size_t, 0>();
+          else
+          {
+            std::array<ssize_t, sz - I> folded_strides{};
+            std::ranges::copy(s.template first<sz - I>(), folded_strides.begin());
+            if (sz > skip_idx)
+              folded_strides[sz - I - 1] = s[sz - skip_idx];
+            return std::as_const(folded_strides);
+          }
+      }(strides))...);
+      return false;
+    };
+
+    [&] <std::size_t... I>(std::index_sequence<I...>)
+    {
+      if (((foldfn.template operator()<I>()) && ...))
+        std::apply(op, std::array<std::span<const size_t, 0>, sizeof...(strides) + 1>{});
+    }(std::make_index_sequence<R>{});
+  }
+}
+
+/// @brief Helper function to reduce the rank for contiguous data and broadcasting strides.
+///
+/// The Fold function calls the provided function with the folded dimensions and strides.
+/// Strides are "broadcast" to match the rank of the dimensions.
+///
+/// Any lower-rank provide stride will be "broadcasted" (setting additional dimensions to 0).
+///
+/// Note that right-hand-side vectors are "converted" to "row" vectors, while LHS vectors
+/// are kept as "colunn" vectors. Thie means that row/col strides for RHS vectors get exchanged.
 ///
 template <size_t R, typename TOp>
 void FoldBroadcast(TOp&& op, std::span<const size_t, R> dims, auto... strides)
