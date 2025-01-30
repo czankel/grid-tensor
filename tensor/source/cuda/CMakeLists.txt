@@ -8,6 +8,7 @@ grid_add_sources(gridtensor
 	binary.cu
 	matmul.cu
 	rms_norm.cu
+	softmax.cu
 	unary.cu
 	wrapper.cu
 )
