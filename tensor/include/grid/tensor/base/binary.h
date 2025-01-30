@@ -120,7 +120,7 @@ class BinaryOperation<TOperator, device::Base>
     auto first_x = std::ranges::cbegin(in1);
     auto first_y = std::ranges::cbegin(in2);
 
-    Fold([&](auto dimensions, auto strides_d, auto strides_x, auto strides_y) {
+    FoldBroadcast([&](auto dimensions, auto strides_d, auto strides_x, auto strides_y) {
         static_assert(dimensions.size() != std::dynamic_extent, "dynamic_extent not supported");
         bool is_cont = IsContiguous(strides_d, strides_x, strides_y);
 

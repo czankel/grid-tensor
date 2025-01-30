@@ -109,7 +109,7 @@ class UnaryOperation<TOperator, device::Base>
     auto first_d = std::ranges::begin(out);
     auto first_x = std::ranges::cbegin(in);
 
-    Fold([&](auto dimensions, auto strides_d, auto strides_x) {
+    FoldBroadcast([&](auto dimensions, auto strides_d, auto strides_x) {
         static_assert(dimensions.size() != std::dynamic_extent, "dynamic_extent not supported");
         bool is_cont = IsContiguous(strides_d, strides_x);
 

@@ -35,7 +35,7 @@ TYPED_TEST_P(TensorParametersTestSuite, TensorFolds)
     bool callback = false;
     constexpr std::array<size_t, 0>  dims{};
     constexpr std::array<ssize_t, 0> strides1{};
-    grid::Fold([&callback](auto f_dims, auto f_strides1) {
+    grid::FoldBroadcast([&callback](auto f_dims, auto f_strides1) {
         EXPECT_THAT(f_dims, ElementsAre());
         EXPECT_THAT(f_strides1, ElementsAre());
         callback = true;
@@ -48,7 +48,7 @@ TYPED_TEST_P(TensorParametersTestSuite, TensorFolds)
     bool callback = false;
     constexpr size_t dims[] =     { 1 };
     constexpr ssize_t strides1[] = { 2 };
-    grid::Fold([&callback](auto f_dims, auto f_strides1) {
+    grid::FoldBroadcast([&callback](auto f_dims, auto f_strides1) {
         EXPECT_THAT(f_dims, ElementsAre());
         EXPECT_THAT(f_strides1, ElementsAre());
         callback = true;
@@ -61,7 +61,7 @@ TYPED_TEST_P(TensorParametersTestSuite, TensorFolds)
     bool callback = false;
     constexpr size_t dims[] =     { 3 };
     constexpr ssize_t strides1[] = { 2 };
-    grid::Fold([&callback](auto f_dims, auto f_strides1) {
+    grid::FoldBroadcast([&callback](auto f_dims, auto f_strides1) {
         EXPECT_THAT(f_dims, ElementsAre(3));
         EXPECT_THAT(f_strides1, ElementsAre(2));
         callback = true;
@@ -75,7 +75,7 @@ TYPED_TEST_P(TensorParametersTestSuite, TensorFolds)
     constexpr size_t dims[] =     { 3 };
     constexpr ssize_t strides1[] = { 2 };
     std::array<const ssize_t, 0> strides2{};
-    grid::Fold([&callback](auto f_dims, auto f_strides1, auto f_strides2) {
+    grid::FoldBroadcast([&callback](auto f_dims, auto f_strides1, auto f_strides2) {
         EXPECT_THAT(f_dims, ElementsAre(3));
         EXPECT_THAT(f_strides1, ElementsAre(2));
         EXPECT_THAT(f_strides2, ElementsAre(0));
@@ -90,7 +90,7 @@ TYPED_TEST_P(TensorParametersTestSuite, TensorFolds)
     bool callback = false;
     constexpr size_t dims[] =     {  3, 5 };
     constexpr ssize_t strides1[] = { 30, 6 };
-    grid::Fold([&callback](auto f_dims, auto f_strides1) {
+    grid::FoldBroadcast([&callback](auto f_dims, auto f_strides1) {
         EXPECT_THAT(f_dims, ElementsAre(15));
         EXPECT_THAT(f_strides1, ElementsAre(6));
         callback = true;
@@ -103,7 +103,7 @@ TYPED_TEST_P(TensorParametersTestSuite, TensorFolds)
     bool callback = false;
     constexpr size_t dims[] =     { 3, 1 };
     constexpr ssize_t strides1[] = { 1, 2 };
-    grid::Fold([&callback](auto f_dims, auto f_strides1) {
+    grid::FoldBroadcast([&callback](auto f_dims, auto f_strides1) {
         EXPECT_THAT(f_dims, ElementsAre(3));
         EXPECT_THAT(f_strides1, ElementsAre(1));
         callback = true;
@@ -116,7 +116,7 @@ TYPED_TEST_P(TensorParametersTestSuite, TensorFolds)
     bool callback = false;
     constexpr size_t dims[] =     { 1, 3, 1 };
     constexpr ssize_t strides1[] = { 6, 1, 2 };
-    grid::Fold([&callback](auto f_dims, auto f_strides1) {
+    grid::FoldBroadcast([&callback](auto f_dims, auto f_strides1) {
         EXPECT_THAT(f_dims, ElementsAre(3));
         EXPECT_THAT(f_strides1, ElementsAre(1));
         callback = true;
@@ -131,7 +131,7 @@ TYPED_TEST_P(TensorParametersTestSuite, TensorFolds)
     bool callback = false;
     constexpr size_t dims[] =     { 1, 1, 4, 3, 1 };
     constexpr ssize_t strides1[] = { 12, 2, 2 };
-    grid::Fold([&callback](auto f_dims, auto f_strides1) {
+    grid::FoldBroadcast([&callback](auto f_dims, auto f_strides1) {
         EXPECT_THAT(f_dims, ElementsAre(4, 3));
         EXPECT_THAT(f_strides1, ElementsAre());
         callback = true;
@@ -145,7 +145,7 @@ TYPED_TEST_P(TensorParametersTestSuite, TensorFolds)
     bool callback = false;
     constexpr size_t dims[] =     { 3, 1 };
     constexpr ssize_t strides1[] = { 3, 2 };
-    grid::Fold([&callback](auto f_dims, auto f_strides1) {
+    grid::FoldBroadcast([&callback](auto f_dims, auto f_strides1) {
         EXPECT_THAT(f_dims, ElementsAre(3));
         EXPECT_THAT(f_strides1, ElementsAre(3));
         callback = true;
@@ -158,7 +158,7 @@ TYPED_TEST_P(TensorParametersTestSuite, TensorFolds)
     bool callback = false;
     constexpr size_t dims[] =     { 3, 1, 5 };
     constexpr ssize_t strides1[] = { 5, 2, 1 };
-    grid::Fold([&callback](auto f_dims, auto f_strides1) {
+    grid::FoldBroadcast([&callback](auto f_dims, auto f_strides1) {
         EXPECT_THAT(f_dims, ElementsAre(15));
         EXPECT_THAT(f_strides1, ElementsAre(1));
         callback = true;
@@ -171,7 +171,7 @@ TYPED_TEST_P(TensorParametersTestSuite, TensorFolds)
     bool callback = false;
     constexpr size_t dims[] =     { 3, 1, 5 };
     constexpr ssize_t strides1[] = { 6, 2, 1 };
-    grid::Fold([&callback](auto f_dims, auto f_strides1) {
+    grid::FoldBroadcast([&callback](auto f_dims, auto f_strides1) {
         EXPECT_THAT(f_dims, ElementsAre(3,5));
         EXPECT_THAT(f_strides1, ElementsAre(6,1));
         callback = true;
@@ -184,7 +184,7 @@ TYPED_TEST_P(TensorParametersTestSuite, TensorFolds)
     bool callback = false;
     constexpr size_t dims[] =     { 4, 5, 6 };
     constexpr ssize_t strides1[] = { 0, 0 };
-    grid::Fold([&callback](auto f_dims, auto f_strides1) {
+    grid::FoldBroadcast([&callback](auto f_dims, auto f_strides1) {
         EXPECT_THAT(f_dims, ElementsAre(120));
         EXPECT_THAT(f_strides1, ElementsAre(0));
         callback = true;
@@ -197,7 +197,7 @@ TYPED_TEST_P(TensorParametersTestSuite, TensorFolds)
     bool callback = false;
     constexpr size_t dims[] =     { 4, 5, 6 };
     constexpr ssize_t strides1[] = { 2, 0 };
-    grid::Fold([&callback](auto f_dims, auto f_strides1) {
+    grid::FoldBroadcast([&callback](auto f_dims, auto f_strides1) {
         EXPECT_THAT(f_dims, ElementsAre(4, 5, 6));
         EXPECT_THAT(f_strides1, ElementsAre(0, 2, 0));
         callback = true;
@@ -211,7 +211,7 @@ TYPED_TEST_P(TensorParametersTestSuite, TensorFolds)
     constexpr size_t dims[] =     {  4, 5, 6 };
     constexpr ssize_t strides1[] = {     0, 0 };
     constexpr ssize_t strides2[] = { 30, 6, 1 };
-    grid::Fold([&callback](auto f_dims, auto f_strides1, auto f_strides2) {
+    grid::FoldBroadcast([&callback](auto f_dims, auto f_strides1, auto f_strides2) {
         EXPECT_THAT(f_dims, ElementsAre(120));
         EXPECT_THAT(f_strides1, ElementsAre(0));
         EXPECT_THAT(f_strides2, ElementsAre(1));
@@ -226,7 +226,7 @@ TYPED_TEST_P(TensorParametersTestSuite, TensorFolds)
     constexpr size_t dims[] =      {  4, 5, 6 };
     constexpr ssize_t strides1[] = {     6, 1 };
     constexpr ssize_t strides2[] = { 30, 6, 1 };
-    grid::Fold([&callback](auto f_dims, auto f_strides1, auto f_strides2) {
+    grid::FoldBroadcast([&callback](auto f_dims, auto f_strides1, auto f_strides2) {
         EXPECT_THAT(f_dims, ElementsAre(4,30));
         EXPECT_THAT(f_strides1, ElementsAre(0,1));
         EXPECT_THAT(f_strides2, ElementsAre(30,1));
@@ -243,7 +243,7 @@ TYPED_TEST_P(TensorParametersTestSuite, TensorFolds)
     constexpr size_t dims[] =     {  4, 5, 6 };
     constexpr ssize_t strides1[] = {  1, 0, 0 };
     constexpr ssize_t strides2[] = { 30, 6, 1 };
-    grid::Fold([&callback](auto f_dims, auto f_strides1, auto f_strides2) {
+    grid::FoldBroadcast([&callback](auto f_dims, auto f_strides1, auto f_strides2) {
         EXPECT_THAT(f_dims, ElementsAre(4,30));
         EXPECT_THAT(f_strides1, ElementsAre(1,0));
         EXPECT_THAT(f_strides2, ElementsAre(30,1));
@@ -258,7 +258,7 @@ TYPED_TEST_P(TensorParametersTestSuite, TensorFolds)
     constexpr size_t dims[] =     {  4, 5, 6 };
     constexpr ssize_t strides1[] = {  2, 0, 0 };
     constexpr ssize_t strides2[] = { 30, 6, 1 };
-    grid::Fold([&callback](auto f_dims, auto f_strides1, auto f_strides2) {
+    grid::FoldBroadcast([&callback](auto f_dims, auto f_strides1, auto f_strides2) {
         EXPECT_THAT(f_dims, ElementsAre(4,30));
         EXPECT_THAT(f_strides1, ElementsAre(2,0));
         EXPECT_THAT(f_strides2, ElementsAre(30,1));
@@ -274,7 +274,7 @@ TYPED_TEST_P(TensorParametersTestSuite, TensorFolds)
     constexpr size_t dims[] =     {  4, 5, 6 };
     constexpr ssize_t strides1[] = {  2, 0, 0 };
     constexpr ssize_t strides2[] = { 30, 6, 2 };
-    grid::Fold([&callback](auto f_dims, auto f_strides1, auto f_strides2) {
+    grid::FoldBroadcast([&callback](auto f_dims, auto f_strides1, auto f_strides2) {
         EXPECT_THAT(f_dims, ElementsAre(4, 5, 6));
         EXPECT_THAT(f_strides1, ElementsAre(2,0,0));
         EXPECT_THAT(f_strides2, ElementsAre(30,6,2));
@@ -289,7 +289,7 @@ TYPED_TEST_P(TensorParametersTestSuite, TensorFolds)
     constexpr size_t dims[] =     {  1, 1, 1 };
     constexpr ssize_t strides1[] = {  2, 0, 0 };
     constexpr ssize_t strides2[] = { 30, 6, 2 };
-    grid::Fold([&callback](auto f_dims, auto f_strides1, auto f_strides2) {
+    grid::FoldBroadcast([&callback](auto f_dims, auto f_strides1, auto f_strides2) {
         EXPECT_THAT(f_dims, ElementsAre());
         EXPECT_THAT(f_strides1, ElementsAre());
         EXPECT_THAT(f_strides2, ElementsAre());

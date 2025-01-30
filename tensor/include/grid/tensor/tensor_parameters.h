@@ -263,7 +263,7 @@ inline bool IsContiguous(auto... strides)
 ///                         multiplied by the lower stride)
 ///
 template <size_t R, typename TOp>
-void Fold(TOp&& op, std::span<const size_t, R> dims, auto... strides)
+void FoldBroadcast(TOp&& op, std::span<const size_t, R> dims, auto... strides)
 {
   // rank-0: scalars return empty dimensions, and are 'contiguous'
   if constexpr (R == 0)
