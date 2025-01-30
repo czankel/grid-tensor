@@ -47,12 +47,12 @@ template <> class RmsNormOperator<device::Base>
 
     auto first_d = std::ranges::begin(out);
     auto first_x = std::ranges::cbegin(in);
-    auto& extents = first_d.Extents();
 
     size_t stride_x = first_x.Strides().back();
+    auto& extents = first_d.Extents();
     size_t row_size = extents.back();
-    size_t n_rows = std::accumulate(std::begin(extents), std::end(extents) - 1, 1, std::multiplies<size_t>());
-    if (n_rows == 1)
+
+    if constexpr (in.Rank() == 1)
     {
       auto sum = SumSquare(&*first_x, row_size, stride_x);
       value_type scale = sqrtf(sum / row_size + eps);
@@ -60,16 +60,19 @@ template <> class RmsNormOperator<device::Base>
     }
     else
     {
+      size_t n_rows =
+        std::accumulate(std::begin(extents), std::end(extents) - 1, 1, std::multiplies<size_t>());
+
       // TODO could there be an alias issue?
       auto x = &*first_x;
-      Tensor scale({n_rows}, Uninitialized<value_type>{});
+      Tensor scale({n_rows, 1}, Uninitialized<value_type>{});
       for (size_t row = 0; row < n_rows; row++)
       {
         auto sum = SumSquare(x, row_size, stride_x);
         scale.Data()[row] = sqrtf(sum / row_size + eps);
         x += first_x.Strides()[rank - 2];
       }
-      BinaryOperation<DivOperator, device::Base>()(in, Tensor(scale), out);
+      BinaryOperation<DivOperator, device::Base>()(in, scale, out);
     }
   }
 };
