@@ -9,6 +9,8 @@
 #ifndef TENSOR_SOURCE_CUDA_KERNELS_UTILS_H
 #define TENSOR_SOURCE_CUDA_KERNELS_UTILS_H
 
+#include <initializer_list>
+
 namespace grid {
 namespace cuda {
 
@@ -35,7 +37,13 @@ inline auto GetSizes(size_t size)
   return std::make_tuple(grid_size, block_size);
 }
 
-// GetSizes returns a tuple of the 3-dimensional grid and block sizes for the provided n dimensions.
+// GetSizes returns a tuple of the 3-dimensional grid and block sizes for the provided dimensions.
+// The sizes are .. capped by the maximum thread count divided by..
+// They should be chosen such that:
+//  - the loads of all parallel threads should be limited to the same 1024k (one memory lane)
+//    for a simple float addition d[i] = x[2*i] + x[2*i+1], this would be 2 (loads) x 4 (32-bit float)
+//    the divisor should be 4 for the first
+//
 // Grid size is the number of thread blocks in grid
 // Block size is the number of threads in each thread block
 template <size_t R, typename... S>
@@ -47,6 +55,18 @@ inline auto GetSizes(std::span<const size_t, R> dims, S... sizes)
          dim3{((unsigned int)std::min(static_cast<size_t>(std::get<I>(sz)), MaxThreadCount))...});
   }(std::make_index_sequence<R>(), std::make_tuple(sizes...));
 }
+
+template <size_t R, typename T, typename... S>
+inline auto GetSizes(const T(&&dims)[R], S... sizes)
+{
+  return [=] <std::size_t... I> (std::index_sequence<I...>, auto sz) {
+     return std::make_tuple(
+         dim3{((unsigned int)ceil((float)(dims[I])/std::min(static_cast<size_t>(std::get<I>(sz)), MaxThreadCount/sizeof(T))))...},
+         dim3{((unsigned int)std::min(static_cast<size_t>(std::get<I>(sz)), MaxThreadCount/sizeof(T)))...});
+  }(std::make_index_sequence<R>(), std::make_tuple(sizes...));
+}
+
+
 
 } // end of namespace cuda
 } // end of namespace grid
