@@ -11,6 +11,8 @@
 #ifndef GRID_TENSOR_COMPARISON_H
 #define GRID_TENSOR_COMPARISON_H
 
+#include "precision.h"
+
 namespace grid {
 
 template <typename T, size_t>
@@ -31,7 +33,7 @@ equals(const T* x, const T* y,
        std::span<const ssize_t, 0>)
 {
   auto max = std::max(std::abs(*x), std::abs(*y));
-  T eps = max * std::numeric_limits<T>::epsilon() * T{10};
+  T eps = max * std::numeric_limits<T>::epsilon() * Precision::Margin();
   return std::abs(*x - *y) <= eps;
 }
 
@@ -62,7 +64,7 @@ equals(const T* x, const T* y,
   for (size_t i = 0; i < dimensions[0]; i++)
   {
     auto max = std::max(std::abs(*x), std::abs(*y));
-    T eps = max * std::numeric_limits<T>::epsilon() * T{10};
+    T eps = max * std::numeric_limits<T>::epsilon() * Precision::Margin();
 
     if (std::abs(*x - *y) > eps)
       return false;
