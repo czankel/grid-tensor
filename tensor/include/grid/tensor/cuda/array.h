@@ -95,6 +95,20 @@ class Array<T, DeviceMemory<device::Cuda>>
     other.data_ = nullptr;
   }
 
+  template <size_t N>
+  Array(const Array& other,
+        const std::array<size_t, N>& dimensions,
+        const std::array<ssize_t, N>& strides1,
+        const std::array<ssize_t, N>& strides2)
+    : size_(get_buffer_size<value_type>(dimensions, strides1))
+  {
+    CudaMallocManaged((void**)&data_, size_);
+    details::copy_unsafe(data_, other.Data(),
+                         std::span<const size_t, N>(dimensions.begin(), N),
+                         std::span<const ssize_t, N>(strides1.begin(), N),
+                         std::span<const ssize_t, N>(strides2.begin(), N));
+  }
+
   ~Array()
   {
     if (data_ != nullptr)
