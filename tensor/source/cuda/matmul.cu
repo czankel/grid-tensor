@@ -50,10 +50,7 @@ void MatmulOperator<device::Cuda>::EvalGeneric(
     std::span<const ssize_t, 2> strides_a,
     std::span<const ssize_t, 2> strides_b) const
 {
-  // TODO: what are the correct values here?
-  auto [grid_size, block_size] = cuda::GetSizes(dimensions, 16, 16, 1);
-  auto x = cuda::MakeDim3(dimensions);
-
+  auto [grid_size, block_size] = cuda::GetSizes({dimensions[0], dimensions[2]}, 16, 16, 1);
   CudaMatmulGeneric<T><<<grid_size, block_size>>>(
       d, a, b,
       cuda::MakeDim3(dimensions),
