@@ -134,7 +134,8 @@ class Array<T, DeviceMemory<device::Base>>
     {
       if (data_ != nullptr)
         operator delete[](data_, std::align_val_t(16));
-      data_ = static_cast<pointer>(operator new[](size_, std::align_val_t(16)));
+      data_ = static_cast<pointer>(operator new[](size, std::align_val_t(16)));
+      size_ = size;
     }
 
     return *this;
