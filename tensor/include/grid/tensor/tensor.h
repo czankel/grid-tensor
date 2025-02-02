@@ -410,12 +410,14 @@ class Tensor<T, TRank, MemoryMapped>
   explicit Tensor(const size_t(&& dimensions)[TRank], const std::tuple<pointer, size_t>& array)
     : dimensions_(std::to_array(dimensions)),
       strides_{make_strides(dimensions_)},
-      size_(dimensions_[0] * strides_[0]),
+      size_(dimensions_[0] * strides_[0] * sizeof(value_type)),
       data_(std::get<0>(array))
   {
     if (size_ > std::get<1>(array))
       throw std::runtime_error("dimensions exceed allotted size: " + std::to_string(size_) + " > " +
           std::to_string(std::get<1>(array)));
+    if (size_ == 0UL)
+      throw std::runtime_error("attempting to create a zero-size memory mapped tensor");
   }
 
   explicit Tensor(const std::array<size_t, TRank>& dimensions, const std::tuple<pointer, size_t>& array)
@@ -427,6 +429,8 @@ class Tensor<T, TRank, MemoryMapped>
     if (size_ > std::get<1>(array))
       throw std::runtime_error("dimensions exceed allotted size: " + std::to_string(size_) + " > " +
           std::to_string(std::get<1>(array)));
+    if (size_ == 0UL)
+      throw std::runtime_error("attempting to create a zero-size memory mapped tensor");
   }
 
 
@@ -513,7 +517,7 @@ class Tensor<T, TRank, MemoryMapped>
   const std::array<ssize_t, TRank>& Strides() const       { return strides_; }
 
   /// Size returns the data buffer size.
-  size_t Size()                                           { return size_; }
+  size_t Size() const                                     { return size_; }
 
   /// Data returns a pointer to the data buffer.
   pointer Data()                                          { return data_; }
