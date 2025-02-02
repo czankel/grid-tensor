@@ -24,12 +24,10 @@ __global__ void CudaSoftMax(T* d, const T* x, T eps, int dim)
 {
   __shared__ T sdata[cuda::MaxThreadCount];
 
-  unsigned int grid_size = gridDim.x * BlockSize;
   unsigned int tid = threadIdx.x;
+  T max{0};
 
-  T max{0};  // FIXME: use T or float?
-  // FIXME unroll (partially)
-  for (unsigned int i = tid; i < dim; i += grid_size)
+  for (unsigned int i = tid; i < dim; i += BlockSize)
     max = x[i] > max ? x[i] : max;
   sdata[tid] = max;
 
@@ -38,9 +36,8 @@ __global__ void CudaSoftMax(T* d, const T* x, T eps, int dim)
   CudaReduce<T, MaxOperator, BlockSize>(sdata, tid, dim);
   max = sdata[0];
 
-  // d = exp(x - local-max); sum += d
   T sum{0};
-  for (unsigned int i = tid; i < dim; i += grid_size)
+  for (unsigned int i = tid; i < dim; i += BlockSize)
   {
     d[i] = exp(x[i] - max);
     sum += d[i];
@@ -54,29 +51,33 @@ __global__ void CudaSoftMax(T* d, const T* x, T eps, int dim)
 
   T scale = static_cast<T>(1)/(sum + eps);
 
-  __syncthreads();
-
-  for (unsigned int i = tid; i < dim; i += grid_size)
+  for (unsigned int i = tid; i < dim; i += BlockSize)
     d[i] = d[i] * scale;
 }
 
 } // end of namespace cuda
 
+
 template <typename T>
-void SoftMaxCallKernel(T* d, const T* x, size_t rows, size_t cols, dim3 grid_size, dim3 block_size)
+void SoftMaxCallKernel(T* d, const T* x, size_t rows, size_t cols)
 {
-  size_t smem_size = cuda::MaxThreadCount;
-  size_t n_threads = std::min(cols, 1024UL);  // FIXME: divide by sizeof(T) *2??
+  size_t max_blocks = cuda::MaxThreadCount / sizeof(T);
+  size_t dim_x = std::min(max_blocks, ((cols + 31) / 32) * 32);
+
+  auto [grid_size, block_size] =
+    cuda::GetSizes({dim_x, rows}, dim_x, 1);
+
+  size_t n_threads = block_size.x;
   int n_threads_log2 = sizeof(n_threads) * 8 - __builtin_clzll(n_threads - 1);
 
   T eps = Eps<T>::default_value;
-
   switch (n_threads_log2)
   {
     #define CUDA_SOFTMAX_CASE(BIT) \
-      case BIT: cuda::CudaSoftMax<T,1<<BIT><<<grid_size,block_size,smem_size>>>(d,x,eps,cols); break;
-    INSTANTIATE1(CUDA_SOFTMAX_CASE, (9, 8, 7, 6, 5, 4, 3, 2, 1, 0))
-    default: throw std::runtime_error("invalid thread count in softmax");
+      case BIT: cuda::CudaSoftMax<T,1<<BIT><<<grid_size,block_size>>>(d,x,eps,cols); break;
+    INSTANTIATE1(CUDA_SOFTMAX_CASE, (11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0))
+    default: throw std::runtime_error(std::string("invalid thread count in softmax: ") +
+                 std::to_string(n_threads_log2));
   }
 }
 
@@ -91,28 +92,19 @@ void SoftMaxOperator<device::Cuda>::EvalContiguous(
 {
   if constexpr (R == 0)
   {
-    SoftMaxCallKernel(d, x, 1, 1, 1, 1);
+    SoftMaxCallKernel(d, x, 1, 1);
   }
   else if constexpr (R == 1)
   {
-    auto [grid_size, block_size] = cuda::GetSizes(dimensions[0]);
-    SoftMaxCallKernel(d, x, 1, dimensions[0], std::move(grid_size), std::move(block_size));
+    SoftMaxCallKernel(d, x, 1, dimensions[0]);
   }
   else if constexpr (R == 2)
   {
-#if 0
-    auto [block_size, grid_size] = cuda::GetSizes(dimensions, 16, 16);  // FIXME 256 threads instead of 1k? 32, 32?
-    CudaSoftMaxContiguousRank2<T><<<block_size, grid_size>>>(
-        d, a, cuda::MakeDim3(dimensions), cuda::MakeDim3(strides_d), cuda::MakeDim3(strides_a));
-#endif
+    throw std::runtime_error("softmax rank 2 not implemented");
   }
   else if constexpr (R == 3)
   {
-#if 0
-    auto [block_size, grid_size] = cuda::GetSizes(dimensions, 8, 8, 8);   // FIXME 512 threads?
-    CudaSoftMaxContiguousRank3<T><<<block_size, grid_size>>>(
-        d, a, cuda::MakeDim3(dimensions), cuda::MakeDim3(strides_d), cuda::MakeDim3(strides_a));
-#endif
+    throw std::runtime_error("softmax rank 3 not implemented");
   }
 }
 
@@ -126,10 +118,11 @@ void SoftMaxOperator<device::Cuda>::EvalDiscontiguous(
 {
   if constexpr (R == 0)
   {
-    SoftMaxCallKernel(d, x, 1, 1, 1, 1);
+    SoftMaxCallKernel(d, x, 1, 1);
   }
-  else { // if constexpr (R == 1)
-  printf("DISCONTIGUOUS@!!\n");
+  else
+  { // if constexpr (R == 1)
+    throw std::runtime_error("softmax on discontiguous tensors not implemented");
   }
 }
 

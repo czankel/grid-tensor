@@ -31,7 +31,7 @@ __global__ void CudaRmsNorm(T* d, const T* x, const T eps, int dim)
   __shared__ T sdata[cuda::MaxThreadCount];
 
   int grid_size = gridDim.x * BlockSize;
-  int row = threadIdx.y * dim;
+  int row = threadIdx.y * blockDim.x;
   int tid = row + threadIdx.x;
 
   size_t idx_first = (blockIdx.y * blockDim.y + threadIdx.y) * dim;
