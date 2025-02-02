@@ -71,7 +71,6 @@ template <> class SoftMaxOperator<device::Base>
     return sum;
   }
 
-  // FIXME: add strides for d
   template <typename T, size_t _N>
   inline auto
   SumExp(T* d, const T* x, T max,
@@ -81,7 +80,7 @@ template <> class SoftMaxOperator<device::Base>
     static_assert(_N != std::dynamic_extent, "dynamic_extent not allowed");
 
     T sum{0};
-    for (size_t i = 0; i < dimensions[0]; i++, x += strides[0])
+    for (size_t i = 0; i < dimensions[0]; i++, d += strides[0], x += strides[0])
     {
       sum += SumExp(d, x, max,
                     std::span<const size_t,  _N - 1>(dimensions.begin() + 1, _N - 1),
