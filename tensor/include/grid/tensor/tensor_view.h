@@ -211,7 +211,6 @@ inline auto View(TTensor& tensor, Ts&&... ts)
   std::array<ssize_t, view_rank> view_strides;
 
   size_t view_index = 0;
-  size_t view_size = 0;
   size_t view_offset = 0;
   size_t tensor_index = 0;
 
@@ -254,7 +253,6 @@ inline auto View(TTensor& tensor, Ts&&... ts)
         view_index++;
       }
 
-      view_size = std::max(view_size, extent * tensor_strides[tensor_index] * sizeof(typename TTensor::value_type));
       view_offset += start * tensor_strides[tensor_index] * sizeof(typename TTensor::value_type);
 
       if (++tensor_index > tensor.Rank())
@@ -271,6 +269,7 @@ inline auto View(TTensor& tensor, Ts&&... ts)
     view_strides[view_index] = tensor_strides[tensor_index];
   }
 
+  size_t view_size = get_block_size<typename TTensor::value_type>(view_dims, view_strides);
   return TensorView(tensor, view_dims, view_strides, view_size, view_offset);
 }
 

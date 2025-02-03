@@ -249,9 +249,9 @@ TYPED_TEST_P(TensorTestSuite, TensorViewBraceInitializationTensor)
   EXPECT_EQ(view_row.Rank(), 1);
   EXPECT_THAT(view_row.Dimensions(), ElementsAre(5));
   EXPECT_THAT(view_row.Strides(), ElementsAre(1));
-
   grid::Tensor expected{231, 232, 233, 234, 235};
   EXPECT_EQ(view_row, expected);
+  EXPECT_EQ(view_row.Size(), expected.Size());
 }
 
 TYPED_TEST_P(TensorTestSuite, TensorViewAllocInitializationTensor)
@@ -276,6 +276,7 @@ TYPED_TEST_P(TensorTestSuite, TensorViewAllocInitializationTensor)
   EXPECT_EQ(view_index.Rank(), 1);
   EXPECT_THAT(view_index.Dimensions(), ElementsAre(5UL));
   EXPECT_THAT(view_index.Strides(), ElementsAre(1));
+  EXPECT_EQ(view_index.Size(), 20); // one row, 5 elements
   EXPECT_EQ(view_index.Data(), data + 2 * 5);
 
   // tensor[2:] -> (2, 5)
@@ -283,6 +284,7 @@ TYPED_TEST_P(TensorTestSuite, TensorViewAllocInitializationTensor)
   EXPECT_EQ(view_span.Rank(), 2);
   EXPECT_THAT(view_span.Dimensions(), ElementsAre(2UL, 5UL));
   EXPECT_THAT(view_span.Strides(), ElementsAre(5, 1));
+  EXPECT_EQ(view_span.Size(), 40);  // 2 x 5 matrix
   EXPECT_EQ(view_span.Data(), data + 2 * 5);
 }
 
