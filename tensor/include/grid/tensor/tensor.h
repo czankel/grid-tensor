@@ -211,6 +211,25 @@ class Tensor : public Array<T, TMemory>
   {}
 
 
+  /// Constructor for any rank tensor with a dynamically allocated initialized buffer
+  explicit Tensor(const size_t(&dimensions)[TRank], value_type init)
+    : Array<value_type, memory_type>(
+        std::accumulate(std::begin(dimensions), std::end(dimensions),
+                        sizeof(value_type), std::multiplies<size_t>()), init),
+      dimensions_(get_array<size_t, TRank>(dimensions)),
+      strides_(make_strides(dimensions))
+  {}
+
+  /// Constructor for any rank tensor with a dynamically allocated uninitialized buffer
+  explicit Tensor(const size_t(&dimensions)[TRank], Uninitialized<value_type>)
+    : Array<value_type, memory_type>(
+        std::accumulate(std::begin(dimensions), std::end(dimensions),
+                        sizeof(value_type), std::multiplies<size_t>())),
+      dimensions_(get_array<size_t, TRank>(dimensions)),
+      strides_(make_strides(dimensions))
+  {}
+
+
   /// Constructor for any rank tensor with a dynamically allocated initialized buffer.
   explicit Tensor(std::array<size_t, TRank> dimensions, value_type init)
     : Array<value_type, memory_type>(
