@@ -15,9 +15,7 @@
 
 namespace grid {
 
-/// @brief GeneratorOperator provides the device specific implementation of a generator.
-template <template <typename> typename TOperator>
-class GeneratorOperator<TOperator<device::Base>>
+template <> class GeneratorOperation<device::Base>
 {
   template <typename T, std::copy_constructible F>
   inline void generate(T* d,
@@ -25,8 +23,9 @@ class GeneratorOperator<TOperator<device::Base>>
                        std::span<const ssize_t, 1> strides,
                        F gen) const
   {
+    // TODO: c++23 introduces an invoke_r: *d = invoke_r<T>(gen); should then work
     for (size_t i = 0; i < dimensions[0]; i++, d += strides[0])
-      TOperator<device::Base>()(d, gen);
+      *d = gen.template operator()<T>();
   }
 
   template <typename T, size_t N, std::copy_constructible F>
@@ -43,15 +42,20 @@ class GeneratorOperator<TOperator<device::Base>>
   }
 
  public:
+
   template<typename O, std::copy_constructible F>
-  requires std::invocable<F&> && std::ranges::output_range<O, std::invoke_result_t<F&>>
-  void operator()(O&& out, F gen) const
+  // TODO: requires invocable_r; what about result?
+  // TODO std::invocable_r<R, F&> && std::ranges::output_range<O, std::invoke_result_t<F&>>
+  void operator()(O&& out, F&& gen) const
   {
     using tensor_type = std::remove_cvref_t<O>;
     constexpr size_t rank = tensor_type::rank;
     auto fist_d = std::ranges::begin(out);
 
-    generate(&*fist_d, std::span<const size_t, rank>{fist_d.Extents()}, std::span{fist_d.Strides()}, std::move(gen));
+    generate(&*fist_d,
+             std::span<const size_t, rank>{fist_d.Extents()},
+             std::span{fist_d.Strides()},
+             std::move(gen));
   }
 };
 
@@ -59,17 +63,21 @@ class GeneratorOperator<TOperator<device::Base>>
 // Operators
 //
 
+#if 0 // FIXME how to implement?
 template <> struct FillOperator<device::Base>
 {
-  template <typename T> inline void operator()(T* d, const T val) const { *d = val; }
+  template <typename T> inline void operator()() const { return val; }
 };
+#endif
 
-template <> struct FunctorOperator<device::Base>
+
+template <> struct RandomFunction<device::Base>
 {
-  // FIXME requires std::invocable<F&> && std::indirectly_writable<O, std::invoke_result_t<F&>>
-  template <typename T, typename F> inline void operator()(T* d, F&& gen) const { *d = std::invoke(gen); }
+  template <typename T> inline T operator()() const
+  {
+    return static_cast<T>((static_cast<double>(std::rand()) / RAND_MAX) * T{100}); // FIXME need max
+  }
 };
-
 
 } // end of namespace grid
 

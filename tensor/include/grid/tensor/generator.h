@@ -9,63 +9,80 @@
 #ifndef GRID_TENSOR_GENERATOR_H
 #define GRID_TENSOR_GENERATOR_H
 
+#include "tensor.h"
+#include "tensor_parameters.h"
+
 namespace grid {
 
-template <typename> class GeneratorOperator;
+//template <template <typename> typename, typename> class GeneratorOperation;
+template <typename> class GeneratorOperation;
 
-template <typename> struct FillOperator;
-template <typename> struct FunctorOperator;
-
-/// @brief Generator applies the given generator operator to a provided tensor.
-template <AnyTensor TTensor, typename TFunction>
+/// @brief Generator generates a sequence of elements filling a tensor
+///
+/// Examples:
+///   auto tensor = Generate<TENSOR>({400, 600}, [](size_t y, size_t x) -> T { ... });
+///   auto tensor = Random<TENSOR, float>({200, 200});
+///
+// TODO: add variadic arguments passed to the generator function
+template <AnyTensor TTensor, typename TOperation>
 class Generator : public TensorOperation<typename std::remove_cvref_t<TTensor>::value_type,
                                          std::remove_cvref_t<TTensor>::rank,
-                                         Generator<TTensor, TFunction>>
+                                         Generator<TTensor, TOperation>>
 {
  public:
   using typename Generator::TensorOperation::value_type;
   using Generator::TensorOperation::rank;
+  using device_type = tensor_device_t<TTensor>;
 
-  template <typename T, typename F>
-  Generator(T&& tensor, F&& f)
-    : TensorOperation<value_type, rank, Generator<TTensor, TFunction>>(*this),
-      function_(std::forward<F>(f)),
-      tensor_(std::forward<T>(tensor))
+  explicit Generator(const size_t(&&dims)[rank])
+    : TensorOperation<value_type, rank, Generator<TTensor, TOperation>>(*this),
+      dimensions_(get_array<size_t, rank>(dims))
   {}
+
+  Generator() = delete;
+  Generator(const Generator& other) = delete;
+  Generator& operator=(const Generator& other) = delete;
+
 
   /// operator()() evaluates the unary operator and returns a tensor.
   auto operator()() const
   {
-    GeneratorOperator<tensor_device_t<std::remove_cvref_t<TTensor>>>(tensor_, function_);
-    return tensor_;
+    auto result = TTensor(dimensions_, Uninitialized<value_type>());
+    GeneratorOperation<device_type>{}(result, operator_);
+    return result;
   }
 
  private:
-  TFunction function_;
-  TTensor tensor_;
+  static TOperation         operator_;
+  std::array<size_t, rank>  dimensions_;
 };
 
-template <typename TOp, typename T> Generator(TOp, T&&) -> Generator<TOp, typename to_tensor<T>::type>;
+//
+// Generator Functions
+//
 
-
-/// @brief Fill fills the tensor with the provided value.
-template <TensorConvertible TTensor>
-void Fill(TTensor&& tensor, typename to_tensor<TTensor>::type::value_type val)
+#if 0 // TODO: requires variadic arguments for Generators
+/// @brief Fill returns a tensor filled with the provided value.
+template <typename> struct FillFunction;
+template <template <typename, size_t, typename...> typename TTensor, typename T, size_t N>
+auto Fill(const size_t(&&dims)[N], T val)
 {
+  using tensor_type = decltype(TTensor(std::move(dims), Uninitialized<T>()));
+  using device_type = tensor_device_t<tensor_type>;
+  return Generator<tensor_type, FillFunction<device_type>>(std::move(dims));
   return Generator(FillOperator<tensor_device_t<TTensor>>(), std::forward<TTensor>(tensor), val);
 }
+#endif
 
-
-/// @brief Applies the generator sequentially to the provided tensor.
-///
-/// Example:
-///   Function(tensor, [n = 0] { return n++; });
-template <TensorConvertible TTensor, typename F>
-void Generate(TTensor&& tensor, F&& gen)
+/// @brief Random returns a tensor of the specified dimensions filled with random values.
+template <typename> struct RandomFunction;
+template <template <typename, size_t, typename...> typename TTensor, typename T, size_t N>
+auto Random(const size_t(&&dims)[N])
 {
-  return Generator(GeneratorOperator<tensor_device_t<TTensor>>(), std::forward<TTensor>(tensor), std::forward<F>(gen));
+  using tensor_type = decltype(TTensor(std::move(dims), Uninitialized<T>()));
+  using device_type = tensor_device_t<tensor_type>;
+  return Generator<tensor_type, RandomFunction<device_type>>(std::move(dims));
 }
-
 
 }   // end of namespace grid
 
