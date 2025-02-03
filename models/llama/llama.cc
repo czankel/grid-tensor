@@ -9,8 +9,12 @@
 #include <string>
 #include <iostream>
 
-#include <grid/tensor/tensor_base.h>
 #include <grid/util/demangle.h>
+
+#include <grid/tensor/tensor_base.h>
+#ifdef BUILD_CUDA
+#include <grid/tensor/tensor_cuda.h>
+#endif
 
 #include "llama.h"
 #include "karpathy.h"
@@ -73,7 +77,7 @@ std::ostream& LLaMAFile::PrintModelInfo(std::ostream& out) const
 // LLaMAModel
 //
 
-LLaMAModel* LLaMAModel::Load(LLaMAFile& file, bool mmap)
+LLaMAModel* LLaMAModel::Load(LLaMAFile& file, std::string_view device_name, bool mmap)
 {
   if (!mmap)
     throw("only memory-mapped files currently supported");
@@ -83,7 +87,21 @@ LLaMAModel* LLaMAModel::Load(LLaMAFile& file, bool mmap)
   if (data_type != typeid(float))
     throw std::runtime_error("invalid data type, only float is supported");
 
-  return LLaMAModelT<float, device::Base>::Load(file);
+#if BUILD_CUDA
+  if (device_name == "cuda")
+    return LLaMAModelT<float, device::Cuda>::Load(file);
+  else
+#endif
+  if (device_name == "")
+    return LLaMAModelT<float, device::Base>::Load(file);
+  else
+    throw std::runtime_error("invalid device name");
+}
+
+
+LLaMAModel* LLaMAModel::Load(LLaMAFile& file, bool mmap)
+{
+  return Load(file, std::string{}, mmap);
 }
 
 } // end of namespace grid

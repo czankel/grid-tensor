@@ -48,10 +48,18 @@ class LLaMAModel
 
   /// Load creates and loads the model from the provided file.
   ///
-  /// @param file  LLaMA file.
-  /// @param mmap  Enable to map the tensors into memory (mmap)
+  /// @param file   LLaMA file.
+  /// @param mmap   Enable to map the tensors into memory (mmap)
   /// @returns LLaMA model
   static LLaMAModel* Load(LLaMAFile& file, bool mmap = true);
+
+  /// Load creates and loads the model from the provided file.
+  ///
+  /// @param file   LLaMA file.
+  /// @param device Accelerator.
+  /// @param mmap   Enable to map the tensors into memory (mmap)
+  /// @returns LLaMA model
+  static LLaMAModel* Load(LLaMAFile& file, std::string_view device_name, bool mmap = true);
 };
 
 
