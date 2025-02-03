@@ -21,12 +21,13 @@ int main(int argc, char** argv)
 {
   int                   opt;
   std::string           model_path;
+  std::string           device_name;
   grid::LLaMAFile::Type model_type = grid::LLaMAFile::kGgml;
 
   int                   steps = 256;
   bool                  show_info = false;
 
-  while ((opt = getopt(argc, argv, "vhim:s:t:")) != -1)
+  while ((opt = getopt(argc, argv, "vhid:m:s:t:")) != -1)
   {
     switch (opt)
     {
@@ -42,6 +43,11 @@ int main(int argc, char** argv)
       case 'v': // version
         // FIXME: TODO
         std::cout << "Version: " << std::endl;
+        break;
+
+      case 'd': // device
+        device_name = optarg;
+        std::cout << "Using device: " << device_name << std::endl;
         break;
 
       case 'm': // model file
@@ -89,9 +95,11 @@ int main(int argc, char** argv)
     prompt.append(argv[optind]).append(1, ' ');
   prompt.resize(prompt.size() - 1);
 
-  std::cout << "Prompt: " << prompt << std::endl;
+  std::cout << "Loading model ... " << std::flush;
+  std::unique_ptr<grid::LLaMAModel> model(grid::LLaMAModel::Load(*file, device_name));
+  std::cout << "done\n";
 
-  std::unique_ptr<grid::LLaMAModel> model(grid::LLaMAModel::Load(*file));
+  std::cout << "Prompt: " << prompt << std::endl;
 
   std::chrono::steady_clock::time_point start_time;
   start_time = std::chrono::steady_clock::now();
