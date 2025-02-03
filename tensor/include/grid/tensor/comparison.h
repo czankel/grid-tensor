@@ -32,9 +32,9 @@ equals(const T* x, const T* y,
        std::span<const ssize_t, 0>,
        std::span<const ssize_t, 0>)
 {
+  T eps = std::numeric_limits<T>::epsilon() * Precision::Margin();
   auto max = std::max(std::abs(*x), std::abs(*y));
-  T eps = max * std::numeric_limits<T>::epsilon() * Precision::Margin();
-  return std::abs(*x - *y) <= eps;
+  return std::abs(*x - *y) <= std::max(T{1}, max) * eps;
 }
 
 template <typename T, size_t>
@@ -63,10 +63,10 @@ equals(const T* x, const T* y,
 {
   for (size_t i = 0; i < dimensions[0]; i++)
   {
+    T eps = std::numeric_limits<T>::epsilon() * Precision::Margin();
     auto max = std::max(std::abs(*x), std::abs(*y));
-    T eps = max * std::numeric_limits<T>::epsilon() * Precision::Margin();
 
-    if (std::abs(*x - *y) > eps)
+    if (std::abs(*x - *y) > std::max(T{1}, max) * eps)
       return false;
 
     x += strides_x[0];
