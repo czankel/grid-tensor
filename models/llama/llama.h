@@ -37,8 +37,6 @@ class LLaMAModelT : public LLaMAModel
   /// Using two tensor types, a dynamically allocated default tensor and a memory-mapped file tensors.
   using Tensor1D = Tensor<T, 1, DeviceMemory<Dev>>;
   using Tensor2D = Tensor<T, 2, DeviceMemory<Dev>>;
-  using TensorFile1D = Tensor<T, 1, MemoryMapped>;
-  using TensorFile2D = Tensor<T, 2, MemoryMapped>;
 
  protected:
   LLaMAModelT() = default;
@@ -75,18 +73,18 @@ class LLaMAModelT : public LLaMAModel
   struct LLaMALayer
   {
     // (note that dim = n_heads * head_size and n_kv_heads = n_heads for this implementation)
-    TensorFile2D  wq_;              // {dim, n_heads * head_size}
-    TensorFile2D  wk_;              // {dim, n_kv_heads * head_size}
-    TensorFile2D  wv_;              // {dim, n_kv_heads * head_size}
-    TensorFile2D  wo_;              // {n_heads * head_size, dim}
+    Tensor2D  wq_;              // {dim, n_heads * head_size}
+    Tensor2D  wk_;              // {dim, n_kv_heads * head_size}
+    Tensor2D  wv_;              // {dim, n_kv_heads * head_size}
+    Tensor2D  wo_;              // {n_heads * head_size, dim}
 
     // Weights for FFN
-    TensorFile2D  w1_;              // {hidden_dim, dim}
-    TensorFile2D  w2_;              // {dim, hidden_dim}
-    TensorFile2D  w3_;              // {hidden_dim, dim}
+    Tensor2D  w1_;              // {hidden_dim, dim}
+    Tensor2D  w2_;              // {dim, hidden_dim}
+    Tensor2D  w3_;              // {hidden_dim, dim}
 
-    TensorFile1D  att_norm_;        // {dim}
-    TensorFile1D  ffn_norm_;        // {dim}
+    Tensor1D      att_norm_;        // {dim}
+    Tensor1D  ffn_norm_;        // {dim}
 
     // Runtime tensors
     Tensor2D      key_cache_;       // {kv_dim, max_sequence_length}
@@ -94,9 +92,9 @@ class LLaMAModelT : public LLaMAModel
     Tensor1D      q_;
   };
 
-  TensorFile2D  embeddings_;
-  TensorFile1D  output_norm_;       // {dim}
-  TensorFile2D  output_;            // {vocab_size, dim}
+  Tensor2D  embeddings_;
+  Tensor1D  output_norm_;       // {dim}
+  Tensor2D  output_;            // {vocab_size, dim}
 
   // Runtime tensors
   Tensor1D      x_;                 // {dim}
