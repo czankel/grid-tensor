@@ -7,11 +7,13 @@
 //
 
 #include <grid/tensor/tensor.h>
+#include <grid/tensor/generator.h>
 
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
 
 #include <grid/tensor/base/tensor.h>
+#include <grid/tensor/base/generator.h>
 #include <grid/tensor/base/rms_norm.h>
 #include "tensor_base.h"
 
@@ -64,9 +66,23 @@ TYPED_TEST_P(RmsNormTestSuite, TensorRmsNormRank2)
   EXPECT_EQ(result, expected);
 }
 
+TYPED_TEST_P(RmsNormTestSuite, TensorRmsNormRank2Large)
+{
+  grid::Precision p(100.f);
+  auto random = grid::Random<grid::Tensor, float>({10000,7000})();
+
+  typename TypeParam::Tensor tensor{random};
+  typename TypeParam::Tensor result = grid::RmsNorm(tensor);
+  grid::Tensor expected = grid::RmsNorm(random);
+  EXPECT_EQ(result, expected);
+}
+
+
 REGISTER_TYPED_TEST_SUITE_P(RmsNormTestSuite,
     TensorRmsNormRank1,
-    TensorRmsNormRank2);
+    TensorRmsNormRank2,
+    TensorRmsNormRank2Large);
+
 
 INSTANTIATE_TYPED_TEST_SUITE_P(RmsNormTestBase, RmsNormTestSuite, TensorBaseType);
 #ifdef BUILD_METAL

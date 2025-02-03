@@ -7,12 +7,14 @@
 //
 
 #include <grid/tensor/tensor.h>
+#include <grid/tensor/generator.h>
 #include <grid/tensor/precision.h>
 
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
 
 #include <grid/tensor/base/tensor.h>
+#include <grid/tensor/base/generator.h>
 #include <grid/tensor/base/softmax.h>
 #include "tensor_base.h"
 
@@ -51,8 +53,22 @@ TYPED_TEST_P(SoftMaxTestSuite, TensorSoftMaxRank1)
 }
 
 
+TYPED_TEST_P(SoftMaxTestSuite, TensorSoftMaxRank1Large)
+{
+  grid::Precision p(100.f);
+  auto random = grid::Random<grid::Tensor, float>({10000,7000})();
+
+  typename TypeParam::Tensor tensor{random};
+  typename TypeParam::Tensor result = grid::SoftMax(tensor);
+
+  grid::Tensor expected = grid::SoftMax(random);
+  EXPECT_EQ(result, expected);
+}
+
+
 REGISTER_TYPED_TEST_SUITE_P(SoftMaxTestSuite,
-    TensorSoftMaxRank1);
+    TensorSoftMaxRank1,
+    TensorSoftMaxRank1Large);
 
 INSTANTIATE_TYPED_TEST_SUITE_P(SoftMaxTestBase, SoftMaxTestSuite, TensorBaseType);
 #ifdef BUILD_METAL

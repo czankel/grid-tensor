@@ -7,11 +7,13 @@
 //
 
 #include <grid/tensor/tensor.h>
+#include <grid/tensor/generator.h>
 
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
 
 #include <grid/tensor/base/tensor.h>
+#include <grid/tensor/base/generator.h>
 #include <grid/tensor/base/unary.h>
 #include "tensor_base.h"
 
@@ -53,9 +55,22 @@ TYPED_TEST_P(SiLUTestSuite, TensorSiLURank2)
   EXPECT_EQ(result, expected);
 }
 
+TYPED_TEST_P(SiLUTestSuite, TensorSiLURank2Large)
+{
+  grid::Precision p(100.f);
+  auto random = grid::Random<grid::Tensor, float>({10000,7000})();
+
+  typename TypeParam::Tensor tensor{random};
+  typename TypeParam::Tensor result = grid::Silu(tensor);
+  grid::Tensor expected = grid::Silu(random);
+  EXPECT_EQ(result, expected);
+}
+
 
 REGISTER_TYPED_TEST_SUITE_P(SiLUTestSuite,
-    TensorSiLURank2);
+    TensorSiLURank2,
+    TensorSiLURank2Large);
+
 
 INSTANTIATE_TYPED_TEST_SUITE_P(SiLUTestBase, SiLUTestSuite, TensorBaseType);
 #ifdef BUILD_METAL

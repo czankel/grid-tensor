@@ -6,12 +6,14 @@
 // The contents of this file are confidential and proprietary to Chris Zankel.
 //
 
+#include <grid/tensor/generator.h>
 #include <grid/tensor/tensor.h>
 
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
 
 #include <grid/tensor/base/binary.h>
+#include <grid/tensor/base/generator.h>
 #include <grid/tensor/base/matmul.h>
 #include <grid/tensor/base/tensor.h>
 #include "tensor_base.h"
@@ -333,6 +335,19 @@ TYPED_TEST_P(MultiplicationTestSuite, TensorElemMulRank2Broadcast)
   EXPECT_EQ(result, expected);
 }
 
+TYPED_TEST_P(MultiplicationTestSuite, TensorElemMulRank2ContiguousLarge)
+{
+  auto random1 = grid::Random<grid::Tensor, float>({10000,7000})();
+  auto random2 = grid::Random<grid::Tensor, float>({10000,7000})();
+
+  typename TypeParam::Tensor tensor1{random1};
+  typename TypeParam::Tensor tensor2{random2};
+  typename TypeParam::Tensor result = grid::Mul(tensor1, tensor2);
+
+  grid::Tensor expected = grid::Mul(random1, random2);
+  EXPECT_EQ(result, expected);
+}
+
 
 REGISTER_TYPED_TEST_SUITE_P(MultiplicationTestSuite,
     TensorVecDot,
@@ -351,7 +366,8 @@ REGISTER_TYPED_TEST_SUITE_P(MultiplicationTestSuite,
     TensorScalexLeft,
     TensorElemMulRank1,
     TensorElemMulRank2,
-    TensorElemMulRank2Broadcast);
+    TensorElemMulRank2Broadcast,
+    TensorElemMulRank2ContiguousLarge);
 
 
 INSTANTIATE_TYPED_TEST_SUITE_P(MultiplicationTestBase, MultiplicationTestSuite, TensorBaseType);
