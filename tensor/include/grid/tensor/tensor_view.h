@@ -66,7 +66,10 @@ class TensorView
       strides_(strides),
       size_(size),
       offset_(offset)
-  {}
+  {
+    if (offset_ + size_ > tensor.Size())
+      throw std::runtime_error("view parameters exceed the tensor size");
+  }
 
 
   /// operator=(Tensor) copies data from the rhs tensor (or view) into the view of the dependent tensor.
@@ -251,7 +254,7 @@ inline auto View(TTensor& tensor, Ts&&... ts)
         view_index++;
       }
 
-      view_size = std::max(view_size, extent * tensor_strides[tensor_index]);
+      view_size = std::max(view_size, extent * tensor_strides[tensor_index] * sizeof(typename TTensor::value_type));
       view_offset += start * tensor_strides[tensor_index] * sizeof(typename TTensor::value_type);
 
       if (++tensor_index > tensor.Rank())
