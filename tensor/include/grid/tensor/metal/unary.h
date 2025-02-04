@@ -109,6 +109,7 @@ class UnaryOperation<TOperator, device::Metal>
 
 template <> struct CopyOperator<device::Metal> { static constexpr std::string_view kernel_name = "Copy";  };
 template <> struct NegOperator<device::Metal> { static constexpr std::string_view kernel_name = "Neg";  };
+template <> struct SiluFunction<device::Metal> { static constexpr std::string_view kernel_name = "Silu";  };
 
 } // end of namespace grid
 

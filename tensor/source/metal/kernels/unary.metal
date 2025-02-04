@@ -6,6 +6,7 @@
 // The contents of this file are confidential and proprietary to Chris Zankel.
 //
 
+#include <metal_math>
 
 #include "../../instantiate.h"
 
@@ -13,6 +14,8 @@
 
 struct CopyOperator { template<typename T> inline T operator()(T x) { return x; } };
 struct NegOperator  { template<typename T> inline T operator()(T x) { return -x; } };
+struct SiluOperator { template<typename T> inline T operator()(T x)
+ { return static_cast<T>(x / (T{1} + metal::precise::exp(-x))); } };
 
 //
 // Fast unary opeator supporting scalars but without strides
@@ -84,7 +87,7 @@ template <typename Op, typename T, typename U>
 }
 
 
-#define FULL_OPS   Copy, Neg
+#define FULL_OPS   Copy, Neg, Silu
 #define FULL_TYPES uint8_t, uint16_t, uint32_t, uint64_t, int8_t, int16_t, int32_t, int64_t, half, float, bfloat
 
 #define RANK1_FUNCTION(O, T) \
