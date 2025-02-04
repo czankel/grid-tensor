@@ -97,7 +97,6 @@ TOperator Function<TOperator, TTensor, Args...>::operator_;
 template <typename> class RmsNormOperator;
 template <typename> class RopeOperator;
 template <typename> class SoftMaxOperator;
-template <typename> class SiluOperator;
 
 
 /// @brief RmsNorm returns a tensor of the RMS normalized tensor.
