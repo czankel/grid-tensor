@@ -14,7 +14,6 @@
 
 namespace grid {
 
-//template <template <typename> typename, typename> class GeneratorOperation;
 template <typename> class GeneratorOperation;
 
 /// @brief Generator generates a sequence of elements filling a tensor
@@ -56,6 +55,9 @@ class Generator : public TensorOperation<typename std::remove_cvref_t<TTensor>::
   static TOperation         operator_;
   std::array<size_t, rank>  dimensions_;
 };
+
+template <AnyTensor TTensor, typename TOperation> TOperation Generator<TTensor, TOperation>::operator_;
+
 
 //
 // Generator Functions
