@@ -120,8 +120,8 @@ TYPED_TEST_P(AdditionTestSuite, TensorAddBroadcast)
 
 TYPED_TEST_P(AdditionTestSuite, TensorAddRank2ContiguousLarge)
 {
-  auto random1 = grid::Random<grid::Tensor, float>({10000,7000})();
-  auto random2 = grid::Random<grid::Tensor, float>({10000,7000})();
+  grid::Tensor random1 = grid::Random<grid::Tensor, float>({10000,7000});
+  grid::Tensor random2 = grid::Random<grid::Tensor, float>({10000,7000});
 
   typename TypeParam::Tensor tensor1{random1};
   typename TypeParam::Tensor tensor2{random2};
