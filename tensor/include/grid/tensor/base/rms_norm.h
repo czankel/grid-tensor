@@ -52,7 +52,7 @@ template <> class RmsNormOperator<device::Base>
     auto& extents = first_d.Extents();
     size_t row_size = extents.back();
 
-    if constexpr (in.Rank() == 1)
+    if constexpr (rank == 1)
     {
       auto sum = SumSquare(&*first_x, row_size, stride_x);
       value_type scale = sqrtf(sum / row_size + eps);
