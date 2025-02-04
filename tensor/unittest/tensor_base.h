@@ -27,6 +27,11 @@ struct TensorBaseType
   {
    public:
     using grid::Tensor<T, TRank, TMemory>::Tensor;
+
+    Tensor(const grid::Tensor<T, TRank, grid::DeviceMemory<grid::device::Base>>& other)
+      : grid::Tensor<T, TRank, TMemory>(other) {}
+    Tensor(grid::Tensor<T, TRank, grid::DeviceMemory<grid::device::Base>>&& other)
+      : grid::Tensor<T, TRank, TMemory>(other) {}
   };
 
   // dynamic tensors
