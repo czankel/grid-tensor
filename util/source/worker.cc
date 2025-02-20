@@ -17,8 +17,8 @@
 
 #define LOGE(x,...)
 #define LOGW(x,...)
-#define LOGV(t,f,...) { printf(f,  ##__VA_ARGS__); putchar('\n'); }
-#define LOGT(t,f,...) { printf(f,  ##__VA_ARGS__); putchar('\n'); }
+#define LOGV(t,f,...) // { printf(f,  ##__VA_ARGS__); putchar('\n'); }
+#define LOGT(t,f,...) // { printf(f,  ##__VA_ARGS__); putchar('\n'); }
 
 namespace grid {
 

@@ -578,7 +578,7 @@ class Worker
 
  private:
   template <typename R, typename... Args>
-  Job::Id AllocateJob(R(&&function)(Args...), Args&&...);
+  Job::Id AllocateJob(R(&&function)(Args...), Args...);
 
   template <typename R, typename C, typename... Args>
   Job::Id AllocateJob(R(C::*)(Args...), C&, Args&&...);

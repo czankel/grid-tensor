@@ -71,9 +71,9 @@ inline void Worker::SetCurrentJob(Job::Id id)
 
 
 template <typename R, typename... Args>
-inline Job::Id Worker::AllocateJob(R(&&function)(Args...), Args&&... args)
+inline Job::Id Worker::AllocateJob(R(&&function)(Args...), Args... args)
 {
-  auto f = std::bind(&function, args...);
+  auto f = std::bind(&function, std::forward<Args>(args)...);
 
   Job::Id id = AllocateJob(sizeof(f));
   if (id != Job::kInvalid)
